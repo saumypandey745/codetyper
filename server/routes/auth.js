@@ -287,7 +287,18 @@ router.get('/google', (req, res) => {
     return res.redirect('/#login?error=google_not_configured');
   }
 
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+  const getCallbackUrl = (request) => {
+    if (process.env.GOOGLE_CALLBACK_URL && !process.env.VERCEL) {
+      return process.env.GOOGLE_CALLBACK_URL;
+    }
+    const host = request.get('host');
+    const forwardedProto = request.headers['x-forwarded-proto'];
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const protocol = isLocal ? 'http' : (forwardedProto?.split(',')[0].trim() || 'https');
+    return `${protocol}://${host}/api/auth/google/callback`;
+  };
+
+  const callbackUrl = getCallbackUrl(req);
   const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
   const options = new URLSearchParams({
     redirect_uri: callbackUrl,
@@ -310,7 +321,14 @@ router.get('/google/callback', async (req, res) => {
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+  
+  const host = req.get('host');
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  const protocol = isLocal ? 'http' : (forwardedProto?.split(',')[0].trim() || 'https');
+  const callbackUrl = (process.env.GOOGLE_CALLBACK_URL && !process.env.VERCEL)
+    ? process.env.GOOGLE_CALLBACK_URL
+    : `${protocol}://${host}/api/auth/google/callback`;
 
   if (!clientId || !clientSecret) {
     return res.status(500).json({ error: 'Google OAuth configuration missing on server.' });
