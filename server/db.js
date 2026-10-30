@@ -87,6 +87,7 @@ export function initDatabase() {
       char_count INTEGER NOT NULL,
       is_code INTEGER DEFAULT 0,
       language TEXT,
+      lesson_number INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -127,20 +128,72 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
   `);
 
+  try {
+    db.exec('ALTER TABLE practice_content ADD COLUMN lesson_number INTEGER DEFAULT 1;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('CREATE INDEX IF NOT EXISTS idx_content_lang_lesson ON practice_content(is_code, language, lesson_number);');
+  } catch (e) {}
+
   seedInitialData();
 }
 
 function seedInitialData() {
+  const curriculumFile = path.resolve(__dirname, './curriculumData.json');
+  let curriculumLessons = [];
+  if (fs.existsSync(curriculumFile)) {
+    try {
+      curriculumLessons = JSON.parse(fs.readFileSync(curriculumFile, 'utf8'));
+    } catch (e) {
+      console.warn('[DB] Could not parse curriculumData.json', e);
+    }
+  }
+
   // Check if content already exists
   const countRow = db.prepare('SELECT COUNT(*) as count FROM practice_content').get();
-  if (countRow.count === 0) {
-    console.log('[DB] Seeding English passages & Coding snippets...');
+
+  if (curriculumLessons.length > 0 && countRow.count < 1400) {
+    console.log(`[DB] Seeding full 50-lesson curricula (${curriculumLessons.length} lessons across all languages)...`);
+    try {
+      db.exec('DELETE FROM practice_content;');
+      const insertStmt = db.prepare(`
+        INSERT INTO practice_content (category, subcategory, difficulty, title, content, word_count, char_count, is_code, language, lesson_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      db.exec('BEGIN TRANSACTION;');
+      for (const item of curriculumLessons) {
+        insertStmt.run(
+          item.category,
+          item.subcategory || item.language,
+          item.difficulty,
+          item.title,
+          item.content,
+          item.word_count,
+          item.char_count,
+          item.is_code,
+          item.language,
+          item.lesson_number || 1
+        );
+      }
+      db.exec('COMMIT;');
+      console.log(`[DB] Successfully seeded ${curriculumLessons.length} lessons in practice_content.`);
+    } catch (err) {
+      console.error('[DB] Failed during curriculum bulk insertion', err);
+      try { db.exec('ROLLBACK;'); } catch {}
+    }
+  } else if (countRow.count === 0) {
+    console.log('[DB] Seeding fallback English passages & Coding snippets...');
     const insertStmt = db.prepare(`
-      INSERT INTO practice_content (category, subcategory, difficulty, title, content, word_count, char_count, is_code, language)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO practice_content (category, subcategory, difficulty, title, content, word_count, char_count, is_code, language, lesson_number)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     // Insert English passages
+    let engLesson = 1;
     for (const p of englishPassages) {
       const words = p.content.trim().split(/\s+/).length;
       insertStmt.run(
@@ -152,11 +205,13 @@ function seedInitialData() {
         words,
         p.content.length,
         0,
-        'English'
+        'English',
+        engLesson++
       );
     }
 
     // Insert Coding snippets
+    let codeLesson = 1;
     for (const c of codingSnippets) {
       const words = c.content.trim().split(/\s+/).length;
       insertStmt.run(
@@ -168,10 +223,11 @@ function seedInitialData() {
         words,
         c.content.length,
         1,
-        c.language
+        c.language,
+        codeLesson++
       );
     }
-    console.log('[DB] Practice content seeded successfully.');
+    console.log('[DB] Fallback practice content seeded successfully.');
   }
 
   // Check demo user

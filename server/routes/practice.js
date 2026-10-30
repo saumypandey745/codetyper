@@ -37,12 +37,10 @@ router.get('/content', optionalAuthenticate, (req, res) => {
     params.push(difficulty);
   }
 
-  // Order lessons sequentially by difficulty: Beginner -> Intermediate -> Advanced, then ID
-  sql += ` ORDER BY CASE LOWER(difficulty)
-    WHEN 'beginner' THEN 1
-    WHEN 'intermediate' THEN 2
-    WHEN 'advanced' THEN 3
-    ELSE 4
+  // Order lessons strictly in sequence: Lesson 1 to Lesson 50
+  sql += ` ORDER BY CASE 
+    WHEN lesson_number IS NOT NULL AND lesson_number > 0 THEN lesson_number
+    ELSE 9999
   END ASC, id ASC`;
 
   // Get matching items

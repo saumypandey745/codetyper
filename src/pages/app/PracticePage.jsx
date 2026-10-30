@@ -19,7 +19,10 @@ import {
   ListOrdered,
   X,
   GraduationCap,
-  Trophy
+  Trophy,
+  Lock,
+  Unlock,
+  Search
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
@@ -57,6 +60,10 @@ export function PracticePage({
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [showCurriculumModal, setShowCurriculumModal] = useState(false);
+
+  // Curriculum modal search & filter
+  const [modalFilter, setModalFilter] = useState('all');
+  const [modalSearch, setModalSearch] = useState('');
 
   // Completed lesson IDs (stored in localStorage for guest, DB for authenticated)
   const [completedLessonIds, setCompletedLessonIds] = useState(() => {
@@ -103,7 +110,7 @@ export function PracticePage({
           params.category = selectedCategory;
         }
       } else if (practiceType === 'test') {
-        params.type = 'english'; // Default test on English or mix
+        params.type = 'english';
       }
 
       if (selectedDifficulty && selectedDifficulty !== 'all') {
@@ -115,24 +122,26 @@ export function PracticePage({
       setContentList(items);
 
       // Merge server completed lesson IDs with local storage
+      let mergedCompleted = completedLessonIds;
       if (Array.isArray(res.completedLessonIds)) {
-        setCompletedLessonIds((prev) => {
-          const merged = Array.from(new Set([...prev, ...res.completedLessonIds]));
-          try {
-            localStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify(merged));
-          } catch {}
-          return merged;
-        });
+        mergedCompleted = Array.from(new Set([...completedLessonIds, ...res.completedLessonIds]));
+        setCompletedLessonIds(mergedCompleted);
+        try {
+          localStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify(mergedCompleted));
+        } catch {}
       }
 
       if (items.length > 0) {
         if (preferredSnippetId) {
           const found = items.find((it) => it.id === preferredSnippetId);
           setCurrentSnippet(found || items[0]);
-        } else if (res.item) {
-          setCurrentSnippet(res.item);
         } else {
-          setCurrentSnippet(items[0]);
+          // Select the first unlocked but incomplete lesson, or Lesson 1
+          const firstIncompleteUnlocked = items.find((it, idx) => {
+            const unlocked = idx === 0 || mergedCompleted.includes(items[idx - 1]?.id);
+            return unlocked && !mergedCompleted.includes(it.id);
+          });
+          setCurrentSnippet(firstIncompleteUnlocked || items[0]);
         }
       } else {
         // Fallback default text if server returns empty list
@@ -159,7 +168,7 @@ export function PracticePage({
       setLoadingContent(false);
       setEngineKey(Date.now());
     }
-  }, [practiceType, selectedLanguage, selectedCategory, selectedDifficulty, isCode]);
+  }, [practiceType, selectedLanguage, selectedCategory, selectedDifficulty, isCode, completedLessonIds]);
 
   useEffect(() => {
     if (!isCustomMode) {
@@ -167,11 +176,24 @@ export function PracticePage({
     }
   }, [fetchContent, isCustomMode]);
 
+  // Sequential Unlock Rule:
+  // Lesson 1 is always unlocked.
+  // Lesson N is unlocked only if Lesson N-1 is completed.
+  const isLessonUnlocked = useCallback(
+    (idx) => {
+      if (idx === 0) return true;
+      const prev = contentList[idx - 1];
+      return prev ? completedLessonIds.includes(prev.id) : false;
+    },
+    [contentList, completedLessonIds]
+  );
+
   // Derived lesson & curriculum calculations
   const currentLessonIndex = contentList.findIndex((c) => c.id === currentSnippet?.id);
   const currentLessonNumber = currentLessonIndex >= 0 ? currentLessonIndex + 1 : 1;
   const totalLessons = contentList.length;
   const completedCount = contentList.filter((c) => completedLessonIds.includes(c.id)).length;
+  const unlockedLessonsCount = contentList.filter((_, idx) => isLessonUnlocked(idx)).length;
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
   const isCurrentCompleted = currentSnippet?.id && completedLessonIds.includes(currentSnippet.id);
   const nextLesson = currentLessonIndex >= 0 && currentLessonIndex + 1 < contentList.length
@@ -181,8 +203,12 @@ export function PracticePage({
     ? contentList[currentLessonIndex - 1]
     : null;
 
-  // Direct lesson selector
-  const handleSelectLesson = (lesson) => {
+  // Direct lesson selector with unlock validation
+  const handleSelectLesson = (lesson, idx) => {
+    if (!isLessonUnlocked(idx)) {
+      toast.warning(`🔒 Lesson ${idx + 1} is locked! Complete Lesson ${idx} first to unlock it.`);
+      return;
+    }
     setCurrentSnippet(lesson);
     setCompletedResult(null);
     setEngineKey(Date.now());
@@ -191,15 +217,18 @@ export function PracticePage({
 
   // Next lesson handler (sequential guided path)
   const handleNextSnippet = () => {
-    if (nextLesson) {
+    if (nextLesson && currentLessonIndex + 1 < contentList.length) {
+      const nextIdx = currentLessonIndex + 1;
+      if (!isLessonUnlocked(nextIdx)) {
+        toast.warning(`🔒 Lesson ${nextIdx + 1} is locked! Complete Lesson ${currentLessonNumber} with ≥80% accuracy to unlock!`);
+        return;
+      }
       setCurrentSnippet(nextLesson);
       setCompletedResult(null);
       setEngineKey(Date.now());
     } else if (contentList.length > 1 && currentSnippet) {
-      // If at end of curriculum or looped
-      const remaining = contentList.filter((c) => c.id !== currentSnippet.id);
-      const nextItem = remaining[Math.floor(Math.random() * remaining.length)];
-      setCurrentSnippet(nextItem);
+      // Loop back to lesson 1
+      setCurrentSnippet(contentList[0]);
       setCompletedResult(null);
       setEngineKey(Date.now());
     } else {
@@ -218,8 +247,9 @@ export function PracticePage({
 
   // Completion handler
   const handleSessionComplete = async (metrics) => {
-    // Check if this counts as completing the lesson (accuracy >= 80%)
     const isPassing = metrics.accuracy >= 80;
+    const wasAlreadyCompleted = currentSnippet?.id && completedLessonIds.includes(currentSnippet.id);
+
     if (currentSnippet?.id && isPassing) {
       setCompletedLessonIds((prev) => {
         if (!prev.includes(currentSnippet.id)) {
@@ -231,6 +261,10 @@ export function PracticePage({
         }
         return prev;
       });
+
+      if (!wasAlreadyCompleted && nextLesson) {
+        toast.success(`🎉 Lesson ${currentLessonNumber} completed! 🔓 Lesson ${currentLessonNumber + 1} is now UNLOCKED!`);
+      }
     }
 
     // Detect level up (e.g. from beginner to intermediate, or intermediate to advanced)
@@ -628,9 +662,15 @@ export function PracticePage({
               </button>
               <button
                 className="btn btn-outline btn-sm"
-                disabled={!nextLesson}
+                disabled={!nextLesson || !isLessonUnlocked(currentLessonIndex + 1)}
                 onClick={handleNextSnippet}
-                title={nextLesson ? `Next: Lesson ${currentLessonNumber + 1} (${nextLesson.title})` : 'Last lesson'}
+                title={
+                  !nextLesson
+                    ? 'Last lesson'
+                    : !isLessonUnlocked(currentLessonIndex + 1)
+                    ? 'Next lesson locked (Complete this lesson first)'
+                    : `Next: Lesson ${currentLessonNumber + 1} (${nextLesson.title})`
+                }
                 style={{ padding: '0.35rem 0.55rem' }}
               >
                 <ArrowRight size={14} />
@@ -646,6 +686,119 @@ export function PracticePage({
               <ListOrdered size={15} />
               <span>All Lessons ({totalLessons})</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 50-Lesson Quick Progress & Unlock Strip (Horizontal Scroll Roadmap) */}
+      {!isCustomMode && !isTest && totalLessons > 0 && (
+        <div
+          className="card"
+          style={{
+            padding: '0.75rem 1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem' }}>
+            <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>Lesson Roadmap (1 to {totalLessons})</span>
+              <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>• Complete a lesson to unlock the next</span>
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                🔓 <strong>{unlockedLessonsCount}</strong> Unlocked
+              </span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                ✓ <strong style={{ color: 'var(--color-primary-forest)' }}>{completedCount}</strong> Completed
+              </span>
+              <span style={{ color: 'var(--color-text-muted)' }}>
+                🔒 <strong>{totalLessons - unlockedLessonsCount}</strong> Locked
+              </span>
+            </div>
+          </div>
+
+          {/* Horizontally scrollable pill strip */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              overflowX: 'auto',
+              paddingBottom: '0.35rem',
+              scrollbarWidth: 'thin'
+            }}
+          >
+            {contentList.map((item, idx) => {
+              const isSelected = item.id === currentSnippet?.id;
+              const isCompleted = completedLessonIds.includes(item.id);
+              const isUnlocked = isLessonUnlocked(idx);
+              const lessonNum = idx + 1;
+
+              return (
+                <button
+                  key={item.id || idx}
+                  onClick={() => handleSelectLesson(item, idx)}
+                  disabled={!isUnlocked}
+                  title={
+                    !isUnlocked
+                      ? `Lesson ${lessonNum}: Locked (Complete Lesson ${lessonNum - 1} first)`
+                      : isCompleted
+                      ? `Lesson ${lessonNum}: ${item.title} (Completed ✓)`
+                      : isSelected
+                      ? `Lesson ${lessonNum}: ${item.title} (Currently Active)`
+                      : `Lesson ${lessonNum}: ${item.title} (Unlocked)`
+                  }
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.25rem 0.55rem',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.75rem',
+                    fontWeight: isSelected ? 700 : 500,
+                    whiteSpace: 'nowrap',
+                    cursor: isUnlocked ? 'pointer' : 'not-allowed',
+                    border: isSelected
+                      ? '2px solid var(--color-primary-forest)'
+                      : isCompleted
+                      ? '1px solid var(--color-primary-forest)'
+                      : isUnlocked
+                      ? '1px solid var(--color-border)'
+                      : '1px solid var(--color-bg-soft)',
+                    backgroundColor: isSelected
+                      ? 'var(--color-primary-forest)'
+                      : isCompleted
+                      ? 'var(--color-bg-soft)'
+                      : isUnlocked
+                      ? 'var(--color-bg-surface)'
+                      : 'var(--color-bg-soft)',
+                    color: isSelected
+                      ? '#ffffff'
+                      : isCompleted
+                      ? 'var(--color-primary-forest)'
+                      : isUnlocked
+                      ? 'var(--color-text-primary)'
+                      : 'var(--color-text-muted)',
+                    opacity: isUnlocked ? 1 : 0.45,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 size={12} />
+                  ) : isSelected ? (
+                    <span>▶</span>
+                  ) : !isUnlocked ? (
+                    <Lock size={11} />
+                  ) : null}
+                  <span>{lessonNum}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -710,24 +863,24 @@ export function PracticePage({
         </div>
       )}
 
-      {/* Curriculum / All Lessons Modal */}
+      {/* Curriculum / All Lessons Modal (50 Lessons with Filters & Search) */}
       {showCurriculumModal && (
         <div className="modal-backdrop" onClick={() => setShowCurriculumModal(false)}>
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '680px', width: '92%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+            style={{ maxWidth: '720px', width: '94%', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
           >
-            <div className="modal-header" style={{ marginBottom: '1rem' }}>
+            <div className="modal-header" style={{ marginBottom: '0.75rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <GraduationCap size={20} color="var(--color-primary-forest)" />
+                  <GraduationCap size={22} color="var(--color-primary-forest)" />
                   <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
-                    {isCode ? `${selectedLanguage} Curriculum` : `${selectedCategory} Lessons`}
+                    {isCode ? `${selectedLanguage} Curriculum (50 Lessons)` : `${selectedCategory} Curriculum (50 Lessons)`}
                   </h3>
                 </div>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                  Structured lesson progression from Beginner to Advanced. Select any lesson or continue in sequence.
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                  Progressive curriculum from Lesson 1 to Lesson 50. Complete each lesson to unlock subsequent challenges.
                 </p>
               </div>
               <button className="modal-close" onClick={() => setShowCurriculumModal(false)}>
@@ -741,118 +894,203 @@ export function PracticePage({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0.75rem 1rem',
+                padding: '0.65rem 1rem',
                 backgroundColor: 'var(--color-bg-soft)',
                 borderRadius: 'var(--radius-md)',
-                marginBottom: '1rem',
-                fontSize: '0.875rem'
+                marginBottom: '0.75rem',
+                fontSize: '0.85rem'
               }}
             >
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                Total Lessons: <strong style={{ color: 'var(--color-text-primary)' }}>{totalLessons}</strong>
+              <span>
+                Total: <strong>{totalLessons} Lessons</strong>
               </span>
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                Completed: <strong style={{ color: 'var(--color-primary-forest)' }}>{completedCount} of {totalLessons} ({progressPercent}%)</strong>
+              <span>
+                Unlocked: <strong style={{ color: 'var(--color-text-primary)' }}>{unlockedLessonsCount}</strong>
               </span>
+              <span>
+                Completed:{' '}
+                <strong style={{ color: 'var(--color-primary-forest)' }}>
+                  {completedCount} / {totalLessons} ({progressPercent}%)
+                </strong>
+              </span>
+            </div>
+
+            {/* Filter Tabs & Search Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {[
+                  { key: 'all', label: `All (${totalLessons})` },
+                  { key: 'beginner', label: 'Beginner (1-15)' },
+                  { key: 'intermediate', label: 'Intermediate (16-35)' },
+                  { key: 'advanced', label: 'Advanced (36-50)' },
+                  { key: 'unlocked', label: `Unlocked Only (${unlockedLessonsCount})` }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    className={`btn btn-sm ${modalFilter === tab.key ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}
+                    onClick={() => setModalFilter(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search input */}
+              <div style={{ position: 'relative' }}>
+                <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Search lessons by title, keyword, or number..."
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem', padding: '0.4rem 0.75rem 0.4rem 2.25rem' }}
+                />
+              </div>
             </div>
 
             {/* Lessons List */}
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.65rem', paddingRight: '0.25rem' }}>
-              {contentList.map((lesson, idx) => {
-                const isSelected = lesson.id === currentSnippet?.id;
-                const isCompleted = completedLessonIds.includes(lesson.id);
+            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.25rem' }}>
+              {contentList
+                .filter((lesson, idx) => {
+                  const lessonNum = idx + 1;
+                  const isUnlocked = isLessonUnlocked(idx);
 
-                return (
-                  <div
-                    key={lesson.id || idx}
-                    onClick={() => handleSelectLesson(lesson)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.85rem 1rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: isSelected
-                        ? '1.5px solid var(--color-primary-forest)'
-                        : '1px solid var(--color-border)',
-                      backgroundColor: isSelected
-                        ? 'var(--color-bg-surface)'
-                        : 'var(--color-bg-card)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <div
-                        style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          backgroundColor: isCompleted
-                            ? 'var(--color-primary-forest)'
-                            : isSelected
-                            ? 'var(--color-primary-sage)'
-                            : 'var(--color-bg-soft)',
-                          color: isCompleted
-                            ? '#ffffff'
-                            : isSelected
-                            ? '#ffffff'
-                            : 'var(--color-text-secondary)'
-                        }}
-                      >
-                        {isCompleted ? <CheckCircle2 size={16} /> : idx + 1}
+                  // Tab filter
+                  if (modalFilter === 'beginner' && (lessonNum < 1 || lessonNum > 15)) return false;
+                  if (modalFilter === 'intermediate' && (lessonNum < 16 || lessonNum > 35)) return false;
+                  if (modalFilter === 'advanced' && (lessonNum < 36 || lessonNum > 50)) return false;
+                  if (modalFilter === 'unlocked' && !isUnlocked) return false;
+
+                  // Search filter
+                  if (modalSearch.trim()) {
+                    const q = modalSearch.toLowerCase();
+                    const matchTitle = lesson.title.toLowerCase().includes(q);
+                    const matchNum = String(lessonNum) === q || `lesson ${lessonNum}`.includes(q);
+                    return matchTitle || matchNum;
+                  }
+
+                  return true;
+                })
+                .map((lesson) => {
+                  const originalIdx = contentList.findIndex((item) => item.id === lesson.id);
+                  const idx = originalIdx >= 0 ? originalIdx : 0;
+                  const isSelected = lesson.id === currentSnippet?.id;
+                  const isCompleted = completedLessonIds.includes(lesson.id);
+                  const isUnlocked = isLessonUnlocked(idx);
+                  const lessonNum = idx + 1;
+
+                  return (
+                    <div
+                      key={lesson.id || idx}
+                      onClick={() => handleSelectLesson(lesson, idx)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: isSelected
+                          ? '1.5px solid var(--color-primary-forest)'
+                          : isCompleted
+                          ? '1px solid var(--color-primary-forest)'
+                          : isUnlocked
+                          ? '1px solid var(--color-border)'
+                          : '1px solid var(--color-bg-soft)',
+                        backgroundColor: isSelected
+                          ? 'var(--color-bg-surface)'
+                          : isUnlocked
+                          ? 'var(--color-bg-card)'
+                          : 'var(--color-bg-soft)',
+                        cursor: isUnlocked ? 'pointer' : 'not-allowed',
+                        opacity: isUnlocked ? 1 : 0.55,
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            backgroundColor: isCompleted
+                              ? 'var(--color-primary-forest)'
+                              : isSelected
+                              ? 'var(--color-primary-sage)'
+                              : isUnlocked
+                              ? 'var(--color-bg-soft)'
+                              : 'var(--color-bg-surface)',
+                            color: isCompleted
+                              ? '#ffffff'
+                              : isSelected
+                              ? '#ffffff'
+                              : 'var(--color-text-secondary)'
+                          }}
+                        >
+                          {isCompleted ? (
+                            <CheckCircle2 size={16} />
+                          ) : !isUnlocked ? (
+                            <Lock size={13} color="var(--color-text-muted)" />
+                          ) : (
+                            lessonNum
+                          )}
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.92rem', color: isUnlocked ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}>
+                              {lesson.title}
+                            </span>
+                            <span
+                              className={`badge ${
+                                lesson.difficulty === 'beginner'
+                                  ? 'badge-sage'
+                                  : lesson.difficulty === 'intermediate'
+                                  ? 'badge-sand'
+                                  : 'badge-terracotta'
+                              }`}
+                              style={{ textTransform: 'capitalize', fontSize: '0.7rem', padding: '0.12rem 0.45rem' }}
+                            >
+                              {lesson.difficulty}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                            {lesson.word_count || lesson.content?.split(/\s+/).length || 0} words • {lesson.char_count || lesson.content?.length || 0} chars
+                          </span>
+                        </div>
                       </div>
 
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>
-                            {lesson.title}
+                        {isSelected ? (
+                          <span className="badge badge-forest" style={{ fontSize: '0.75rem' }}>
+                            Active
                           </span>
-                          <span
-                            className={`badge ${
-                              lesson.difficulty === 'beginner'
-                                ? 'badge-sage'
-                                : lesson.difficulty === 'intermediate'
-                                ? 'badge-sand'
-                                : 'badge-terracotta'
-                            }`}
-                            style={{ textTransform: 'capitalize', fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
-                          >
-                            {lesson.difficulty}
+                        ) : isCompleted ? (
+                          <span style={{ color: 'var(--color-primary-forest)', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle2 size={14} /> Completed
                           </span>
-                        </div>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-                          {lesson.word_count || lesson.content?.split(/\s+/).length || 0} words • {lesson.char_count || lesson.content?.length || 0} chars
-                        </span>
+                        ) : isUnlocked ? (
+                          <span className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem' }}>
+                            Play →
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Lock size={12} /> Locked
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    <div>
-                      {isSelected ? (
-                        <span className="badge badge-forest" style={{ fontSize: '0.75rem' }}>
-                          Current
-                        </span>
-                      ) : isCompleted ? (
-                        <span style={{ color: 'var(--color-primary-forest)', fontSize: '0.8rem', fontWeight: 600 }}>
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem' }}>
-                          Start →
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowCurriculumModal(false)}>
                 Close
               </button>
