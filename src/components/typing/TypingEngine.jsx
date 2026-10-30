@@ -166,13 +166,13 @@ export function TypingEngine({
       </div>
 
       {/* Target Info Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span className="badge badge-sage">{language}</span>
           <span className="badge badge-forest">{difficulty}</span>
           <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{title}</span>
         </div>
-        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
           {typedText.length} / {targetText.length} characters
         </span>
       </div>
