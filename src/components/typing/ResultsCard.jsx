@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap } from 'lucide-react';
+import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap, Sparkles } from 'lucide-react';
 import { formatDuration } from '../../utils/wpmCalculator.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -33,11 +33,66 @@ export function ResultsCard({
       <div className="results-header">
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <CheckCircle2 size={24} color="var(--color-primary-forest)" />
-          <span className="badge badge-sage">Session Complete</span>
+          <span className="badge badge-sage">
+            {result.lessonNumber && result.totalLessons
+              ? `Lesson ${result.lessonNumber} of ${result.totalLessons} Complete`
+              : 'Session Complete'}
+          </span>
         </div>
         <h2 className="results-title">
-          {isPersonalBest ? 'Outstanding! New Personal Best!' : 'Great Focus & Consistency!'}
+          {result.isCourseComplete
+            ? '🏆 Course Completed! Fantastic Job!'
+            : isPersonalBest
+            ? 'Outstanding! New Personal Best!'
+            : 'Great Focus & Consistency!'}
         </h2>
+
+        {/* Level Up Banner */}
+        {result.levelUpInfo && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              backgroundColor: 'var(--color-bg-soft)',
+              padding: '0.45rem 1rem',
+              borderRadius: 'var(--radius-full)',
+              border: '1px solid var(--color-primary-forest)',
+              color: 'var(--color-primary-forest)',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              margin: '0.5rem auto 0.75rem'
+            }}
+          >
+            <Sparkles size={16} />
+            <span>
+              Level Up! Mastered {result.levelUpInfo.from} → Promoted to {result.levelUpInfo.to}!
+            </span>
+          </div>
+        )}
+
+        {/* Course Completion Banner */}
+        {result.isCourseComplete && !result.levelUpInfo && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              backgroundColor: 'var(--color-bg-soft)',
+              padding: '0.45rem 1rem',
+              borderRadius: 'var(--radius-full)',
+              border: '1px solid var(--color-primary-forest)',
+              color: 'var(--color-primary-forest)',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              margin: '0.5rem auto 0.75rem'
+            }}
+          >
+            <Award size={18} />
+            <span>All lessons completed in this curriculum!</span>
+          </div>
+        )}
+
         <p style={{ color: 'var(--color-text-secondary)', maxWidth: '520px', margin: '0 auto' }}>
           Every completed session trains neural pathways and muscle memory for faster, fatigue-free typing.
         </p>
@@ -148,7 +203,11 @@ export function ResultsCard({
         </button>
 
         <button className="btn btn-primary" onClick={onNextPractice}>
-          <span>Next Practice</span>
+          <span>
+            {result.nextLesson
+              ? `Next: Lesson ${result.lessonNumber + 1} (${result.nextLesson.title.length > 25 ? result.nextLesson.title.slice(0, 25) + '...' : result.nextLesson.title})`
+              : 'Next Practice'}
+          </span>
           <ArrowRight size={16} />
         </button>
 

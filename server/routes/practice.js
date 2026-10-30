@@ -37,20 +37,54 @@ router.get('/content', optionalAuthenticate, (req, res) => {
     params.push(difficulty);
   }
 
+  // Order lessons sequentially by difficulty: Beginner -> Intermediate -> Advanced, then ID
+  sql += ` ORDER BY CASE LOWER(difficulty)
+    WHEN 'beginner' THEN 1
+    WHEN 'intermediate' THEN 2
+    WHEN 'advanced' THEN 3
+    ELSE 4
+  END ASC, id ASC`;
+
   // Get matching items
   const items = db.prepare(sql).all(...params);
+
+  // Get completed lessons for authenticated user
+  let completedLessonIds = [];
+  if (req.user?.id) {
+    try {
+      const rows = db.prepare(`
+        SELECT DISTINCT content_id
+        FROM typing_sessions
+        WHERE user_id = ? AND content_id IS NOT NULL
+      `).all(req.user.id);
+      completedLessonIds = rows.map((r) => r.content_id);
+    } catch (e) {
+      console.warn('Could not query completed lessons for user', e);
+    }
+  }
 
   if (items.length === 0) {
     // Fallback: return any matching type or random item so user never gets stuck
     const fallback = db.prepare('SELECT * FROM practice_content ORDER BY RANDOM() LIMIT 1').get();
-    return res.json({ item: fallback, fallback: true });
+    return res.json({
+      item: fallback,
+      items: fallback ? [fallback] : [],
+      completedLessonIds,
+      totalMatches: fallback ? 1 : 0,
+      fallback: true
+    });
   }
 
-  // Pick random item from matched set
-  const randomIndex = Math.floor(Math.random() * items.length);
-  const selected = items[randomIndex];
+  // Select the first uncompleted lesson in the curriculum, or first lesson if all completed
+  const firstIncomplete = items.find((it) => !completedLessonIds.includes(it.id));
+  const selected = firstIncomplete || items[0];
 
-  return res.json({ item: selected, totalMatches: items.length });
+  return res.json({
+    item: selected,
+    items,
+    completedLessonIds,
+    totalMatches: items.length
+  });
 });
 
 router.get('/languages', (req, res) => {

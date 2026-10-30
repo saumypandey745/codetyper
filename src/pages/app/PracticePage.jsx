@@ -11,9 +11,15 @@ import {
   Shuffle,
   FileText,
   CheckCircle,
+  CheckCircle2,
   HelpCircle,
   Layers,
-  ArrowRight
+  ArrowRight,
+  ArrowLeft,
+  ListOrdered,
+  X,
+  GraduationCap,
+  Trophy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
@@ -22,6 +28,8 @@ import { api } from '../../utils/api.js';
 import { TypingEngine } from '../../components/typing/TypingEngine.jsx';
 import { ResultsCard } from '../../components/typing/ResultsCard.jsx';
 import { programmingLanguages, englishCategories } from '../../../server/seedData.js';
+
+const GUEST_COMPLETED_KEY = 'codetyper_completed_lessons';
 
 export function PracticePage({
   initialType = 'practice',
@@ -41,13 +49,24 @@ export function PracticePage({
   const [duration, setDuration] = useState(initialType === 'test' ? 60 : 30);
   const [wordCount, setWordCount] = useState(25);
 
-  // Content state
+  // Content & Curriculum state
   const [contentList, setContentList] = useState([]);
   const [currentSnippet, setCurrentSnippet] = useState(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [customText, setCustomText] = useState('');
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showCurriculumModal, setShowCurriculumModal] = useState(false);
+
+  // Completed lesson IDs (stored in localStorage for guest, DB for authenticated)
+  const [completedLessonIds, setCompletedLessonIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem(GUEST_COMPLETED_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Result state
   const [completedResult, setCompletedResult] = useState(null);
@@ -69,7 +88,7 @@ export function PracticePage({
   const isTest = practiceType === 'test';
 
   // Load content from API
-  const fetchContent = useCallback(async () => {
+  const fetchContent = useCallback(async (preferredSnippetId = null) => {
     setLoadingContent(true);
     try {
       const params = {};
@@ -92,13 +111,29 @@ export function PracticePage({
       }
 
       const res = await api.practice.getContent(params);
-      const items = res.items || [];
+      const items = res.items || (res.item ? [res.item] : []);
       setContentList(items);
 
+      // Merge server completed lesson IDs with local storage
+      if (Array.isArray(res.completedLessonIds)) {
+        setCompletedLessonIds((prev) => {
+          const merged = Array.from(new Set([...prev, ...res.completedLessonIds]));
+          try {
+            localStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+
       if (items.length > 0) {
-        // Pick random item
-        const randomIndex = Math.floor(Math.random() * items.length);
-        setCurrentSnippet(items[randomIndex]);
+        if (preferredSnippetId) {
+          const found = items.find((it) => it.id === preferredSnippetId);
+          setCurrentSnippet(found || items[0]);
+        } else if (res.item) {
+          setCurrentSnippet(res.item);
+        } else {
+          setCurrentSnippet(items[0]);
+        }
       } else {
         // Fallback default text if server returns empty list
         setCurrentSnippet({
@@ -113,7 +148,6 @@ export function PracticePage({
       }
     } catch (err) {
       console.warn('Failed to fetch practice content', err);
-      // Fallback snippet
       setCurrentSnippet({
         id: null,
         title: 'Calm Practice Session',
@@ -133,9 +167,36 @@ export function PracticePage({
     }
   }, [fetchContent, isCustomMode]);
 
-  // Next snippet handler
+  // Derived lesson & curriculum calculations
+  const currentLessonIndex = contentList.findIndex((c) => c.id === currentSnippet?.id);
+  const currentLessonNumber = currentLessonIndex >= 0 ? currentLessonIndex + 1 : 1;
+  const totalLessons = contentList.length;
+  const completedCount = contentList.filter((c) => completedLessonIds.includes(c.id)).length;
+  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const isCurrentCompleted = currentSnippet?.id && completedLessonIds.includes(currentSnippet.id);
+  const nextLesson = currentLessonIndex >= 0 && currentLessonIndex + 1 < contentList.length
+    ? contentList[currentLessonIndex + 1]
+    : null;
+  const prevLesson = currentLessonIndex > 0
+    ? contentList[currentLessonIndex - 1]
+    : null;
+
+  // Direct lesson selector
+  const handleSelectLesson = (lesson) => {
+    setCurrentSnippet(lesson);
+    setCompletedResult(null);
+    setEngineKey(Date.now());
+    setShowCurriculumModal(false);
+  };
+
+  // Next lesson handler (sequential guided path)
   const handleNextSnippet = () => {
-    if (contentList.length > 1 && currentSnippet) {
+    if (nextLesson) {
+      setCurrentSnippet(nextLesson);
+      setCompletedResult(null);
+      setEngineKey(Date.now());
+    } else if (contentList.length > 1 && currentSnippet) {
+      // If at end of curriculum or looped
       const remaining = contentList.filter((c) => c.id !== currentSnippet.id);
       const nextItem = remaining[Math.floor(Math.random() * remaining.length)];
       setCurrentSnippet(nextItem);
@@ -146,9 +207,53 @@ export function PracticePage({
     }
   };
 
+  // Previous lesson handler
+  const handlePrevSnippet = () => {
+    if (prevLesson) {
+      setCurrentSnippet(prevLesson);
+      setCompletedResult(null);
+      setEngineKey(Date.now());
+    }
+  };
+
   // Completion handler
   const handleSessionComplete = async (metrics) => {
-    setCompletedResult(metrics);
+    // Check if this counts as completing the lesson (accuracy >= 80%)
+    const isPassing = metrics.accuracy >= 80;
+    if (currentSnippet?.id && isPassing) {
+      setCompletedLessonIds((prev) => {
+        if (!prev.includes(currentSnippet.id)) {
+          const updated = [...prev, currentSnippet.id];
+          try {
+            localStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify(updated));
+          } catch {}
+          return updated;
+        }
+        return prev;
+      });
+    }
+
+    // Detect level up (e.g. from beginner to intermediate, or intermediate to advanced)
+    let levelUpInfo = null;
+    if (nextLesson && currentSnippet?.difficulty && nextLesson.difficulty) {
+      if (currentSnippet.difficulty.toLowerCase() !== nextLesson.difficulty.toLowerCase()) {
+        levelUpInfo = {
+          from: currentSnippet.difficulty,
+          to: nextLesson.difficulty
+        };
+      }
+    }
+
+    const isCourseComplete = (currentLessonIndex + 1 >= totalLessons) && isPassing;
+
+    setCompletedResult({
+      ...metrics,
+      lessonNumber: currentLessonNumber,
+      totalLessons,
+      nextLesson,
+      levelUpInfo,
+      isCourseComplete
+    });
 
     // Prepare payload for backend
     const sessionPayload = {
@@ -173,13 +278,13 @@ export function PracticePage({
         if (response.statistics) {
           updateUserStats(response.statistics);
         }
-        toast.success(`Session recorded! Speed: ${metrics.netWpm} WPM (${metrics.accuracy}% acc)`);
+        toast.success(`Lesson recorded! Speed: ${metrics.netWpm} WPM (${metrics.accuracy}% acc)`);
       } catch (err) {
         console.error('Failed to save session to server', err);
         toast.warning('Session completed. Offline queue saved.');
       }
     } else {
-      toast.info('Sign up or log in to permanently save your progress and unlock rank charts.');
+      toast.info('Sign up or log in to permanently save your progress and sync across devices.');
     }
   };
 
@@ -413,6 +518,138 @@ export function PracticePage({
         </div>
       </div>
 
+      {/* Lesson Curriculum & Level Progression Bar */}
+      {!isCustomMode && !isTest && totalLessons > 0 && (
+        <div
+          className="card"
+          style={{
+            padding: '0.85rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            borderLeft: '4px solid var(--color-primary-forest)'
+          }}
+        >
+          {/* Left: Lesson Number, Title & Level Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span
+              className="badge badge-forest"
+              style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.3rem 0.65rem' }}
+            >
+              Lesson {currentLessonNumber} of {totalLessons}
+            </span>
+
+            <span style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--color-text-primary)' }}>
+              {currentSnippet?.title || 'Focused Practice'}
+            </span>
+
+            <span
+              className={`badge ${
+                currentSnippet?.difficulty === 'beginner'
+                  ? 'badge-sage'
+                  : currentSnippet?.difficulty === 'intermediate'
+                  ? 'badge-sand'
+                  : 'badge-terracotta'
+              }`}
+              style={{ textTransform: 'capitalize', fontSize: '0.75rem' }}
+            >
+              {currentSnippet?.difficulty || 'Practice'}
+            </span>
+
+            {isCurrentCompleted && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  color: 'var(--color-primary-forest)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600
+                }}
+              >
+                <CheckCircle2 size={15} />
+                <span>Completed</span>
+              </span>
+            )}
+          </div>
+
+          {/* Right: Progress % Bar & Prev / Next Navigation & All Lessons Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            {/* Progress Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: '150px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '0.75rem',
+                  color: 'var(--color-text-muted)'
+                }}
+              >
+                <span>Curriculum Progress</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-primary-forest)' }}>
+                  {completedCount}/{totalLessons} ({progressPercent}%)
+                </span>
+              </div>
+              <div
+                style={{
+                  width: '100%',
+                  height: '6px',
+                  backgroundColor: 'var(--color-bg-soft)',
+                  borderRadius: '999px',
+                  overflow: 'hidden'
+                }}
+              >
+                <div
+                  style={{
+                    width: `${progressPercent}%`,
+                    height: '100%',
+                    backgroundColor: 'var(--color-primary-forest)',
+                    borderRadius: '999px',
+                    transition: 'width 0.4s ease'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Quick Prev / Next Arrows */}
+            <div style={{ display: 'inline-flex', gap: '0.25rem' }}>
+              <button
+                className="btn btn-outline btn-sm"
+                disabled={!prevLesson}
+                onClick={handlePrevSnippet}
+                title={prevLesson ? `Previous: Lesson ${currentLessonNumber - 1} (${prevLesson.title})` : 'First lesson'}
+                style={{ padding: '0.35rem 0.55rem' }}
+              >
+                <ArrowLeft size={14} />
+              </button>
+              <button
+                className="btn btn-outline btn-sm"
+                disabled={!nextLesson}
+                onClick={handleNextSnippet}
+                title={nextLesson ? `Next: Lesson ${currentLessonNumber + 1} (${nextLesson.title})` : 'Last lesson'}
+                style={{ padding: '0.35rem 0.55rem' }}
+              >
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {/* Curriculum Modal Trigger */}
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowCurriculumModal(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}
+            >
+              <ListOrdered size={15} />
+              <span>All Lessons ({totalLessons})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Practice Surface */}
       {completedResult ? (
         <ResultsCard
@@ -467,6 +704,157 @@ export function PracticePage({
               </button>
               <button className="btn btn-primary" onClick={handleApplyCustomText}>
                 Load Custom Passage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Curriculum / All Lessons Modal */}
+      {showCurriculumModal && (
+        <div className="modal-backdrop" onClick={() => setShowCurriculumModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '680px', width: '92%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="modal-header" style={{ marginBottom: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <GraduationCap size={20} color="var(--color-primary-forest)" />
+                  <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
+                    {isCode ? `${selectedLanguage} Curriculum` : `${selectedCategory} Lessons`}
+                  </h3>
+                </div>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                  Structured lesson progression from Beginner to Advanced. Select any lesson or continue in sequence.
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setShowCurriculumModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Curriculum Stats Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 1rem',
+                backgroundColor: 'var(--color-bg-soft)',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: '1rem',
+                fontSize: '0.875rem'
+              }}
+            >
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                Total Lessons: <strong style={{ color: 'var(--color-text-primary)' }}>{totalLessons}</strong>
+              </span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                Completed: <strong style={{ color: 'var(--color-primary-forest)' }}>{completedCount} of {totalLessons} ({progressPercent}%)</strong>
+              </span>
+            </div>
+
+            {/* Lessons List */}
+            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.65rem', paddingRight: '0.25rem' }}>
+              {contentList.map((lesson, idx) => {
+                const isSelected = lesson.id === currentSnippet?.id;
+                const isCompleted = completedLessonIds.includes(lesson.id);
+
+                return (
+                  <div
+                    key={lesson.id || idx}
+                    onClick={() => handleSelectLesson(lesson)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.85rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: isSelected
+                        ? '1.5px solid var(--color-primary-forest)'
+                        : '1px solid var(--color-border)',
+                      backgroundColor: isSelected
+                        ? 'var(--color-bg-surface)'
+                        : 'var(--color-bg-card)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          backgroundColor: isCompleted
+                            ? 'var(--color-primary-forest)'
+                            : isSelected
+                            ? 'var(--color-primary-sage)'
+                            : 'var(--color-bg-soft)',
+                          color: isCompleted
+                            ? '#ffffff'
+                            : isSelected
+                            ? '#ffffff'
+                            : 'var(--color-text-secondary)'
+                        }}
+                      >
+                        {isCompleted ? <CheckCircle2 size={16} /> : idx + 1}
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>
+                            {lesson.title}
+                          </span>
+                          <span
+                            className={`badge ${
+                              lesson.difficulty === 'beginner'
+                                ? 'badge-sage'
+                                : lesson.difficulty === 'intermediate'
+                                ? 'badge-sand'
+                                : 'badge-terracotta'
+                            }`}
+                            style={{ textTransform: 'capitalize', fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
+                          >
+                            {lesson.difficulty}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                          {lesson.word_count || lesson.content?.split(/\s+/).length || 0} words • {lesson.char_count || lesson.content?.length || 0} chars
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      {isSelected ? (
+                        <span className="badge badge-forest" style={{ fontSize: '0.75rem' }}>
+                          Current
+                        </span>
+                      ) : isCompleted ? (
+                        <span style={{ color: 'var(--color-primary-forest)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem' }}>
+                          Start →
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowCurriculumModal(false)}>
+                Close
               </button>
             </div>
           </div>
