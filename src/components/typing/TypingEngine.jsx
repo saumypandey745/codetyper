@@ -85,7 +85,7 @@ export function TypingEngine({
           className={`char-token ${state} ${isCurrent ? 'current' : ''}`}
           style={{ position: 'relative' }}
         >
-          {isCurrent && status === 'typing' && (
+          {isCurrent && (status === 'typing' || status === 'idle') && (
             <span
               className={`typing-caret caret-${settings.cursor_style || 'line'}`}
               aria-hidden="true"

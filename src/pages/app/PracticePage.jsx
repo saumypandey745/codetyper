@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Code2,
   BookOpen,
@@ -75,6 +75,13 @@ export function PracticePage({
     }
   });
 
+  const completedLessonIdsRef = useRef(completedLessonIds);
+  useEffect(() => {
+    completedLessonIdsRef.current = completedLessonIds;
+  }, [completedLessonIds]);
+
+  const activeRoadmapPillRef = useRef(null);
+
   // Result state
   const [completedResult, setCompletedResult] = useState(null);
   const [engineKey, setEngineKey] = useState(Date.now());
@@ -122,13 +129,17 @@ export function PracticePage({
       setContentList(items);
 
       // Merge server completed lesson IDs with local storage
-      let mergedCompleted = completedLessonIds;
-      if (Array.isArray(res.completedLessonIds)) {
-        mergedCompleted = Array.from(new Set([...completedLessonIds, ...res.completedLessonIds]));
-        setCompletedLessonIds(mergedCompleted);
-        try {
-          localStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify(mergedCompleted));
-        } catch {}
+      const currentCompleted = completedLessonIdsRef.current || [];
+      let mergedCompleted = currentCompleted;
+      if (Array.isArray(res.completedLessonIds) && res.completedLessonIds.length > 0) {
+        const mergedSet = new Set([...currentCompleted, ...res.completedLessonIds]);
+        if (mergedSet.size !== currentCompleted.length) {
+          mergedCompleted = Array.from(mergedSet);
+          setCompletedLessonIds(mergedCompleted);
+          try {
+            localStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify(mergedCompleted));
+          } catch {}
+        }
       }
 
       if (items.length > 0) {
@@ -168,7 +179,7 @@ export function PracticePage({
       setLoadingContent(false);
       setEngineKey(Date.now());
     }
-  }, [practiceType, selectedLanguage, selectedCategory, selectedDifficulty, isCode, completedLessonIds]);
+  }, [practiceType, selectedLanguage, selectedCategory, selectedDifficulty, isCode]);
 
   useEffect(() => {
     if (!isCustomMode) {
@@ -244,6 +255,17 @@ export function PracticePage({
       setEngineKey(Date.now());
     }
   };
+
+  // Auto-scroll active pill into view in roadmap strip
+  useEffect(() => {
+    if (activeRoadmapPillRef.current) {
+      activeRoadmapPillRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [currentSnippet?.id]);
 
   // Completion handler
   const handleSessionComplete = async (metrics) => {
@@ -614,11 +636,12 @@ export function PracticePage({
           {/* Right: Progress % Bar & Prev / Next Navigation & All Lessons Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             {/* Progress Bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: '150px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '160px' }}>
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
+                  gap: '0.75rem',
                   fontSize: '0.75rem',
                   color: 'var(--color-text-muted)'
                 }}
@@ -643,7 +666,7 @@ export function PracticePage({
                     height: '100%',
                     backgroundColor: 'var(--color-primary-forest)',
                     borderRadius: '999px',
-                    transition: 'width 0.4s ease'
+                    transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                   }}
                 />
               </div>
@@ -723,16 +746,7 @@ export function PracticePage({
           </div>
 
           {/* Horizontally scrollable pill strip */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              overflowX: 'auto',
-              paddingBottom: '0.35rem',
-              scrollbarWidth: 'thin'
-            }}
-          >
+          <div className="lesson-roadmap-strip">
             {contentList.map((item, idx) => {
               const isSelected = item.id === currentSnippet?.id;
               const isCompleted = completedLessonIds.includes(item.id);
@@ -742,8 +756,10 @@ export function PracticePage({
               return (
                 <button
                   key={item.id || idx}
+                  ref={isSelected ? activeRoadmapPillRef : null}
                   onClick={() => handleSelectLesson(item, idx)}
                   disabled={!isUnlocked}
+                  className={`roadmap-pill ${isSelected ? 'active' : ''}`}
                   title={
                     !isUnlocked
                       ? `Lesson ${lessonNum}: Locked (Complete Lesson ${lessonNum - 1} first)`
@@ -754,14 +770,6 @@ export function PracticePage({
                       : `Lesson ${lessonNum}: ${item.title} (Unlocked)`
                   }
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.55rem',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.75rem',
-                    fontWeight: isSelected ? 700 : 500,
-                    whiteSpace: 'nowrap',
                     cursor: isUnlocked ? 'pointer' : 'not-allowed',
                     border: isSelected
                       ? '2px solid var(--color-primary-forest)'
@@ -784,8 +792,7 @@ export function PracticePage({
                       : isUnlocked
                       ? 'var(--color-text-primary)'
                       : 'var(--color-text-muted)',
-                    opacity: isUnlocked ? 1 : 0.45,
-                    transition: 'all 0.15s ease'
+                    opacity: isUnlocked ? 1 : 0.45
                   }}
                 >
                   {isCompleted ? (

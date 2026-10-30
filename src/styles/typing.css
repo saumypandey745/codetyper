@@ -1,10 +1,11 @@
 /* Typing Container & Wrapper */
 .typing-container {
-  max-width: 960px;
+  max-width: 980px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-5);
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Typing HUD & Control Bar */
@@ -12,13 +13,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-6);
+  padding: 0.85rem 1.4rem;
   background-color: var(--color-bg-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
   gap: var(--space-4);
+  transition: all var(--transition-normal);
 }
 
 .hud-stat-group {
@@ -30,26 +34,29 @@
 .hud-stat-item {
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
 }
 
 .hud-stat-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
 }
 
 .hud-stat-value {
   font-family: var(--font-heading);
-  font-size: 1.6rem;
+  font-size: 1.65rem;
   font-weight: 700;
   color: var(--color-text-primary);
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .hud-stat-value.highlight {
   color: var(--color-primary-forest);
+  text-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
 }
 
 .hud-controls {
@@ -62,35 +69,45 @@
 .timer-pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0.4rem 0.85rem;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
   border-radius: var(--radius-full);
   background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary-soft);
   color: var(--color-primary-forest);
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-fast);
 }
 
 /* Typing Display Viewport */
 .typing-viewport {
   position: relative;
   background-color: var(--color-bg-surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: var(--space-8);
-  box-shadow: var(--shadow-md);
-  min-height: 280px;
+  padding: 2rem 2.25rem;
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  min-height: 290px;
   max-height: 480px;
   overflow-y: auto;
   cursor: text;
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-normal);
 }
 
 .typing-viewport.focused {
   border-color: var(--color-primary-sage);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 3px rgba(35, 107, 77, 0.16), 0 12px 32px -4px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .typing-viewport.focused {
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2), 0 16px 40px -8px rgba(0, 0, 0, 0.5);
 }
 
 .typing-hidden-input {
@@ -107,8 +124,8 @@
 .code-mode-container {
   display: flex;
   font-family: var(--font-mono);
-  font-size: 1.05rem;
-  line-height: 1.7;
+  font-size: 1.08rem;
+  line-height: 1.8;
   letter-spacing: 0.02em;
 }
 
@@ -117,24 +134,27 @@
   flex-direction: column;
   user-select: none;
   color: var(--color-text-muted);
+  opacity: 0.6;
   padding-right: var(--space-4);
   margin-right: var(--space-4);
-  border-right: 1px solid var(--color-border-subtle);
+  border-right: 1px solid var(--color-border);
   text-align: right;
-  min-width: 2.2rem;
+  min-width: 2.4rem;
   font-size: 0.9rem;
+  line-height: 1.8;
 }
 
 /* Typing Text Content */
 .typing-text-content {
   flex: 1;
   font-family: var(--font-mono);
-  font-size: 1.15rem;
-  line-height: 1.8;
+  font-size: 1.18rem;
+  line-height: 1.85;
   letter-spacing: 0.015em;
   white-space: pre-wrap;
   word-break: break-word;
   user-select: none;
+  tab-size: 2;
 }
 
 .typing-text-content.english-font {
@@ -147,8 +167,8 @@
 /* Character Tokens */
 .char-token {
   position: relative;
-  transition: color 80ms ease, background-color 80ms ease;
-  border-radius: 2px;
+  transition: color 70ms ease, background-color 70ms ease;
+  border-radius: 3px;
 }
 
 .char-token.pending {
@@ -160,10 +180,19 @@
   background-color: var(--color-char-correct-bg);
 }
 
+[data-theme="dark"] .char-token.correct {
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.25);
+}
+
 .char-token.wrong {
   color: var(--color-char-wrong);
   background-color: var(--color-char-wrong-bg);
   text-decoration: underline wavy var(--color-char-wrong);
+  text-underline-offset: 3px;
+}
+
+.char-token.current {
+  background-color: rgba(52, 211, 153, 0.15);
 }
 
 /* Caret / Cursor Styles */
@@ -171,42 +200,102 @@
   position: absolute;
   display: inline-block;
   pointer-events: none;
-  transition: left 80ms cubic-bezier(0.16, 1, 0.3, 1), top 80ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: left 70ms cubic-bezier(0.16, 1, 0.3, 1), top 70ms cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 10;
 }
 
 .caret-line {
   width: 2.5px;
-  height: 1.3em;
+  height: 1.35em;
   background-color: var(--color-cursor);
-  border-radius: 2px;
-  animation: caretBlink 1s infinite ease-in-out;
+  border-radius: 3px;
+  box-shadow: 0 0 8px var(--color-cursor);
+  animation: caretBlinkGlow 1.05s infinite ease-in-out;
 }
 
 .caret-block {
-  width: 0.6em;
-  height: 1.2em;
+  width: 0.62em;
+  height: 1.25em;
   background-color: var(--color-primary-sage);
   opacity: 0.45;
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
   animation: caretPulse 1.2s infinite ease-in-out;
 }
 
 .caret-underline {
-  width: 0.6em;
+  width: 0.65em;
   height: 3px;
   background-color: var(--color-cursor);
-  margin-top: 1.1em;
-  animation: caretBlink 1s infinite ease-in-out;
+  margin-top: 1.15em;
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--color-cursor);
+  animation: caretBlinkGlow 1.05s infinite ease-in-out;
 }
 
-@keyframes caretBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+@keyframes caretBlinkGlow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px var(--color-cursor);
+  }
+  50% {
+    opacity: 0.18;
+    box-shadow: 0 0 2px transparent;
+  }
 }
 
 @keyframes caretPulse {
-  0%, 100% { opacity: 0.65; }
-  50% { opacity: 0.25; }
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(0.98);
+  }
+}
+
+/* Lesson Roadmap Horizontal Scroll Strip */
+.lesson-roadmap-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.15rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+}
+
+.lesson-roadmap-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.roadmap-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.roadmap-pill:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.roadmap-pill.active {
+  background-color: var(--color-primary-forest) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  border: 2px solid var(--color-primary-forest) !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+  transform: scale(1.05);
 }
 
 /* Typing Shortcuts & Footer Helper */
@@ -223,13 +312,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  transition: color var(--transition-fast);
 }
 
 .shortcut-pill kbd {
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
