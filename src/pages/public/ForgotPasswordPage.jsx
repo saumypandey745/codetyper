@@ -105,6 +105,46 @@ export function ForgotPasswordPage({ onNavigate }) {
           </div>
         ) : submitted ? (
           <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {token ? (
+              <div style={{ padding: '0.65rem 0.85rem', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-primary-sage)', borderRadius: 'var(--radius-md)', fontSize: '0.825rem', color: 'var(--color-primary-forest)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle2 size={16} />
+                <span>Security reset token detected and automatically applied below!</span>
+              </div>
+            ) : (
+              <div style={{ padding: '0.85rem', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: '0.825rem', lineHeight: 1.5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  <AlertCircle size={15} color="var(--color-primary-sage)" />
+                  <span>Email & Token Information</span>
+                </div>
+                <p style={{ margin: '0 0 0.5rem', color: 'var(--color-text-secondary)' }}>
+                  If you didn't receive an email for <strong>{email}</strong>:
+                </p>
+                <ul style={{ margin: '0 0 0.75rem 1.1rem', padding: 0, color: 'var(--color-text-secondary)' }}>
+                  <li><strong>Account Not Registered:</strong> An account with this email might not have been created yet.</li>
+                  <li><strong>Live Mail Delivery:</strong> An external email service (SMTP) is not configured on this cloud deployment to send real emails to Gmail.</li>
+                </ul>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => onNavigate('signup')}
+                  >
+                    Create Account Now
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      setSubmitted(false);
+                      setToken('');
+                    }}
+                  >
+                    Try Another Email
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="form-group">
               <label className="form-label" htmlFor="reset-token">
                 Security Reset Token
