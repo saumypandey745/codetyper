@@ -27,8 +27,14 @@ const defaultOrigins = [
   'http://localhost:5173',
   'http://localhost:5000',
   'http://127.0.0.1:5173',
-  'http://127.0.0.1:5000'
+  'http://127.0.0.1:5000',
+  'https://codetyper-beta.vercel.app',
+  'https://codetyper.vercel.app'
 ];
+
+if (process.env.VERCEL_URL) {
+  defaultOrigins.push(`https://${process.env.VERCEL_URL}`);
+}
 
 const envOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
@@ -36,13 +42,32 @@ const envOrigins = process.env.ALLOWED_ORIGINS
 
 export const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
+export const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    // Allow local development
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return true;
+    }
+    // Allow CodeTyper Vercel production & branch preview subdomains
+    if (parsed.hostname.endsWith('.vercel.app') && parsed.hostname.includes('codetyper')) {
+      return true;
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
+};
+
 export const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. mobile apps, curl, same-origin static requests)
     if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       return callback(null, origin);
     }
     return callback(new Error('Cross-Origin Request Blocked: Origin not permitted by CodeTyper security policy.'));

@@ -214,7 +214,7 @@ router.post('/forgot-password', resetLimiter, (req, res) => {
       VALUES (?, ?, ?)
     `).run(user.id, tokenHash, expiresAt);
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' || !process.env.SMTP_HOST) {
       devResetToken = rawToken;
     }
   }

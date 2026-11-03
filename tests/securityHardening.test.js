@@ -179,6 +179,20 @@ describe('Security Hardening Suite (P0 & P1)', () => {
     assert.equal(res.headers.get('access-control-allow-credentials'), 'true');
   });
 
+  it('CORS permits CodeTyper Vercel production and preview origins', async () => {
+    const resBeta = await fetch(`${baseUrl}/api/health`, {
+      headers: { Origin: 'https://codetyper-beta.vercel.app' }
+    });
+    assert.equal(resBeta.status, 200);
+    assert.equal(resBeta.headers.get('access-control-allow-origin'), 'https://codetyper-beta.vercel.app');
+
+    const resPreview = await fetch(`${baseUrl}/api/health`, {
+      headers: { Origin: 'https://codetyper-git-main-saumypandey745.vercel.app' }
+    });
+    assert.equal(resPreview.status, 200);
+    assert.equal(resPreview.headers.get('access-control-allow-origin'), 'https://codetyper-git-main-saumypandey745.vercel.app');
+  });
+
   it('CORS blocks untrusted origin with 403 Forbidden', async () => {
     const res = await fetch(`${baseUrl}/api/health`, {
       headers: { Origin: 'https://malicious-attacker-site.com' }
@@ -186,6 +200,12 @@ describe('Security Hardening Suite (P0 & P1)', () => {
     assert.equal(res.status, 403);
     const data = await res.json();
     assert.ok(data.error.includes('Cross-Origin Request Blocked'));
+
+    // Also blocks unrelated vercel sites
+    const resOtherVercel = await fetch(`${baseUrl}/api/health`, {
+      headers: { Origin: 'https://other-unrelated-app.vercel.app' }
+    });
+    assert.equal(resOtherVercel.status, 403);
   });
 
   it('CORS permits requests with no Origin header (e.g. mobile/same-origin)', async () => {
