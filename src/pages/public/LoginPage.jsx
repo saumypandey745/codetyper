@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Lock, Mail, User, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
@@ -54,16 +54,6 @@ export function LoginPage({ onNavigate }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemoAccount = () => {
-    setLoginIdentifier('demo@codetyper.dev');
-    setPassword('Peaceful_Demo_2026');
-  };
-
-  const fillSaumyAccount = () => {
-    setLoginIdentifier('saumypandey745@gmail.com');
-    setPassword('Saumy_2026!');
   };
 
   return (
@@ -212,27 +202,6 @@ export function LoginPage({ onNavigate }) {
           >
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
-
-          {/* Quick 1-Click Credentials Fill */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={fillSaumyAccount}
-              title="Sign in with Saumy Pandey Admin Account"
-            >
-              <Sparkles size={14} />
-              <span>Saumy Account</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={fillDemoAccount}
-              title="Sign in with Demo Account"
-            >
-              <span>Demo Account</span>
-            </button>
-          </div>
         </form>
 
         <div style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--color-text-secondary)', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '1.25rem' }}>
