@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { db } from '../db.js';
 import { authenticate, JWT_SECRET } from '../authMiddleware.js';
 import { createRateLimiter } from '../rateLimiter.js';
+import { sendPasswordResetEmail } from '../mailer.js';
 
 const router = Router();
 
@@ -190,7 +191,7 @@ router.post('/logout', (req, res) => {
   return res.json({ message: 'Logged out successfully.' });
 });
 
-router.post('/forgot-password', resetLimiter, (req, res) => {
+router.post('/forgot-password', resetLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required.' });
@@ -200,6 +201,7 @@ router.post('/forgot-password', resetLimiter, (req, res) => {
   const user = db.prepare('SELECT id, email FROM users WHERE LOWER(email) = ?').get(trimmedEmail);
 
   let devResetToken = null;
+  let emailDispatched = false;
 
   if (user) {
     // Invalidate existing unused tokens for this user
@@ -214,13 +216,23 @@ router.post('/forgot-password', resetLimiter, (req, res) => {
       VALUES (?, ?, ?)
     `).run(user.id, tokenHash, expiresAt);
 
+    const origin = req.get('origin') || (req.protocol + '://' + req.get('host'));
+    const mailRes = await sendPasswordResetEmail({
+      toEmail: user.email,
+      resetToken: rawToken,
+      origin
+    });
+
+    emailDispatched = !!mailRes.delivered;
+
     if (process.env.NODE_ENV !== 'production' || !process.env.SMTP_HOST) {
       devResetToken = rawToken;
     }
   }
 
   const response = {
-    message: 'If an account exists with this email, a password reset link has been dispatched to your inbox.'
+    message: 'If an account exists with this email, a password reset link has been dispatched to your inbox.',
+    emailDispatched
   };
 
   if (devResetToken) {
