@@ -50,6 +50,46 @@ describe('CodeTyper API Integration Suite', () => {
     demoToken = data.token;
   });
 
+  it('POST /api/auth/login logs in seeded Saumy admin account', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        login: 'saumypandey745@gmail.com',
+        password: 'Saumy_2026!'
+      })
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.token, 'Token must be returned');
+    assert.equal(data.user.email, 'saumypandey745@gmail.com');
+    assert.equal(data.user.role, 'admin');
+  });
+
+  it('verifies complete forgot-password and reset flow for Saumy account', async () => {
+    // 1. Request password reset
+    const forgotRes = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'saumypandey745@gmail.com' })
+    });
+    assert.equal(forgotRes.status, 200);
+    const forgotData = await forgotRes.json();
+    assert.ok(forgotData.devResetToken, 'Token must be generated and returned in fallback mode');
+
+    // 2. Perform reset
+    const resetRes = await fetch(`${baseUrl}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: forgotData.devResetToken,
+        new_password: 'Saumy_2026!',
+        confirm_password: 'Saumy_2026!'
+      })
+    });
+    assert.equal(resetRes.status, 200);
+  });
+
   it('GET /api/auth/me returns authenticated user details', async () => {
     const res = await fetch(`${baseUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${demoToken}` }

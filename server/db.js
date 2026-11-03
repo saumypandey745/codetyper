@@ -341,4 +341,39 @@ function seedInitialData() {
     }
     console.log('[DB] Demo user and history seeded successfully.');
   }
+
+  // Seed Saumy Pandey Admin Account independently
+  try {
+    const existingSaumy = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'saumypandey745@gmail.com'").get();
+    if (!existingSaumy) {
+      const salt = bcrypt.genSaltSync(10);
+      const saumyPassword = process.env.SAUMY_USER_PASSWORD || 'Saumy_2026!';
+      const saumyHash = bcrypt.hashSync(saumyPassword, salt);
+
+      const saumyRes = db.prepare(`
+        INSERT INTO users (email, username, full_name, password_hash, avatar_url, role, bio)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'saumypandey745@gmail.com',
+        'saumypandey',
+        'Saumy Pandey',
+        saumyHash,
+        'https://api.dicebear.com/7.x/identicon/svg?seed=saumypandey',
+        'admin',
+        'Lead developer and architect of CodeTyper.'
+      );
+
+      const saumyId = Number(saumyRes.lastInsertRowid);
+      db.prepare('INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)').run(saumyId);
+      db.prepare(`
+        INSERT OR IGNORE INTO user_statistics (user_id, total_tests, total_practice_seconds, best_wpm, avg_wpm, avg_accuracy, current_streak, last_practice_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(saumyId, 25, 3600, 92.4, 81.6, 98.8, 7, new Date().toISOString().split('T')[0]);
+      console.log('[DB] Saumy Pandey admin account seeded successfully.');
+    }
+  } catch (e) {
+    if (!e.message.includes('UNIQUE constraint failed')) {
+      console.warn('Could not seed Saumy account', e);
+    }
+  }
 }

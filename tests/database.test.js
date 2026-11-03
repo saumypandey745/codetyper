@@ -35,5 +35,9 @@ describe('Database & Seed Data Integrity Suite', () => {
     const demoUser = db.prepare("SELECT * FROM users WHERE email = 'demo@codetyper.dev'").get();
     assert.ok(demoUser, 'Demo user account should be seeded');
     assert.equal(demoUser.username, 'sarah_coder');
+
+    const saumyUser = db.prepare("SELECT * FROM users WHERE LOWER(email) = 'saumypandey745@gmail.com'").get();
+    assert.ok(saumyUser, 'Saumy user account should be seeded');
+    assert.equal(saumyUser.role, 'admin');
   });
 });

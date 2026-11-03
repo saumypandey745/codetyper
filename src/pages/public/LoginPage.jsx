@@ -61,6 +61,11 @@ export function LoginPage({ onNavigate }) {
     setPassword('Peaceful_Demo_2026');
   };
 
+  const fillSaumyAccount = () => {
+    setLoginIdentifier('saumypandey745@gmail.com');
+    setPassword('Saumy_2026!');
+  };
+
   return (
     <div style={{ maxWidth: '440px', margin: '3rem auto', padding: '0 1rem' }}>
       <div className="card" style={{ padding: '2.5rem' }}>
@@ -208,16 +213,26 @@ export function LoginPage({ onNavigate }) {
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
 
-          {/* Quick Demo Fill button */}
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            style={{ width: '100%', marginBottom: '1.5rem' }}
-            onClick={fillDemoAccount}
-          >
-            <Sparkles size={14} />
-            <span>Use Demo Account (Sarah Jenkins)</span>
-          </button>
+          {/* Quick 1-Click Credentials Fill */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={fillSaumyAccount}
+              title="Sign in with Saumy Pandey Admin Account"
+            >
+              <Sparkles size={14} />
+              <span>Saumy Account</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={fillDemoAccount}
+              title="Sign in with Demo Account"
+            >
+              <span>Demo Account</span>
+            </button>
+          </div>
         </form>
 
         <div style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--color-text-secondary)', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '1.25rem' }}>
