@@ -208,3 +208,4 @@ export const keyStatsManager = {
     return Math.max(0, Math.min(100, Math.round((correct / keyData.total) * 100)));
   }
 };
+

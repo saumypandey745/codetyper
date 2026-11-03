@@ -465,3 +465,4 @@ export function MultiplayerArena({ onNavigate }) {
     </div>
   );
 }
+

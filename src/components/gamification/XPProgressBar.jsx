@@ -131,3 +131,4 @@ export function XPProgressBar({ totalXp = 0, compact = false }) {
     </div>
   );
 }
+

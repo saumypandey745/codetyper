@@ -62,3 +62,4 @@ export function DailyQuestsCard({ completedQuestIds = [], onClaim = null }) {
     </div>
   );
 }
+
