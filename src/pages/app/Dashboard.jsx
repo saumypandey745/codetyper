@@ -11,12 +11,16 @@ import {
   BookOpen,
   Timer,
   Play,
-  RotateCcw
+  RotateCcw,
+  Swords,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../utils/api.js';
 import { LineChart } from '../../components/charts/LineChart.jsx';
 import { formatDuration, formatDate } from '../../utils/wpmCalculator.js';
+import { XPProgressBar } from '../../components/gamification/XPProgressBar.jsx';
+import { DailyQuestsCard } from '../../components/gamification/DailyQuestsCard.jsx';
 
 export function Dashboard({ onNavigate, onStartPractice }) {
   const { user, userStats } = useAuth();
@@ -57,6 +61,16 @@ export function Dashboard({ onNavigate, onStartPractice }) {
 
   const lastSession = recentSessions[0];
 
+  const totalXp = (() => {
+    try {
+      const stored = parseInt(localStorage.getItem('codetyper_total_xp') || '0', 10);
+      if (stored > 0) return stored;
+      return (userStats?.total_tests || 0) * 150 + (userStats?.best_wpm || 0) * 10;
+    } catch {
+      return 0;
+    }
+  })();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Personalized Header */}
@@ -71,12 +85,19 @@ export function Dashboard({ onNavigate, onStartPractice }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button className="btn btn-outline" onClick={() => onNavigate('multiplayer')}>
+            <Swords size={16} color="var(--color-primary-forest)" />
+            <span>1v1 Arena</span>
+          </button>
           <button className="btn btn-primary" onClick={() => onNavigate('test')}>
             <Timer size={16} />
             <span>Take 1-Min Test</span>
           </button>
         </div>
       </div>
+
+      {/* Level & XP Progression Card */}
+      <XPProgressBar totalXp={totalXp} />
 
       {/* 6 KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
@@ -206,6 +227,56 @@ export function Dashboard({ onNavigate, onStartPractice }) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Daily Rotating Quests */}
+      <DailyQuestsCard />
+
+      {/* Real-Time 1v1 Arena Callout Banner */}
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem',
+          padding: '1.5rem',
+          background: 'linear-gradient(135deg, var(--color-bg-card) 0%, rgba(47, 107, 82, 0.08) 100%)',
+          border: '1px solid var(--color-border-subtle)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '260px' }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'rgba(47, 107, 82, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-primary-forest)',
+              flexShrink: 0
+            }}
+          >
+            <Swords size={26} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Real-Time 1v1 Duel Arena</h3>
+              <span className="badge badge-forest" style={{ fontSize: '0.7rem' }}>Live PvP</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+              Race head-to-head against friends with live keystroke progress tracks, countdown timer, and victory celebrations.
+            </p>
+          </div>
+        </div>
+
+        <button className="btn btn-primary" onClick={() => onNavigate('multiplayer')}>
+          <span>Enter Battle Arena</span>
+          <ArrowRight size={15} />
+        </button>
       </div>
 
       {/* Practice Categories */}

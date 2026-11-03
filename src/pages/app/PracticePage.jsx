@@ -22,7 +22,12 @@ import {
   Trophy,
   Lock,
   Unlock,
-  Search
+  Search,
+  Globe,
+  Download,
+  Trash2,
+  ExternalLink,
+  FileCode
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
@@ -59,6 +64,15 @@ export function PracticePage({
   const [customText, setCustomText] = useState('');
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customModalTab, setCustomModalTab] = useState('custom'); // 'custom' | 'github'
+  const [customSnippetTitle, setCustomSnippetTitle] = useState('My Custom Snippet');
+  const [customSnippetLang, setCustomSnippetLang] = useState('JavaScript');
+  const [saveToLibrary, setSaveToLibrary] = useState(false);
+  const [savedSnippets, setSavedSnippets] = useState([]);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [githubUrl, setGithubUrl] = useState('');
+  const [githubLoading, setGithubLoading] = useState(false);
+  const [githubPreview, setGithubPreview] = useState(null);
   const [showCurriculumModal, setShowCurriculumModal] = useState(false);
 
   // Curriculum modal search & filter
@@ -344,16 +358,49 @@ export function PracticePage({
     }
   };
 
-  const handleApplyCustomText = () => {
+  const loadSavedSnippets = useCallback(async () => {
+    if (!user) return;
+    setLoadingSaved(true);
+    try {
+      const data = await api.practice.getCustomSnippets();
+      setSavedSnippets(data.snippets || []);
+    } catch (e) {
+      console.warn('Could not load custom snippets', e);
+    } finally {
+      setLoadingSaved(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (showCustomModal && user) {
+      loadSavedSnippets();
+    }
+  }, [showCustomModal, user, loadSavedSnippets]);
+
+  const handleApplyCustomText = async () => {
     if (!customText.trim()) {
       toast.error('Please enter some text or code to practice.');
       return;
     }
+
+    if (saveToLibrary && user) {
+      try {
+        await api.practice.saveCustomSnippet({
+          title: customSnippetTitle.trim() || 'Custom Snippet',
+          language: customSnippetLang,
+          content: customText.trim()
+        });
+        toast.success('Snippet saved to your library!');
+      } catch (e) {
+        toast.warning('Could not save snippet to cloud, continuing locally.');
+      }
+    }
+
     setIsCustomMode(true);
     setCurrentSnippet({
       id: null,
-      title: 'Custom Practice Passage',
-      language: isCode ? selectedLanguage : 'Custom',
+      title: customSnippetTitle.trim() || 'Custom Practice Passage',
+      language: customSnippetLang || (isCode ? selectedLanguage : 'Custom'),
       difficulty: 'custom',
       content: customText.trim()
     });
@@ -361,6 +408,51 @@ export function PracticePage({
     setCompletedResult(null);
     setEngineKey(Date.now());
     toast.success('Custom passage loaded.');
+  };
+
+  const handleFetchGithub = async () => {
+    if (!githubUrl.trim()) {
+      toast.error('Please enter a public GitHub file URL.');
+      return;
+    }
+    setGithubLoading(true);
+    setGithubPreview(null);
+    try {
+      const data = await api.practice.fetchGithubSnippet(githubUrl.trim());
+      setGithubPreview(data);
+      toast.success(`Fetched ${data.title} (${data.lineCount} lines)!`);
+    } catch (e) {
+      toast.error(e.message || 'Failed to fetch GitHub file.');
+    } finally {
+      setGithubLoading(false);
+    }
+  };
+
+  const handleApplyGithubSnippet = () => {
+    if (!githubPreview?.content) return;
+    setIsCustomMode(true);
+    setCurrentSnippet({
+      id: null,
+      title: githubPreview.title,
+      language: githubPreview.language,
+      difficulty: 'custom',
+      content: githubPreview.content
+    });
+    setShowCustomModal(false);
+    setCompletedResult(null);
+    setEngineKey(Date.now());
+    toast.success(`Loaded ${githubPreview.title} into practice!`);
+  };
+
+  const handleDeleteSavedSnippet = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await api.practice.deleteCustomSnippet(id);
+      setSavedSnippets((prev) => prev.filter((s) => s.id !== id));
+      toast.success('Snippet deleted.');
+    } catch (err) {
+      toast.error('Failed to delete snippet.');
+    }
   };
 
   const targetText = currentSnippet?.content || '';
@@ -840,32 +932,231 @@ export function PracticePage({
         />
       )}
 
-      {/* Custom Text Modal */}
+      {/* Custom & GitHub Importer Modal */}
       {showCustomModal && (
         <div className="modal-backdrop" onClick={() => setShowCustomModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%' }}>
-            <h3 style={{ marginBottom: '0.5rem' }}>Paste Custom Practice Text</h3>
-            <p style={{ fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-              Paste your own code excerpt, documentation paragraph, or study notes to practice typing custom content.
-            </p>
-
-            <textarea
-              className="input"
-              rows={8}
-              placeholder="Paste code or text here..."
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value)}
-              style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', marginBottom: '1.25rem', resize: 'vertical' }}
-            />
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button className="btn btn-ghost" onClick={() => setShowCustomModal(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={handleApplyCustomText}>
-                Load Custom Passage
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '680px', width: '92%', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            <div className="modal-header" style={{ marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileCode size={20} color="var(--color-primary-forest)" />
+                  <span>Custom Code & GitHub Importer</span>
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                  Practice with your own snippets or import open-source code directly from public GitHub repositories.
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setShowCustomModal(false)}>
+                <X size={18} />
               </button>
             </div>
+
+            {/* Modal Tabs */}
+            <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--color-border)', marginBottom: '1.25rem' }}>
+              <button
+                className={`btn btn-sm ${customModalTab === 'custom' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0', borderBottom: 'none' }}
+                onClick={() => setCustomModalTab('custom')}
+              >
+                <FileCode size={15} />
+                <span>Custom Snippet</span>
+              </button>
+              <button
+                className={`btn btn-sm ${customModalTab === 'github' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0', borderBottom: 'none' }}
+                onClick={() => setCustomModalTab('github')}
+              >
+                <Globe size={15} />
+                <span>Import from GitHub</span>
+              </button>
+            </div>
+
+            {customModalTab === 'custom' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                      Snippet Title
+                    </label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="e.g. Binary Search Tree / React State Hook"
+                      value={customSnippetTitle}
+                      onChange={(e) => setCustomSnippetTitle(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                      Language
+                    </label>
+                    <select
+                      className="input"
+                      value={customSnippetLang}
+                      onChange={(e) => setCustomSnippetLang(e.target.value)}
+                    >
+                      {['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'C++', 'C', 'Java', 'HTML', 'CSS', 'SQL', 'Text'].map((l) => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                    Code or Passage Content
+                  </label>
+                  <textarea
+                    className="input"
+                    rows={8}
+                    placeholder="Paste code excerpt or text here..."
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', resize: 'vertical' }}
+                  />
+                </div>
+
+                {user && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={saveToLibrary}
+                      onChange={(e) => setSaveToLibrary(e.target.checked)}
+                    />
+                    <span>Save this snippet to my account library for future practice</span>
+                  </label>
+                )}
+
+                {/* Saved Snippets List */}
+                {user && savedSnippets.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
+                      Saved In Your Library ({savedSnippets.length})
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '140px', overflowY: 'auto' }}>
+                      {savedSnippets.map((s) => (
+                        <div
+                          key={s.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.45rem 0.75rem',
+                            backgroundColor: 'var(--color-bg-subtle)',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            setCustomText(s.content);
+                            setCustomSnippetTitle(s.title);
+                            setCustomSnippetLang(s.language || 'JavaScript');
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className="badge badge-sage" style={{ fontSize: '0.7rem' }}>{s.language}</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{s.title}</span>
+                          </div>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: '0.2rem 0.4rem', color: '#B91C1C' }}
+                            onClick={(e) => handleDeleteSavedSnippet(s.id, e)}
+                            title="Delete snippet"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button className="btn btn-ghost" onClick={() => setShowCustomModal(false)}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-primary" onClick={handleApplyCustomText}>
+                    Load Snippet
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* GitHub Importer Tab */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                    Public GitHub File URL
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="url"
+                      className="input"
+                      placeholder="https://github.com/torvalds/linux/blob/master/init/main.c"
+                      value={githubUrl}
+                      onChange={(e) => setGithubUrl(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleFetchGithub}
+                      disabled={githubLoading || !githubUrl.trim()}
+                    >
+                      {githubLoading ? (
+                        <>
+                          <div className="spinner" style={{ width: '14px', height: '14px' }} />
+                          <span>Fetching...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download size={14} />
+                          <span>Fetch</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', marginTop: '0.35rem', display: 'block' }}>
+                    Paste a link to any public repository file. GitHub raw content will be retrieved and parsed.
+                  </span>
+                </div>
+
+                {githubPreview && (
+                  <div className="card" style={{ padding: '1rem', backgroundColor: 'var(--color-bg-subtle)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <strong style={{ fontSize: '0.9rem' }}>{githubPreview.title}</strong>
+                      <span className="badge badge-forest">{githubPreview.language}</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+                      {githubPreview.lineCount} lines • {githubPreview.content?.length} characters
+                    </div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--color-bg-card)',
+                        borderRadius: 'var(--radius-sm)',
+                        maxHeight: '160px',
+                        overflowY: 'auto',
+                        fontSize: '0.8rem',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    >
+                      {githubPreview.content.slice(0, 400)}...
+                    </pre>
+
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ width: '100%', marginTop: '0.75rem' }}
+                      onClick={handleApplyGithubSnippet}
+                    >
+                      Start Typing This File
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -10,7 +10,9 @@ import {
   Settings,
   ShieldAlert,
   Keyboard,
-  Flame
+  Flame,
+  Swords,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -23,6 +25,8 @@ export function Sidebar({ currentView, onNavigate, isOpen, onClose }) {
     { id: 'coding', label: 'Coding Practice', icon: Code2 },
     { id: 'english', label: 'English Practice', icon: BookOpen },
     { id: 'test', label: 'Typing Test', icon: Timer },
+    { id: 'multiplayer', label: '1v1 Duel Arena', icon: Swords },
+    { id: 'heatmap', label: 'Key Heatmap', icon: Activity },
     { id: 'history', label: 'History', icon: History },
     { id: 'statistics', label: 'Statistics', icon: BarChart3 },
     { id: 'profile', label: 'Profile', icon: User },

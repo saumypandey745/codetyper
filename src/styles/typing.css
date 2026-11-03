@@ -233,6 +233,64 @@
   animation: caretBlinkGlow 1.05s infinite ease-in-out;
 }
 
+.caret-laser {
+  width: 3px;
+  height: 1.45em;
+  background: linear-gradient(180deg, #34d399, #10b981);
+  border-radius: 4px;
+  box-shadow: 0 0 12px #34d399, 0 0 24px #10b981;
+  animation: caretLaserPulse 0.9s infinite alternate;
+}
+
+@keyframes caretLaserPulse {
+  0% { opacity: 0.7; box-shadow: 0 0 8px #34d399; }
+  100% { opacity: 1; box-shadow: 0 0 18px #10b981, 0 0 26px #34d399; }
+}
+
+/* Pure Zen Focus Mode */
+.typing-container.zen-mode {
+  max-width: 920px;
+  margin: 2rem auto;
+  transition: all 400ms ease;
+}
+
+.typing-container.zen-mode .typing-viewport {
+  min-height: 380px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-size: 1.32rem;
+}
+
+.typing-container.zen-mode .char-token.pending {
+  opacity: 0.4;
+}
+
+.zen-floating-pill {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: var(--color-bg-card);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-main);
+  font-size: 0.82rem;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+  opacity: 0.85;
+  transition: opacity 200ms ease;
+}
+
+.zen-floating-pill:hover {
+  opacity: 1;
+}
+
 @keyframes caretBlinkGlow {
   0%, 100% {
     opacity: 1;

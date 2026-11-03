@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap, Sparkles } from 'lucide-react';
 import { formatDuration } from '../../utils/wpmCalculator.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { computeSessionXp, calculateLevelFromXp } from '../../utils/gamificationEngine.js';
 
 export function ResultsCard({
   result,
@@ -11,6 +12,16 @@ export function ResultsCard({
   onNavigate
 }) {
   const { userStats } = useAuth();
+
+  const earnedXp = useMemo(() => {
+    return computeSessionXp({
+      correctCharacters: result.correctCharacters || 0,
+      netWpm: result.netWpm || 0,
+      accuracy: result.accuracy || 0,
+      durationSeconds: result.durationSeconds || 0,
+      isZen: !!result.isZen
+    });
+  }, [result]);
 
   useEffect(() => {
     // Peaceful celebration burst
@@ -21,8 +32,27 @@ export function ResultsCard({
         origin: { y: 0.6 },
         colors: ['#2F6B52', '#8FAF9A', '#DDEBDD', '#FAF8F1']
       });
+
+      // Update local gamification XP and unlock badges
+      const storedXp = parseInt(localStorage.getItem('codetyper_total_xp') || '0', 10);
+      const newTotalXp = storedXp + earnedXp;
+      localStorage.setItem('codetyper_total_xp', newTotalXp.toString());
+
+      const rawBadges = localStorage.getItem('codetyper_unlocked_badges');
+      const unlocked = rawBadges ? JSON.parse(rawBadges) : [];
+      const updatedBadges = [...unlocked];
+
+      if (!updatedBadges.includes('first_keystroke')) updatedBadges.push('first_keystroke');
+      if (result.netWpm >= 60 && !updatedBadges.includes('speed_demon_60')) updatedBadges.push('speed_demon_60');
+      if (result.netWpm >= 80 && !updatedBadges.includes('speed_demon_80')) updatedBadges.push('speed_demon_80');
+      if (result.netWpm >= 100 && !updatedBadges.includes('century_club')) updatedBadges.push('century_club');
+      if (result.netWpm >= 120 && !updatedBadges.includes('hypersonic_120')) updatedBadges.push('hypersonic_120');
+      if (result.accuracy === 100 && result.totalCharacters >= 150 && !updatedBadges.includes('flawless_accuracy')) updatedBadges.push('flawless_accuracy');
+      if (result.isZen && !updatedBadges.includes('zen_master')) updatedBadges.push('zen_master');
+
+      localStorage.setItem('codetyper_unlocked_badges', JSON.stringify(updatedBadges));
     } catch (e) {}
-  }, []);
+  }, [earnedXp, result]);
 
   const bestWpm = userStats?.best_wpm || result.netWpm;
   const avgWpm = userStats?.avg_wpm || result.netWpm;
@@ -46,6 +76,29 @@ export function ResultsCard({
             ? 'Outstanding! New Personal Best!'
             : 'Great Focus & Consistency!'}
         </h2>
+
+        {/* XP Earned Tag */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', margin: '0.5rem 0 0.85rem' }}>
+          <span
+            className="badge badge-forest"
+            style={{
+              padding: '0.35rem 0.85rem',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <Sparkles size={14} />
+            +{earnedXp} XP Earned
+          </span>
+          {result.isZen && (
+            <span className="badge badge-sage" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              🌿 Zen Focus Bonus (+20%)
+            </span>
+          )}
+        </div>
 
         {/* Level Up Banner */}
         {result.levelUpInfo && (

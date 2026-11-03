@@ -121,11 +121,24 @@ export function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS custom_snippets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      language TEXT DEFAULT 'JavaScript',
+      is_code INTEGER DEFAULT 1,
+      source TEXT DEFAULT 'custom',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON typing_sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_completed ON typing_sessions(completed_at);
     CREATE INDEX IF NOT EXISTS idx_content_type_lang ON practice_content(is_code, language, difficulty);
     CREATE INDEX IF NOT EXISTS idx_password_resets_hash ON password_resets(token_hash);
     CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_custom_snippets_user ON custom_snippets(user_id);
   `);
 
   try {

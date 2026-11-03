@@ -98,7 +98,19 @@ class ApiClient {
       return this.request(`/practice/content?${query}`);
     },
     getLanguages: () => this.request('/practice/languages'),
-    getCategories: () => this.request('/practice/categories')
+    getCategories: () => this.request('/practice/categories'),
+    getCustomSnippets: () => this.request('/practice/custom'),
+    saveCustomSnippet: (snippet) => this.request('/practice/custom', { method: 'POST', body: JSON.stringify(snippet) }),
+    deleteCustomSnippet: (id) => this.request(`/practice/custom/${id}`, { method: 'DELETE' }),
+    fetchGithubSnippet: (url) => this.request('/practice/github-fetch', { method: 'POST', body: JSON.stringify({ url }) })
+  };
+
+  // Multiplayer Duels
+  multiplayer = {
+    createRoom: (payload) => this.request('/multiplayer/create', { method: 'POST', body: JSON.stringify(payload) }),
+    joinRoom: (payload) => this.request('/multiplayer/join', { method: 'POST', body: JSON.stringify(payload) }),
+    getRoom: (roomId) => this.request(`/multiplayer/room/${roomId}`),
+    sendProgress: (payload) => this.request('/multiplayer/progress', { method: 'POST', body: JSON.stringify(payload) })
   };
 
   // Sessions & Stats

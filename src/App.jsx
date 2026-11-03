@@ -22,6 +22,8 @@ import { StatisticsPage } from './pages/app/StatisticsPage.jsx';
 import { ProfilePage } from './pages/app/ProfilePage.jsx';
 import { SettingsPage } from './pages/app/SettingsPage.jsx';
 import { AdminPage } from './pages/app/AdminPage.jsx';
+import { MultiplayerArena } from './pages/app/MultiplayerArena.jsx';
+import { KeyHeatmap } from './components/typing/KeyHeatmap.jsx';
 
 export function App() {
   const { user, loading } = useAuth();
@@ -163,6 +165,25 @@ export function App() {
             initialType="test"
             onNavigate={navigateTo}
           />
+        );
+      case 'multiplayer':
+        return <MultiplayerArena onNavigate={navigateTo} />;
+      case 'heatmap':
+        return (
+          <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h1 style={{ fontSize: '1.85rem', margin: '0 0 0.25rem' }}>Keystroke Precision Heatmap</h1>
+                <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
+                  Per-key accuracy diagnostics captured across all your live typing and coding drills.
+                </p>
+              </div>
+              <button className="btn btn-primary" onClick={() => navigateTo('practice')}>
+                Start Practice Drill
+              </button>
+            </div>
+            <KeyHeatmap />
+          </div>
         );
       case 'history':
         return <HistoryPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;

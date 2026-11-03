@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { soundEngine } from '../utils/soundEngine.js';
 import { calculateMetrics } from '../utils/wpmCalculator.js';
+import { keyStatsManager } from '../utils/gamificationEngine.js';
 
 export function useTypingEngine({
   targetText = '',
@@ -17,6 +18,8 @@ export function useTypingEngine({
   const [remainingSeconds, setRemainingSeconds] = useState(duration);
   const [wpmTimeline, setWpmTimeline] = useState([]);
   const [totalErrors, setTotalErrors] = useState(0);
+  const [lastPressedKey, setLastPressedKey] = useState(null);
+  const [lastMatchState, setLastMatchState] = useState(null);
 
   const startTimeRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -58,6 +61,8 @@ export function useTypingEngine({
     setRemainingSeconds(duration);
     setWpmTimeline([]);
     setTotalErrors(0);
+    setLastPressedKey(null);
+    setLastMatchState(null);
     startTimeRef.current = null;
   }, [duration]);
 
@@ -276,6 +281,11 @@ export function useTypingEngine({
           setTotalErrors((err) => err + 1);
         }
 
+        // Live Virtual Keyboard & Heatmap Telemetry
+        setLastPressedKey(charToAdd === '\n' ? 'Enter' : charToAdd);
+        setLastMatchState(isMatch ? 'correct' : 'wrong');
+        keyStatsManager.recordKeystroke(charToAdd, isMatch);
+
         const nextTyped = typedText + charToAdd;
         const nextIndex = cursorIndex + 1;
 
@@ -300,6 +310,8 @@ export function useTypingEngine({
     remainingSeconds,
     totalErrors,
     liveMetrics,
+    lastPressedKey,
+    lastMatchState,
     handleKeyDown,
     startTyping,
     resetEngine,

@@ -81,6 +81,18 @@ export function QuickSearchModal({ isOpen, onClose, onSelectPractice, onNavigate
               </button>
               <button
                 className="nav-link"
+                onClick={() => { onNavigate('multiplayer'); onClose(); }}
+              >
+                <span>⚔️ 1v1 Duel Arena (Multiplayer)</span>
+              </button>
+              <button
+                className="nav-link"
+                onClick={() => { onNavigate('heatmap'); onClose(); }}
+              >
+                <span>⌨️ Keystroke Accuracy Heatmap</span>
+              </button>
+              <button
+                className="nav-link"
                 onClick={() => { onNavigate('test'); onClose(); }}
               >
                 <span>Take a 60-second Timed Speed Test</span>

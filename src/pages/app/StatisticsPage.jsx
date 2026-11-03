@@ -18,12 +18,27 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { LineChart } from '../../components/charts/LineChart.jsx';
 import { BarChart } from '../../components/charts/BarChart.jsx';
 import { formatDuration, formatDate } from '../../utils/wpmCalculator.js';
+import { KeyHeatmap } from '../../components/typing/KeyHeatmap.jsx';
+import { BadgeShowcase } from '../../components/gamification/BadgeShowcase.jsx';
 
 export function StatisticsPage({ onNavigate, onStartPractice }) {
   const { userStats } = useAuth();
   const [statsData, setStatsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('wpm'); // 'wpm' | 'accuracy'
+
+  const [unlockedBadges] = useState(() => {
+    try {
+      const saved = localStorage.getItem('codetyper_unlocked_badges');
+      const list = saved ? JSON.parse(saved) : [];
+      if (!list.includes('first_keystroke') && (userStats?.total_tests || 0) > 0) {
+        list.push('first_keystroke');
+      }
+      return list;
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     async function fetchStats() {
@@ -262,6 +277,18 @@ export function StatisticsPage({ onNavigate, onStartPractice }) {
           </div>
         </div>
       </div>
+
+      {/* Keystroke Accuracy Heatmap */}
+      <div>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Keystroke Accuracy Heatmap</h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+          Diagnostic view showing precision percentages and error frequency per individual physical key.
+        </p>
+        <KeyHeatmap />
+      </div>
+
+      {/* Achievement & Mastery Badges Showcase */}
+      <BadgeShowcase unlockedBadgeIds={unlockedBadges} />
     </div>
   );
 }
