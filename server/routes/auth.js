@@ -225,7 +225,9 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
     emailDispatched = !!mailRes.delivered;
 
-    if (process.env.NODE_ENV !== 'production' || !process.env.SMTP_HOST) {
+    // Expose devResetToken in non-production OR when email was not actually delivered
+    // (e.g. SMTP configured but network unavailable in dev/test environments)
+    if (process.env.NODE_ENV !== 'production' || !emailDispatched) {
       devResetToken = rawToken;
     }
   }

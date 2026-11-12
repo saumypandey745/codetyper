@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle2, AlertCircle, ArrowLeft, KeyRound, Lock, ExternalLink, Sparkles } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, ArrowLeft, KeyRound, Lock, ExternalLink, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { api } from '../../utils/api.js';
 
 export function ForgotPasswordPage({ onNavigate }) {
@@ -7,8 +7,11 @@ export function ForgotPasswordPage({ onNavigate }) {
   const [stage, setStage] = useState('request'); // 'request' | 'sent' | 'reset' | 'success'
   const [token, setToken] = useState('');
   const [devToken, setDevToken] = useState('');
+  const [emailDispatched, setEmailDispatched] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +38,7 @@ export function ForgotPasswordPage({ onNavigate }) {
     setError('');
     try {
       const res = await api.auth.forgotPassword(email.trim());
+      setEmailDispatched(!!res.emailDispatched);
       setStage('sent');
       if (res.devResetToken) {
         setDevToken(res.devResetToken);
@@ -179,10 +183,12 @@ export function ForgotPasswordPage({ onNavigate }) {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: 'var(--color-primary-forest)', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
                   <Sparkles size={15} />
-                  <span>Preview Environment Simulation</span>
+                  <span>{emailDispatched ? 'Dev Mode: Email Also Sent' : 'Preview Environment Simulation'}</span>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0 0 0.75rem', lineHeight: 1.4 }}>
-                  External SMTP delivery is not configured on this server. Click below to simulate opening the email link directly:
+                  {emailDispatched
+                    ? 'Email was dispatched. You can also simulate the link click for instant testing:'
+                    : 'SMTP email could not be delivered in this environment. Click below to simulate opening the email link directly:'}
                 </p>
                 <button
                   type="button"
@@ -233,29 +239,56 @@ export function ForgotPasswordPage({ onNavigate }) {
             <form onSubmit={handleApplyReset} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <div className="form-group">
                 <label className="form-label" htmlFor="new-password">New Password (8+ characters)</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  className="form-input"
-                  placeholder="••••••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className="input-with-button">
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    className="form-input"
+                    placeholder="••••••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    autoFocus
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="input-toggle-btn"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label" htmlFor="confirm-new-password">Confirm New Password</label>
-                <input
-                  id="confirm-new-password"
-                  type="password"
-                  className="form-input"
-                  placeholder="••••••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
+                <div className="input-with-button">
+                  <input
+                    id="confirm-new-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="form-input"
+                    placeholder="••••••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="input-toggle-btn"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {confirmPassword && newPassword && confirmPassword !== newPassword && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-error)', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <AlertCircle size={13} /> Passwords do not match.
+                  </p>
+                )}
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>

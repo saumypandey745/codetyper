@@ -13,6 +13,7 @@ export function SignupPage({ onNavigate }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -154,6 +155,7 @@ export function SignupPage({ onNavigate }) {
               placeholder="e.g. Alex Mercer"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              autoComplete="name"
               required
             />
           </div>
@@ -167,6 +169,7 @@ export function SignupPage({ onNavigate }) {
               placeholder="e.g. alex_dev"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
               required
             />
           </div>
@@ -180,6 +183,7 @@ export function SignupPage({ onNavigate }) {
               placeholder="alex@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
           </div>
@@ -194,6 +198,7 @@ export function SignupPage({ onNavigate }) {
                 placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
                 required
               />
               <button
@@ -222,15 +227,31 @@ export function SignupPage({ onNavigate }) {
 
           <div className="form-group">
             <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
-            <input
-              id="reg-confirm"
-              type={showPassword ? 'text' : 'password'}
-              className="form-input"
-              placeholder="Re-enter your password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
+            <div className="input-with-button">
+              <input
+                id="reg-confirm"
+                type={showConfirmPassword ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                className="input-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {confirmPassword && password && confirmPassword !== password && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-error)', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <AlertCircle size={13} /> Passwords do not match.
+              </p>
+            )}
           </div>
 
           <button
