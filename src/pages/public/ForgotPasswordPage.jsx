@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle2, AlertCircle, ArrowLeft, KeyRound, Lock, ExternalLink, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
 import { api } from '../../utils/api.js';
 
 export function ForgotPasswordPage({ onNavigate }) {
   const [email, setEmail] = useState('');
   const [stage, setStage] = useState('request'); // 'request' | 'sent' | 'reset' | 'success'
   const [token, setToken] = useState('');
-  const [devToken, setDevToken] = useState('');
-  const [emailDispatched, setEmailDispatched] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -15,36 +13,46 @@ export function ForgotPasswordPage({ onNavigate }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Auto-detect token if user clicked a reset link from email (e.g. #forgot-password?token=XYZ)
+  // Auto-detect token if user clicked a reset link from email
+  // Supports both: /#forgot-password?token=XYZ  and  /reset-password?token=XYZ
   useEffect(() => {
-    const raw = window.location.hash.includes('?')
+    const hashQuery = window.location.hash.includes('?')
       ? window.location.hash.split('?')[1]
-      : window.location.search.replace('?', '');
+      : '';
+    const searchQuery = window.location.search.replace('?', '');
+    const raw = hashQuery || searchQuery;
+
     if (raw) {
       const params = new URLSearchParams(raw);
       const urlToken = params.get('token');
       if (urlToken) {
         setToken(urlToken);
         setStage('reset');
+        // Clean the token from URL to prevent accidental reuse
+        if (window.history && window.history.replaceState) {
+          const cleanHash = window.location.hash.split('?')[0];
+          window.history.replaceState(null, '', cleanHash || window.location.pathname);
+        }
       }
     }
   }, []);
 
   const handleRequestEmail = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError('Please enter your email address.');
+      return;
+    }
 
     setLoading(true);
     setError('');
     try {
-      const res = await api.auth.forgotPassword(email.trim());
-      setEmailDispatched(!!res.emailDispatched);
+      await api.auth.forgotPassword(trimmed);
+      // Always show "sent" screen regardless of whether account exists (security: no account enumeration)
       setStage('sent');
-      if (res.devResetToken) {
-        setDevToken(res.devResetToken);
-      }
     } catch (err) {
-      setError(err.message || 'Could not process recovery request.');
+      setError(err.message || 'Could not process recovery request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -52,13 +60,19 @@ export function ForgotPasswordPage({ onNavigate }) {
 
   const handleApplyReset = async (e) => {
     e.preventDefault();
-    if (!token.trim() || !newPassword || !confirmPassword) return;
 
+    if (!token.trim()) {
+      setError('Please enter the reset token from your email.');
+      return;
+    }
+    if (!newPassword) {
+      setError('Please enter a new password.');
+      return;
+    }
     if (newPassword.length < 8) {
       setError('Password must be at least 8 characters long.');
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -74,18 +88,18 @@ export function ForgotPasswordPage({ onNavigate }) {
       });
       setStage('success');
     } catch (err) {
-      setError(err.message || 'Could not reset password. The link or token may be expired or invalid.');
+      setError(err.message || 'Could not reset password. The link may be expired or invalid.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSimulateOpenEmail = () => {
-    if (devToken) {
-      setToken(devToken);
-      setStage('reset');
-      setError('');
+  const handleGoToLogin = () => {
+    // Navigate to login with success flag so it shows a confirmation banner
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', '#login?success=password_reset');
     }
+    onNavigate('login');
   };
 
   return (
@@ -101,8 +115,22 @@ export function ForgotPasswordPage({ onNavigate }) {
         </button>
 
         {error && (
-          <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-            {error}
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'var(--color-error-bg)',
+              border: '1px solid var(--color-error-border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-error)',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.5rem',
+              marginBottom: '1.25rem'
+            }}
+          >
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+            <span>{error}</span>
           </div>
         )}
 
@@ -111,33 +139,38 @@ export function ForgotPasswordPage({ onNavigate }) {
           <div>
             <h2 style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>Reset Your Password</h2>
             <p style={{ fontSize: '0.925rem', marginBottom: '1.5rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-              Enter the email address associated with your account and we will send a password recovery link to your inbox.
+              Enter the email address associated with your account. If it exists, we'll send a password reset link to your inbox.
             </p>
 
             <form onSubmit={handleRequestEmail}>
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label className="form-label" htmlFor="reset-email">Email Address</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    id="reset-email"
-                    type="email"
-                    className="form-input"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
+                <input
+                  id="reset-email"
+                  type="email"
+                  className="form-input"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  autoFocus
+                  required
+                />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                disabled={loading}
+              >
                 {loading ? 'Sending Recovery Link...' : 'Send Recovery Link'}
               </button>
             </form>
           </div>
         )}
 
-        {/* STAGE 2: Email Dispatched Confirmation Screen */}
+        {/* STAGE 2: Email Dispatched Confirmation */}
         {stage === 'sent' && (
           <div style={{ textAlign: 'center' }}>
             <div
@@ -158,49 +191,58 @@ export function ForgotPasswordPage({ onNavigate }) {
 
             <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Check Your Email</h2>
             <p style={{ fontSize: '0.925rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              We have dispatched recovery instructions to <strong>{email}</strong>. Please check your inbox and click the reset button inside the email.
+              If an account exists for <strong>{email}</strong>, a reset link has been sent. Check your inbox and click the link in the email.
             </p>
 
-            <div style={{ padding: '0.85rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', textAlign: 'left', fontSize: '0.825rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              <strong>Didn't see the email?</strong>
+            <div
+              style={{
+                padding: '0.85rem',
+                backgroundColor: 'var(--color-bg-subtle)',
+                borderRadius: 'var(--radius-md)',
+                textAlign: 'left',
+                fontSize: '0.825rem',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.5,
+                marginBottom: '1.5rem'
+              }}
+            >
+              <strong>Didn't receive the email?</strong>
               <ul style={{ margin: '0.35rem 0 0 1.1rem', padding: 0 }}>
                 <li>Check your Spam, Junk, or Promotions folder.</li>
-                <li>Make sure the email was typed correctly without typos.</li>
+                <li>Make sure the email address was typed correctly.</li>
+                <li>Links expire in 15 minutes — request a new one if needed.</li>
               </ul>
             </div>
 
-            {/* In preview/test environments where SMTP is not active, allow 1-click test simulation */}
-            {devToken && (
-              <div
-                style={{
-                  padding: '0.85rem',
-                  backgroundColor: 'rgba(47, 107, 82, 0.08)',
-                  border: '1px dashed var(--color-primary-forest)',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '1.5rem',
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: 'var(--color-primary-forest)', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                  <Sparkles size={15} />
-                  <span>{emailDispatched ? 'Dev Mode: Email Also Sent' : 'Preview Environment Simulation'}</span>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0 0 0.75rem', lineHeight: 1.4 }}>
-                  {emailDispatched
-                    ? 'Email was dispatched. You can also simulate the link click for instant testing:'
-                    : 'SMTP email could not be delivered in this environment. Click below to simulate opening the email link directly:'}
-                </p>
+            {/* Allow entering the token manually (e.g. copy from email body) */}
+            <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>
+                Have the reset token from the email? Enter it directly:
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Paste reset token here"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  style={{ flex: 1, fontSize: '0.85rem' }}
+                />
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
-                  style={{ width: '100%' }}
-                  onClick={handleSimulateOpenEmail}
+                  disabled={!token.trim()}
+                  onClick={() => {
+                    if (token.trim()) {
+                      setError('');
+                      setStage('reset');
+                    }
+                  }}
                 >
-                  <ExternalLink size={14} />
-                  <span>Simulate Clicking Email Link</span>
+                  Continue
                 </button>
               </div>
-            )}
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <button
@@ -209,6 +251,7 @@ export function ForgotPasswordPage({ onNavigate }) {
                 style={{ width: '100%' }}
                 onClick={() => {
                   setStage('request');
+                  setToken('');
                   setError('');
                 }}
               >
@@ -225,7 +268,7 @@ export function ForgotPasswordPage({ onNavigate }) {
           </div>
         )}
 
-        {/* STAGE 3: Set New Password Form (Arrived from email link) */}
+        {/* STAGE 3: Set New Password Form */}
         {stage === 'reset' && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -233,10 +276,26 @@ export function ForgotPasswordPage({ onNavigate }) {
               <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Set New Password</h2>
             </div>
             <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-              Enter and confirm your new secure password below to regain access.
+              Enter and confirm your new password below.
             </p>
 
             <form onSubmit={handleApplyReset} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              {/* Show token field only if it wasn't auto-filled from URL */}
+              {!token && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="reset-token">Reset Token</label>
+                  <input
+                    id="reset-token"
+                    type="text"
+                    className="form-input"
+                    placeholder="Paste the token from your email"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label" htmlFor="new-password">New Password (8+ characters)</label>
                 <div className="input-with-button">
@@ -291,7 +350,12 @@ export function ForgotPasswordPage({ onNavigate }) {
                 )}
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '0.5rem' }}
+                disabled={loading || (confirmPassword && newPassword && confirmPassword !== newPassword)}
+              >
                 {loading ? 'Updating Password...' : 'Save New Password'}
               </button>
             </form>
@@ -316,12 +380,16 @@ export function ForgotPasswordPage({ onNavigate }) {
             >
               <CheckCircle2 size={32} />
             </div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Password Successfully Updated</h2>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Password Updated!</h2>
             <p style={{ fontSize: '0.925rem', color: 'var(--color-text-secondary)', marginBottom: '1.75rem', lineHeight: 1.5 }}>
-              Your credentials have been securely updated. You can now log into your CodeTyper sanctuary with your new password.
+              Your password has been reset successfully. You can now sign in with your new password.
             </p>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => onNavigate('login')}>
-              Proceed to Login
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              onClick={handleGoToLogin}
+            >
+              Go to Sign In
             </button>
           </div>
         )}

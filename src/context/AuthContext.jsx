@@ -32,11 +32,14 @@ export function AuthProvider({ children }) {
     const res = await api.auth.login(credentials);
     api.setToken(res.token);
     setUser(res.user);
-    // Fetch refreshed stats
+    // Fetch full profile including statistics in one call
     try {
       const me = await api.auth.me();
+      setUser(me.user);
       setUserStats(me.statistics);
-    } catch (e) {}
+    } catch (e) {
+      // Non-fatal: user is logged in, stats will load on next /me call
+    }
     return res;
   };
 
@@ -44,10 +47,14 @@ export function AuthProvider({ children }) {
     const res = await api.auth.register(userData);
     api.setToken(res.token);
     setUser(res.user);
+    // Fetch full profile including statistics
     try {
       const me = await api.auth.me();
+      setUser(me.user);
       setUserStats(me.statistics);
-    } catch (e) {}
+    } catch (e) {
+      // Non-fatal
+    }
     return res;
   };
 

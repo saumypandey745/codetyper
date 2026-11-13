@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
@@ -13,20 +13,36 @@ export function LoginPage({ onNavigate }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    const raw = window.location.hash.includes('?')
+    // Parse error/success flags from hash-based routing (e.g. /#login?error=google_cancelled)
+    // Also handles query string for direct URL access
+    const hashQuery = window.location.hash.includes('?')
       ? window.location.hash.split('?')[1]
-      : window.location.search.replace('?', '');
+      : '';
+    const searchQuery = window.location.search.replace('?', '');
+    const raw = hashQuery || searchQuery;
+
     if (raw) {
       const params = new URLSearchParams(raw);
       const urlError = params.get('error');
-      if (urlError === 'google_not_configured') {
-        setError('Google Sign-In is not configured yet. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file.');
+      const urlSuccess = params.get('success');
+
+      if (urlSuccess === 'password_reset') {
+        setSuccessMessage('Password reset successfully. You can now sign in with your new password.');
+      } else if (urlError === 'google_not_configured') {
+        setError('Google Sign-In is not configured on this server.');
       } else if (urlError === 'google_cancelled') {
-        setError('Google Sign-In was cancelled.');
+        setError('Google Sign-In was cancelled. Please try again.');
       } else if (urlError) {
         setError(decodeURIComponent(urlError));
+      }
+
+      // Clean the URL so the message doesn't persist on refresh
+      if (window.history && window.history.replaceState) {
+        const cleanHash = window.location.hash.split('?')[0];
+        window.history.replaceState(null, '', cleanHash || window.location.pathname);
       }
     }
   }, []);
@@ -63,6 +79,26 @@ export function LoginPage({ onNavigate }) {
           <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Welcome Back</h2>
           <p style={{ fontSize: '0.925rem' }}>Log in to access your personalized practice and history.</p>
         </div>
+
+        {successMessage && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'rgba(47, 107, 82, 0.1)',
+              border: '1px solid var(--color-primary-sage)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-primary-forest)',
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1.5rem'
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>{successMessage}</span>
+          </div>
+        )}
 
         {error && (
           <div

@@ -200,11 +200,10 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   const trimmedEmail = email.trim().toLowerCase();
   const user = db.prepare('SELECT id, email FROM users WHERE LOWER(email) = ?').get(trimmedEmail);
 
-  let devResetToken = null;
   let emailDispatched = false;
 
   if (user) {
-    // Invalidate existing unused tokens for this user
+    // Invalidate all existing unused tokens for this user before creating a new one
     db.prepare('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL').run(user.id);
 
     const rawToken = crypto.randomBytes(32).toString('hex');
@@ -225,23 +224,18 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
     emailDispatched = !!mailRes.delivered;
 
-    // Expose devResetToken in non-production OR when email was not actually delivered
-    // (e.g. SMTP configured but network unavailable in dev/test environments)
-    if (process.env.NODE_ENV !== 'production' || !emailDispatched) {
-      devResetToken = rawToken;
+    // In development only: log token to console so devs can test without real email
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Password reset token for ${user.email}: ${rawToken}`);
+      console.log(`[DEV] Reset link: ${origin}/#forgot-password?token=${rawToken}`);
     }
   }
 
-  const response = {
-    message: 'If an account exists with this email, a password reset link has been dispatched to your inbox.',
+  // Always return the same response regardless of whether the account exists (prevent account enumeration)
+  return res.json({
+    message: 'If an account exists with this email, a password reset link has been sent to your inbox.',
     emailDispatched
-  };
-
-  if (devResetToken) {
-    response.devResetToken = devResetToken;
-  }
-
-  return res.json(response);
+  });
 });
 
 router.post('/reset-password', resetLimiter, (req, res) => {
@@ -293,11 +287,6 @@ router.post('/reset-password', resetLimiter, (req, res) => {
 router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId || clientId.trim() === '' || clientId.includes('your_google_client_id_here')) {
-    if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      return res.status(503).json({
-        error: 'Google OAuth is not configured on the server yet. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.'
-      });
-    }
     return res.redirect('/#login?error=google_not_configured');
   }
 
