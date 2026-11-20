@@ -13,6 +13,7 @@ import {
   Flame,
   Swords,
   Activity,
+  Trophy,
   X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -27,6 +28,7 @@ export function Sidebar({ currentView, onNavigate, isOpen, onClose }) {
     { id: 'english', label: 'English Practice', icon: BookOpen },
     { id: 'test', label: 'Typing Test', icon: Timer },
     { id: 'multiplayer', label: '1v1 Duel Arena', icon: Swords },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
     { id: 'heatmap', label: 'Key Heatmap', icon: Activity },
     { id: 'history', label: 'History', icon: History },
     { id: 'statistics', label: 'Statistics', icon: BarChart3 },

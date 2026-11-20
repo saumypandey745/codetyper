@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap, Sparkles } from 'lucide-react';
 import { formatDuration } from '../../utils/wpmCalculator.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { computeSessionXp, calculateLevelFromXp } from '../../utils/gamificationEngine.js';
+import { TypingCertificateModal } from './TypingCertificateModal.jsx';
 
 export function ResultsCard({
   result,
@@ -12,6 +13,7 @@ export function ResultsCard({
   onNavigate
 }) {
   const { userStats } = useAuth();
+  const [showCertModal, setShowCertModal] = useState(false);
 
   const earnedXp = useMemo(() => {
     return computeSessionXp({
@@ -317,11 +319,26 @@ export function ResultsCard({
           <span>View Statistics</span>
         </button>
 
+        <button
+          className="btn btn-outline"
+          style={{ borderColor: 'rgba(234, 179, 8, 0.5)', color: '#EAB308' }}
+          onClick={() => setShowCertModal(true)}
+        >
+          <Award size={16} />
+          <span>Claim Certificate</span>
+        </button>
+
         <button className="btn btn-ghost" onClick={() => onNavigate('dashboard')}>
           <Home size={16} />
           <span>Dashboard</span>
         </button>
       </div>
+
+      <TypingCertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        result={result}
+      />
     </div>
   );
 }

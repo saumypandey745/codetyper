@@ -129,7 +129,11 @@ class ApiClient {
       return this.request(`/sessions/history?${query}`);
     },
     delete: (id) => this.request(`/sessions/${id}`, { method: 'DELETE' }),
-    getStats: () => this.request('/sessions/stats')
+    getStats: () => this.request('/sessions/stats'),
+    getLeaderboard: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return this.request(`/sessions/leaderboard?${query}`);
+    }
   };
 
   // User & Settings

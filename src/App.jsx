@@ -23,6 +23,7 @@ import { ProfilePage } from './pages/app/ProfilePage.jsx';
 import { SettingsPage } from './pages/app/SettingsPage.jsx';
 import { AdminPage } from './pages/app/AdminPage.jsx';
 import { MultiplayerArena } from './pages/app/MultiplayerArena.jsx';
+import { LeaderboardPage } from './pages/app/LeaderboardPage.jsx';
 import { KeyHeatmap } from './components/typing/KeyHeatmap.jsx';
 
 export function App() {
@@ -202,6 +203,8 @@ export function App() {
         return <HistoryPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
       case 'statistics':
         return <StatisticsPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
+      case 'leaderboard':
+        return <LeaderboardPage />;
       case 'profile':
         return <ProfilePage onNavigate={navigateTo} />;
       case 'settings':

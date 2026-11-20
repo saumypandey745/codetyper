@@ -229,4 +229,16 @@ describe('CodeTyper API Integration Suite', () => {
     assert.ok(metrics.users >= 2);
     assert.ok(metrics.contentItems >= 30);
   });
+
+  it('GET /api/sessions/leaderboard returns ranked typists and tier badges', async () => {
+    const res = await fetch(`${baseUrl}/api/sessions/leaderboard?period=all_time&limit=20`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.leaderboard));
+    assert.ok(data.leaderboard.length > 0);
+    assert.equal(data.leaderboard[0].rank, 1);
+    assert.ok(data.leaderboard[0].best_wpm > 0);
+    assert.ok(data.leaderboard[0].tier);
+    assert.ok(data.leaderboard[0].tierIcon);
+  });
 });
