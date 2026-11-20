@@ -210,6 +210,54 @@ export function ResultsCard({
         </div>
       </div>
 
+      {/* Pro Biometrics & Ergonomics */}
+      <div className="pro-metrics-grid">
+        <div className="pro-metric-card">
+          <div className="header">
+            <span>Burst Speed</span>
+            <span style={{ color: '#ef4444' }}>🔥 Peak</span>
+          </div>
+          <div className="value">
+            {result.burstWpm || result.netWpm} <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>WPM</span>
+          </div>
+          <div className="subtext">Highest 2-second speed spike during run</div>
+        </div>
+
+        <div className="pro-metric-card">
+          <div className="header">
+            <span>Consistency</span>
+            <span style={{ color: 'var(--color-primary-forest)' }}>🎯 Flow</span>
+          </div>
+          <div className="value">
+            {result.consistency !== undefined ? result.consistency : 95}%
+          </div>
+          <div className="subtext">Cadence stability & low pace variance</div>
+        </div>
+
+        <div className="pro-metric-card">
+          <div className="header">
+            <span>Hand Balance</span>
+            <span>⌨️ Ergonomics</span>
+          </div>
+          <div className="value" style={{ fontSize: '1.2rem', display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#3b82f6' }}>L: {result.handBalance ? result.handBalance.leftPercent : 50}%</span>
+            <span style={{ color: '#10b981' }}>R: {result.handBalance ? result.handBalance.rightPercent : 50}%</span>
+          </div>
+          <div className="hand-balance-bar">
+            <div
+              className="hand-balance-left"
+              style={{ width: `${result.handBalance ? result.handBalance.leftPercent : 50}%` }}
+              title="Left Hand Key Distribution"
+            />
+            <div
+              className="hand-balance-right"
+              style={{ width: `${result.handBalance ? result.handBalance.rightPercent : 50}%` }}
+              title="Right Hand Key Distribution"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Detailed Diagnostics Table */}
       <table className="results-breakdown-table">
         <tbody>

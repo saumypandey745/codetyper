@@ -24,6 +24,7 @@ import { ambientEngine } from '../../utils/ambientSoundEngine.js';
 
 export function TypingEngine({
   targetText = '',
+  snippetId = null,
   title = '',
   language = 'English',
   difficulty = 'intermediate',
@@ -37,9 +38,11 @@ export function TypingEngine({
   const activeCharRef = useRef(null);
   const [isFocused, setIsFocused] = useState(true);
 
-  // New Advanced State: Zen Mode, Virtual Keyboard, Ambient Sound
+  // Advanced States: Zen Mode, Virtual Keyboard, Ambient Sound, Ghost PB, Switch Preset
   const [isZenMode, setIsZenMode] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [showGhost, setShowGhost] = useState(true);
+  const [showSwitchMenu, setShowSwitchMenu] = useState(false);
   const [activeAmbientTrack, setActiveAmbientTrack] = useState(null);
   const [ambientVolume, setAmbientVolume] = useState(0.4);
   const [showAmbientMenu, setShowAmbientMenu] = useState(false);
@@ -49,6 +52,8 @@ export function TypingEngine({
     countdown,
     typedText,
     cursorIndex,
+    ghostIndex,
+    ghostInfo,
     remainingSeconds,
     liveMetrics,
     lastPressedKey,
@@ -58,6 +63,7 @@ export function TypingEngine({
     resetEngine
   } = useTypingEngine({
     targetText,
+    snippetId,
     mode,
     duration,
     countdownEnabled: settings.countdown_enabled,
@@ -159,12 +165,22 @@ export function TypingEngine({
           className={`char-token ${state} ${isCurrent ? 'current' : ''}`}
           style={{ position: 'relative' }}
         >
+          {/* User Caret */}
           {isCurrent && (status === 'typing' || status === 'idle') && (
             <span
               className={`typing-caret caret-${settings.cursor_style || 'line'}`}
               aria-hidden="true"
             />
           )}
+
+          {/* Ghost Mode Caret (Race Against Personal Best) */}
+          {showGhost && ghostInfo && i === ghostIndex && (status === 'typing' || status === 'countdown') && (
+            <span className="typing-ghost-caret" aria-hidden="true">
+              <span className="ghost-caret-badge">👻 PB {ghostInfo.wpm}</span>
+              <span className="ghost-caret-line" />
+            </span>
+          )}
+
           {displayChar}
         </span>
       );
@@ -346,6 +362,84 @@ export function TypingEngine({
               <Leaf size={15} />
               <span>Zen</span>
             </button>
+
+            {/* Ghost Mode Toggle (if a PB exists) */}
+            {ghostInfo && (
+              <button
+                className={`btn btn-sm ${showGhost ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setShowGhost((g) => !g)}
+                title={`Ghost Mode: Race your personal best of ${ghostInfo.wpm} WPM`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <span>👻 Ghost ({ghostInfo.wpm})</span>
+              </button>
+            )}
+
+            {/* Switch Preset Selector */}
+            <div style={{ position: 'relative' }}>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowSwitchMenu((s) => !s)}
+                title="Mechanical Switch Sound Preset"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Sliders size={14} />
+                <span style={{ textTransform: 'capitalize' }}>{settings.sound_theme || 'mechanical'}</span>
+                <ChevronDown size={12} />
+              </button>
+              {showSwitchMenu && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    zIndex: 40,
+                    backgroundColor: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: 'var(--shadow-lg)',
+                    padding: '0.5rem',
+                    minWidth: '175px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem'
+                  }}
+                >
+                  {[
+                    { id: 'thock', label: '🖲️ Oil King (Thock)' },
+                    { id: 'holypanda', label: '🥊 Holy Panda' },
+                    { id: 'mechanical', label: '⌨️ Cherry MX Blue' },
+                    { id: 'buckling', label: '🏛️ Buckling Spring' },
+                    { id: 'typewriter', label: '📜 Typewriter' },
+                    { id: 'soft', label: '🫧 Soft Membrane' }
+                  ].map((sw) => (
+                    <button
+                      key={sw.id}
+                      onClick={() => {
+                        updateSetting('sound_theme', sw.id);
+                        setShowSwitchMenu(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.45rem 0.65rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: (settings.sound_theme || 'mechanical') === sw.id ? 'var(--color-primary-light)' : 'transparent',
+                        color: (settings.sound_theme || 'mechanical') === sw.id ? 'var(--color-primary-forest)' : 'var(--color-text-main)',
+                        fontWeight: (settings.sound_theme || 'mechanical') === sw.id ? 700 : 500,
+                        fontSize: '0.825rem',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <span>{sw.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Keypress Sound Effects Toggle */}
             <button

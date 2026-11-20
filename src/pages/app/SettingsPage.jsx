@@ -176,7 +176,7 @@ export function SettingsPage({ onNavigate }) {
               Choose between the signature warm botanical cream palette or a subdued slate-green dark mode.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <div
                 style={{
                   padding: '1.25rem',
@@ -203,8 +203,8 @@ export function SettingsPage({ onNavigate }) {
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
                   border: settings.theme === 'dark' ? '2px solid var(--color-primary-forest)' : '1px solid var(--color-border)',
-                  backgroundColor: '#131B16',
-                  color: '#E8ECE9',
+                  backgroundColor: '#111A15',
+                  color: '#F2F7F4',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -212,10 +212,115 @@ export function SettingsPage({ onNavigate }) {
                 }}
                 onClick={() => updateSetting('theme', 'dark')}
               >
-                <Moon size={24} color="#8FAF9A" />
+                <Moon size={24} color="#34D399" />
                 <div>
-                  <div style={{ fontWeight: 600 }}>Slate Green Dark</div>
-                  <div style={{ fontSize: '0.78rem', color: '#9BAFA3' }}>Deep forest nocturnal mode</div>
+                  <div style={{ fontWeight: 600 }}>Slate Emerald Dark</div>
+                  <div style={{ fontSize: '0.78rem', color: '#A3B9AD' }}>Deep forest nocturnal mode</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: settings.theme === 'catppuccin' ? '2px solid #a6e3a1' : '1px solid var(--color-border)',
+                  backgroundColor: '#1e1e2e',
+                  color: '#cdd6f4',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+                onClick={() => updateSetting('theme', 'catppuccin')}
+              >
+                <Sparkles size={24} color="#89b4fa" />
+                <div>
+                  <div style={{ fontWeight: 600 }}>Catppuccin Mocha</div>
+                  <div style={{ fontSize: '0.78rem', color: '#a6adc8' }}>Programmer pastel dark</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: settings.theme === 'dracula' ? '2px solid #bd93f9' : '1px solid var(--color-border)',
+                  backgroundColor: '#282a36',
+                  color: '#f8f8f2',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+                onClick={() => updateSetting('theme', 'dracula')}
+              >
+                <Moon size={24} color="#bd93f9" />
+                <div>
+                  <div style={{ fontWeight: 600 }}>Dracula</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6272a4' }}>Iconic neon purple & green</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: settings.theme === 'tokyo-night' ? '2px solid #7aa2f7' : '1px solid var(--color-border)',
+                  backgroundColor: '#1a1b26',
+                  color: '#c0caf5',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+                onClick={() => updateSetting('theme', 'tokyo-night')}
+              >
+                <Sparkles size={24} color="#7dcfff" />
+                <div>
+                  <div style={{ fontWeight: 600 }}>Tokyo Night</div>
+                  <div style={{ fontSize: '0.78rem', color: '#7aa2f7' }}>Deep indigo neon aesthetic</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: settings.theme === 'nord' ? '2px solid #88c0d0' : '1px solid var(--color-border)',
+                  backgroundColor: '#2e3440',
+                  color: '#eceff4',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+                onClick={() => updateSetting('theme', 'nord')}
+              >
+                <Sun size={24} color="#88c0d0" />
+                <div>
+                  <div style={{ fontWeight: 600 }}>Nord Arctic</div>
+                  <div style={{ fontSize: '0.78rem', color: '#81a1c1' }}>Clean cold arctic slate</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: settings.theme === 'matrix-neon' ? '2px solid #39ff14' : '1px solid var(--color-border)',
+                  backgroundColor: '#061108',
+                  color: '#39ff14',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+                onClick={() => updateSetting('theme', 'matrix-neon')}
+              >
+                <Sparkles size={24} color="#39ff14" />
+                <div>
+                  <div style={{ fontWeight: 600 }}>Matrix Neon</div>
+                  <div style={{ fontSize: '0.78rem', color: '#1ec805' }}>Cyberpunk emerald glow</div>
                 </div>
               </div>
             </div>
@@ -415,10 +520,13 @@ export function SettingsPage({ onNavigate }) {
             <h4 style={{ marginBottom: '0.75rem', fontSize: '0.95rem' }}>Key Sound Switch Profile</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', opacity: settings.sound_enabled ? 1 : 0.5 }}>
               {[
-                { id: 'mechanical', name: 'Tactile Mechanical', desc: 'Crisp mechanical switch click' },
-                { id: 'soft', name: 'Soft Thud', desc: 'Gentle subdued keystroke' },
-                { id: 'typewriter', name: 'Classic Typewriter', desc: 'Vintage mechanical cadence' },
-                { id: 'beep', name: 'Minimalist Ping', desc: 'Subtle pure sine blip' }
+                { id: 'thock', name: '🖲️ Deep Creamy Thock', desc: 'Oil King deep acoustic bottom-out resonance' },
+                { id: 'holypanda', name: '🥊 Holy Panda Tactile', desc: 'Crisp dual-transient tactile bump' },
+                { id: 'mechanical', name: '⌨️ Cherry MX Blue', desc: 'Crisp clicky mechanical switch snap' },
+                { id: 'buckling', name: '🏛️ Buckling Spring', desc: 'IBM Model M steel plate ping and click' },
+                { id: 'typewriter', name: '📜 Classic Typewriter', desc: 'Vintage mechanical striking cadence' },
+                { id: 'soft', name: '🫧 Soft Membrane', desc: 'Gentle subdued bubble keystroke' },
+                { id: 'beep', name: '⚡ Minimalist Ping', desc: 'Subtle pure high-tech sine blip' }
               ].map((snd) => (
                 <div
                   key={snd.id}

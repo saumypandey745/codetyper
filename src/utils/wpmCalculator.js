@@ -26,6 +26,75 @@ export function calculateMetrics({
   };
 }
 
+/**
+ * Calculates typing consistency score (0-100%) like Monkeytype.
+ * Uses standard deviation of instantaneous WPM across 1-second interval snapshots.
+ */
+export function calculateConsistency(timeline = [], avgWpm = 0) {
+  if (!timeline || timeline.length < 2 || avgWpm <= 0) return 100;
+
+  const wpms = timeline.map((entry) => (typeof entry.wpm === 'number' ? entry.wpm : 0));
+  const mean = wpms.reduce((sum, v) => sum + v, 0) / wpms.length;
+
+  if (mean <= 0) return 100;
+
+  const variance = wpms.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / wpms.length;
+  const stdDev = Math.sqrt(variance);
+
+  // Coefficient of Variation: stdDev / mean. Lower variation = higher consistency.
+  const score = Math.max(0, Math.min(100, Math.round(100 * (1 - (stdDev / (mean * 1.5))))));
+  return isNaN(score) ? 100 : score;
+}
+
+// Left hand keyboard characters (standard QWERTY)
+const LEFT_HAND_KEYS = new Set([
+  '~', '`', '!', '1', '@', '2', '#', '3', '$', '4', '%', '5',
+  'q', 'w', 'e', 'r', 't',
+  'a', 's', 'd', 'f', 'g',
+  'z', 'x', 'c', 'v', 'b',
+  'Q', 'W', 'E', 'R', 'T',
+  'A', 'S', 'D', 'F', 'G',
+  'Z', 'X', 'C', 'V', 'B'
+]);
+
+/**
+ * Calculates ergonomic hand load distribution (Left vs Right Hand percentage).
+ */
+export function calculateHandBalance(text = '') {
+  if (!text || text.length === 0) {
+    return { leftCount: 0, rightCount: 0, leftPercent: 50, rightPercent: 50 };
+  }
+
+  let leftCount = 0;
+  let rightCount = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === ' ' || ch === '\n') {
+      // Spacebar shared equally
+      leftCount += 0.5;
+      rightCount += 0.5;
+    } else if (LEFT_HAND_KEYS.has(ch)) {
+      leftCount++;
+    } else {
+      rightCount++;
+    }
+  }
+
+  const total = leftCount + rightCount;
+  if (total === 0) return { leftCount: 0, rightCount: 0, leftPercent: 50, rightPercent: 50 };
+
+  const leftPercent = Math.round((leftCount / total) * 100);
+  const rightPercent = 100 - leftPercent;
+
+  return {
+    leftCount: Math.round(leftCount),
+    rightCount: Math.round(rightCount),
+    leftPercent,
+    rightPercent
+  };
+}
+
 export function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);

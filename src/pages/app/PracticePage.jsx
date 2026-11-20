@@ -27,7 +27,8 @@ import {
   Download,
   Trash2,
   ExternalLink,
-  FileCode
+  FileCode,
+  Target
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
@@ -35,6 +36,7 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { api } from '../../utils/api.js';
 import { TypingEngine } from '../../components/typing/TypingEngine.jsx';
 import { ResultsCard } from '../../components/typing/ResultsCard.jsx';
+import { keyStatsManager } from '../../utils/gamificationEngine.js';
 import { programmingLanguages, englishCategories } from '../../../server/seedData.js';
 
 const GUEST_COMPLETED_KEY = 'codetyper_completed_lessons';
@@ -268,6 +270,17 @@ export function PracticePage({
       setCompletedResult(null);
       setEngineKey(Date.now());
     }
+  };
+
+  // Smart Weakness Drill generator
+  const handleStartWeaknessDrill = () => {
+    const weakKeys = keyStatsManager.getWeakestKeys(5);
+    const drillSnippet = keyStatsManager.generateWeaknessSnippet(weakKeys, isCode);
+    setCurrentSnippet(drillSnippet);
+    setIsCustomMode(false);
+    setCompletedResult(null);
+    setEngineKey(Date.now());
+    toast.success(`🎯 Generated Weakness Drill targeting: [ ${weakKeys.join(', ')} ]`);
   };
 
   // Auto-scroll active pill into view in roadmap strip
@@ -663,6 +676,17 @@ export function PracticePage({
             <FileText size={14} />
             <span>Custom</span>
           </button>
+
+          {/* Smart Weakness Drill Button */}
+          <button
+            className={`btn btn-sm ${currentSnippet?.isWeaknessDrill ? 'btn-primary' : 'btn-outline'}`}
+            onClick={handleStartWeaknessDrill}
+            title="Generate intelligent drill targeting your most error-prone keys and symbols"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <Target size={14} />
+            <span>Target Weaknesses</span>
+          </button>
         </div>
       </div>
 
@@ -945,6 +969,7 @@ export function PracticePage({
       ) : (
         <TypingEngine
           key={engineKey}
+          snippetId={currentSnippet?.id || currentSnippet?.title}
           targetText={targetText}
           title={currentSnippet?.title || 'Focused Practice'}
           language={currentSnippet?.language || (isCode ? selectedLanguage : 'English')}

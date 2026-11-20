@@ -460,6 +460,8 @@ export const englishPassages = [
 ];
 
 export const programmingLanguages = [
+  'Algorithms (DSA)',
+  'Vim Navigation',
   'JavaScript',
   'TypeScript',
   'Python',
@@ -1291,5 +1293,123 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(3000);`
+  },
+
+  // Algorithms (DSA) - Blind 75
+  {
+    language: 'Algorithms (DSA)',
+    difficulty: 'beginner',
+    title: 'Two Sum (Optimal Hash Map - O(n))',
+    content: `function twoSum(nums, target) {
+  const prevMap = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    const diff = target - nums[i];
+    if (prevMap.has(diff)) {
+      return [prevMap.get(diff), i];
+    }
+    prevMap.set(nums[i], i);
+  }
+  return [];
+}`
+  },
+  {
+    language: 'Algorithms (DSA)',
+    difficulty: 'beginner',
+    title: 'Valid Parentheses (Stack - O(n))',
+    content: `function isValid(s) {
+  const stack = [];
+  const closeToOpen = { ')': '(', ']': '[', '}': '{' };
+  for (const char of s) {
+    if (closeToOpen[char]) {
+      if (stack.length > 0 && stack[stack.length - 1] === closeToOpen[char]) {
+        stack.pop();
+      } else {
+        return false;
+      }
+    } else {
+      stack.push(char);
+    }
+  }
+  return stack.length === 0;
+}`
+  },
+  {
+    language: 'Algorithms (DSA)',
+    difficulty: 'intermediate',
+    title: 'Binary Search (Iterative - O(log n))',
+    content: `function binarySearch(nums, target) {
+  let left = 0;
+  let right = nums.length - 1;
+  while (left <= right) {
+    const mid = Math.floor(left + (right - left) / 2);
+    if (nums[mid] === target) {
+      return mid;
+    } else if (nums[mid] < target) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  return -1;
+}`
+  },
+  {
+    language: 'Algorithms (DSA)',
+    difficulty: 'intermediate',
+    title: 'Reverse Linked List (In-Place - O(n))',
+    content: `function reverseList(head) {
+  let prev = null;
+  let curr = head;
+  while (curr !== null) {
+    const nextNode = curr.next;
+    curr.next = prev;
+    prev = curr;
+    curr = nextNode;
+  }
+  return prev;
+}`
+  },
+  {
+    language: 'Algorithms (DSA)',
+    difficulty: 'advanced',
+    title: 'Maximum Subarray (Kadanes Algorithm - O(n))',
+    content: `function maxSubArray(nums) {
+  let maxSoFar = nums[0];
+  let currentMax = nums[0];
+  for (let i = 1; i < nums.length; i++) {
+    currentMax = Math.max(nums[i], currentMax + nums[i]);
+    maxSoFar = Math.max(maxSoFar, currentMax);
+  }
+  return maxSoFar;
+}`
+  },
+
+  // Vim Navigation & Modal Editing
+  {
+    language: 'Vim Navigation',
+    difficulty: 'beginner',
+    title: 'Vim Motions: Basic HJKL & Word Jumps',
+    content: `h: Move left one char.
+j: Move down one line.
+k: Move up one line.
+l: Move right one char.
+w: Jump forward to beginning of next word.
+b: Jump backward to beginning of previous word.
+e: Jump forward to end of current word.
+0: Jump to beginning of line.
+$: Jump to end of line.`
+  },
+  {
+    language: 'Vim Navigation',
+    difficulty: 'intermediate',
+    title: 'Vim Operators: Change, Delete & Text Objects',
+    content: `ciw: Change inside current word (erases word and enters insert mode).
+di": Delete everything inside quotes.
+ca(: Change entire parenthesized argument block.
+dd: Delete (cut) current entire line.
+yy: Yank (copy) current line to register.
+p: Paste register after cursor.
+u: Undo last change.
+Ctrl+r: Redo last undone change.`
   }
 ];

@@ -247,6 +247,109 @@
   100% { opacity: 1; box-shadow: 0 0 18px #10b981, 0 0 26px #34d399; }
 }
 
+/* Ghost Mode Replay Caret (Race Against Personal Best) */
+.typing-ghost-caret {
+  position: absolute;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  transition: left 110ms cubic-bezier(0.16, 1, 0.3, 1), top 110ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 9;
+  opacity: 0.75;
+}
+
+.ghost-caret-line {
+  width: 2.5px;
+  height: 1.35em;
+  background: linear-gradient(180deg, #818cf8, #6366f1);
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+  animation: ghostPulse 1.4s infinite alternate ease-in-out;
+}
+
+.ghost-caret-badge {
+  position: absolute;
+  top: -1.55rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.92);
+  color: #ffffff;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+@keyframes ghostPulse {
+  0% { opacity: 0.55; transform: scaleY(0.95); }
+  100% { opacity: 0.95; transform: scaleY(1.05); }
+}
+
+/* Pro Biometrics & Hand Balance Grid in Results */
+.pro-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.pro-metric-card {
+  background-color: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pro-metric-card .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.pro-metric-card .value {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.pro-metric-card .subtext {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.hand-balance-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+  background: var(--color-border-subtle);
+}
+
+.hand-balance-left {
+  background: #3b82f6;
+  transition: width 0.3s ease;
+}
+
+.hand-balance-right {
+  background: #10b981;
+  transition: width 0.3s ease;
+}
+
 /* Pure Zen Focus Mode */
 .typing-container.zen-mode {
   max-width: 920px;

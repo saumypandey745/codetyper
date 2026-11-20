@@ -9,13 +9,18 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch }) {
   const { settings, toggleTheme, updateSetting } = useSettings();
   const toast = useToast();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
   const dropdownRef = useRef(null);
+  const themeMenuRef = useRef(null);
 
-  // Close dropdown on click outside
+  // Close dropdowns on click outside
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
+      }
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
+        setShowThemeMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -82,15 +87,71 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch }) {
           {settings.sound_enabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
 
-        {/* Theme Toggle */}
-        <button
-          className="theme-toggle-btn"
-          onClick={toggleTheme}
-          title={settings.theme === 'dark' ? 'Switch to Peaceful Cream Theme' : 'Switch to Slate Green Dark Theme'}
-          aria-label="Toggle appearance theme"
-        >
-          {settings.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        {/* Theme Picker Dropdown */}
+        <div style={{ position: 'relative' }} ref={themeMenuRef}>
+          <button
+            className="theme-toggle-btn"
+            onClick={() => setShowThemeMenu((p) => !p)}
+            title={`Current theme: ${settings.theme}. Click to switch theme.`}
+            aria-label="Change Theme"
+          >
+            {settings.theme === 'peaceful' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          {showThemeMenu && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '125%',
+                right: 0,
+                width: '190px',
+                backgroundColor: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-lg)',
+                padding: '0.4rem',
+                zIndex: 100,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.2rem'
+              }}
+            >
+              {[
+                { id: 'peaceful', label: '☀️ Peaceful Cream' },
+                { id: 'dark', label: '🌿 Slate Emerald' },
+                { id: 'catppuccin', label: '🌸 Catppuccin' },
+                { id: 'dracula', label: '🧛 Dracula' },
+                { id: 'tokyo-night', label: '🌆 Tokyo Night' },
+                { id: 'nord', label: '❄️ Nord Arctic' },
+                { id: 'matrix-neon', label: '💚 Matrix Neon' }
+              ].map((th) => (
+                <button
+                  key={th.id}
+                  onClick={() => {
+                    updateSetting('theme', th.id);
+                    setShowThemeMenu(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.4rem 0.65rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: settings.theme === th.id ? 'var(--color-primary-light)' : 'transparent',
+                    color: settings.theme === th.id ? 'var(--color-primary-forest)' : 'var(--color-text-main)',
+                    fontWeight: settings.theme === th.id ? 700 : 500,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span>{th.label}</span>
+                  {settings.theme === th.id && <Check size={14} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Profile Avatar / Menu */}
         {user ? (

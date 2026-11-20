@@ -296,6 +296,27 @@ function seedInitialData() {
       }
     }
 
+    // 3. Sync any missing coding snippets from seedData.js
+    for (const c of codingSnippets) {
+      if (!existingTitles.has(c.title)) {
+        const words = c.content.trim().split(/\s+/).length;
+        insertMissingStmt.run(
+          'Programming',
+          c.language,
+          c.difficulty,
+          c.title,
+          c.content,
+          words,
+          c.content.length,
+          1,
+          c.language,
+          1
+        );
+        existingTitles.add(c.title);
+        newInserted++;
+      }
+    }
+
     if (newInserted > 0) {
       console.log(`[DB] Synced ${newInserted} new practice items into practice_content.`);
     }

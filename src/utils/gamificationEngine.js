@@ -206,6 +206,71 @@ export const keyStatsManager = {
     if (!keyData || keyData.total === 0) return null;
     const correct = keyData.total - keyData.errors;
     return Math.max(0, Math.min(100, Math.round((correct / keyData.total) * 100)));
+  },
+
+  getWeakestKeys(limit = 5) {
+    const stats = this.getStats();
+    const evaluated = [];
+
+    for (const [key, data] of Object.entries(stats)) {
+      if (data.total >= 3 && data.errors > 0) {
+        const accuracy = (data.total - data.errors) / data.total;
+        evaluated.push({ key, accuracy, errors: data.errors, total: data.total });
+      }
+    }
+
+    // Sort by lowest accuracy first, then highest error count
+    evaluated.sort((a, b) => a.accuracy - b.accuracy || b.errors - a.errors);
+
+    const keys = evaluated.slice(0, limit).map((e) => e.key);
+    // If fewer than 3 weak keys recorded yet, pad with notoriously tricky coding symbols
+    const defaultSymbols = ['{', '}', '[', ']', ';', '(', ')', '_', '$', '='];
+    for (const sym of defaultSymbols) {
+      if (keys.length >= limit) break;
+      if (!keys.includes(sym)) keys.push(sym);
+    }
+    return keys;
+  },
+
+  generateWeaknessSnippet(targetKeys = [], isCode = true) {
+    const keysStr = targetKeys.join(' ');
+
+    if (isCode) {
+      return {
+        id: `weakness_drill_${Date.now()}`,
+        title: `Smart Weakness Drill: [ ${targetKeys.join(', ')} ]`,
+        language: 'JavaScript',
+        difficulty: 'intermediate',
+        isWeaknessDrill: true,
+        targetKeys,
+        content: `// Targeted Weakness Drill for: ${targetKeys.join(' ')}
+const lookupTable = {
+  data: [12, 45, 78, 92],
+  active: true,
+  config: { flags: ['alpha', 'beta'], timeout: 5000 };
+};
+
+function processBuffer(keys = [], callback = null) {
+  if (!lookupTable.active) return null;
+  const result = keys.map((key, idx) => ({ id: idx, value: key }));
+  return typeof callback === 'function' ? callback(result) : result;
+}
+
+const payload = processBuffer(['${targetKeys[0] || 'k1'}', '${targetKeys[1] || 'k2'}']);
+console.log(payload);`
+      };
+    }
+
+    return {
+      id: `weakness_drill_${Date.now()}`,
+      title: `Precision Drill: [ ${targetKeys.join(', ')} ]`,
+      language: 'English',
+      difficulty: 'intermediate',
+      isWeaknessDrill: true,
+      targetKeys,
+      content: `Deliberate practice with tricky keys like ${keysStr} builds muscle memory rapidly. By repeating complex finger reaches with calm posture, your accuracy improves significantly across every coding project and writing task.`
+    };
   }
 };
+
 
