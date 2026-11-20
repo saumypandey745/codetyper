@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   LayoutDashboard,
   Code2,
@@ -12,7 +12,8 @@ import {
   Keyboard,
   Flame,
   Swords,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -37,6 +38,18 @@ export function Sidebar({ currentView, onNavigate, isOpen, onClose }) {
     navItems.push({ id: 'admin', label: 'Admin Panel', icon: ShieldAlert });
   }
 
+  // Close drawer on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (onClose) onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const handleItemClick = (id) => {
     onNavigate(id);
     if (onClose) onClose();
@@ -44,18 +57,35 @@ export function Sidebar({ currentView, onNavigate, isOpen, onClose }) {
 
   return (
     <>
-      <div className={`sidebar-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
-      <aside className={`app-sidebar ${isOpen ? 'open' : ''}`}>
+      <div
+        className={`sidebar-overlay ${isOpen ? 'open' : ''}`}
+        onClick={onClose}
+        aria-hidden={!isOpen}
+      />
+      <aside
+        className={`app-sidebar ${isOpen ? 'open' : ''}`}
+        aria-label="Navigation Menu"
+        aria-hidden={!isOpen}
+      >
         <div className="sidebar-header">
           <button
             className="brand-logo"
             onClick={() => handleItemClick('dashboard')}
-            style={{ textAlign: 'left' }}
+            style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             <div className="brand-icon">
               <Code2 size={20} />
             </div>
             <span>CodeTyper</span>
+          </button>
+
+          <button
+            className="sidebar-close-btn"
+            onClick={onClose}
+            aria-label="Close navigation menu"
+            title="Close menu (Esc)"
+          >
+            <X size={19} />
           </button>
         </div>
 

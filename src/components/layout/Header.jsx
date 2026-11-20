@@ -33,9 +33,10 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch }) {
     <header className="app-header">
       <div className="header-left">
         <button
-          className="btn btn-ghost btn-sm"
+          className="btn btn-ghost btn-sm sidebar-toggle-btn"
           onClick={onToggleSidebar}
           aria-label="Toggle Navigation Menu"
+          title="Toggle Navigation Menu"
         >
           <Menu size={20} />
         </button>
