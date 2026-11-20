@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Code2, BookOpen, Terminal, ArrowRight, X } from 'lucide-react';
-import { programmingLanguages } from '../../../server/seedData.js';
+import { programmingLanguages, englishCategories } from '../../../server/seedData.js';
 
 export function QuickSearchModal({ isOpen, onClose, onSelectPractice, onNavigate }) {
   const [query, setQuery] = useState('');
@@ -29,11 +29,6 @@ export function QuickSearchModal({ isOpen, onClose, onSelectPractice, onNavigate
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const englishCategories = [
-    'General English', 'Daily Life', 'Technology', 'Education', 'Business',
-    'Travel', 'Science', 'Nature', 'Productivity', 'Motivation', 'Communication', 'Programming Concepts'
-  ];
 
   const filteredLangs = programmingLanguages.filter((l) =>
     l.toLowerCase().includes(query.toLowerCase())

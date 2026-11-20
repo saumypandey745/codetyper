@@ -149,7 +149,7 @@ export function initDatabase() {
 
   try {
     db.exec('CREATE INDEX IF NOT EXISTS idx_content_lang_lesson ON practice_content(is_code, language, lesson_number);');
-  } catch (e) {}
+  } catch (e) { }
 
   seedInitialData();
 }
@@ -168,8 +168,8 @@ function seedInitialData() {
   // Check if content already exists
   const countRow = db.prepare('SELECT COUNT(*) as count FROM practice_content').get();
 
-  if (curriculumLessons.length > 0 && countRow.count < 1400) {
-    console.log(`[DB] Seeding full 50-lesson curricula (${curriculumLessons.length} lessons across all languages)...`);
+  if (curriculumLessons.length > 0 && countRow.count < curriculumLessons.length) {
+    console.log(`[DB] Seeding full curricula (${curriculumLessons.length} lessons across all languages)...`);
     try {
       db.exec('DELETE FROM practice_content;');
       const insertStmt = db.prepare(`
@@ -196,7 +196,7 @@ function seedInitialData() {
       console.log(`[DB] Successfully seeded ${curriculumLessons.length} lessons in practice_content.`);
     } catch (err) {
       console.error('[DB] Failed during curriculum bulk insertion', err);
-      try { db.exec('ROLLBACK;'); } catch {}
+      try { db.exec('ROLLBACK;'); } catch { }
     }
   } else if (countRow.count === 0) {
     console.log('[DB] Seeding fallback English passages & Coding snippets...');
@@ -241,6 +241,66 @@ function seedInitialData() {
       );
     }
     console.log('[DB] Fallback practice content seeded successfully.');
+  }
+
+  // Ensure any newly added curriculum lessons or developer knowledge passages are synced into practice_content
+  try {
+    const existingTitles = new Set(
+      db.prepare('SELECT title FROM practice_content').all().map((r) => r.title)
+    );
+
+    const insertMissingStmt = db.prepare(`
+      INSERT INTO practice_content (category, subcategory, difficulty, title, content, word_count, char_count, is_code, language, lesson_number)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let newInserted = 0;
+    // 1. Sync any missing items from curriculumLessons (e.g. Lessons 51-80)
+    for (const item of curriculumLessons) {
+      if (!existingTitles.has(item.title)) {
+        insertMissingStmt.run(
+          item.category,
+          item.subcategory || item.language,
+          item.difficulty,
+          item.title,
+          item.content,
+          item.word_count,
+          item.char_count,
+          item.is_code,
+          item.language,
+          item.lesson_number || 1
+        );
+        existingTitles.add(item.title);
+        newInserted++;
+      }
+    }
+
+    // 2. Sync any missing passages from seedData.js
+    for (const p of englishPassages) {
+      if (!existingTitles.has(p.title)) {
+        const words = p.content.trim().split(/\s+/).length;
+        insertMissingStmt.run(
+          p.category,
+          p.category,
+          p.difficulty,
+          p.title,
+          p.content,
+          words,
+          p.content.length,
+          0,
+          'English',
+          1
+        );
+        existingTitles.add(p.title);
+        newInserted++;
+      }
+    }
+
+    if (newInserted > 0) {
+      console.log(`[DB] Synced ${newInserted} new practice items into practice_content.`);
+    }
+  } catch (syncErr) {
+    console.warn('[DB] Could not sync new practice passages', syncErr);
   }
 
   // Check demo user
@@ -289,7 +349,7 @@ function seedInitialData() {
         INSERT OR IGNORE INTO user_statistics (user_id, total_tests, total_practice_seconds, best_wpm, avg_wpm, avg_accuracy, current_streak, last_practice_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       // Seed demo stats & sessions
       statsStmt.run(demoId, 12, 1440, 78.4, 68.2, 97.4, 4, new Date().toISOString().split('T')[0]);
       statsStmt.run(adminId, 5, 600, 84.1, 74.5, 98.6, 2, new Date().toISOString().split('T')[0]);

@@ -708,6 +708,30 @@ export function PracticePage({
               {currentSnippet?.difficulty || 'Practice'}
             </span>
 
+            {/* A-Z Alphabet Pangram indicator */}
+            {(() => {
+              if (!currentSnippet?.content) return null;
+              const clean = currentSnippet.content.toLowerCase().replace(/[^a-z]/g, '');
+              const isPangram = new Set(clean).size === 26;
+              if (!isPangram) return null;
+              return (
+                <span
+                  className="badge badge-sage"
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.2rem 0.55rem'
+                  }}
+                  title="This passage contains all 26 English letters (A-Z) for comprehensive keyboard dexterity practice."
+                >
+                  ✨ A–Z Pangram
+                </span>
+              );
+            })()}
+
             {isCurrentCompleted && (
               <span
                 style={{
