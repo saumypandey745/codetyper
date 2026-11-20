@@ -76,13 +76,15 @@ describe('CodeTyper API Integration Suite', () => {
     assert.equal(forgotRes.status, 200);
     const forgotData = await forgotRes.json();
     assert.ok(forgotData.devResetToken, 'Token must be generated and returned in fallback mode');
+    assert.ok(forgotData.devOtp, '6-digit OTP must be generated');
+    assert.match(forgotData.devOtp, /^\d{6}$/, 'OTP must be 6 digits');
 
-    // 2. Perform reset
+    // 2. Perform reset using 6-digit OTP
     const resetRes = await fetch(`${baseUrl}/api/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token: forgotData.devResetToken,
+        token: forgotData.devOtp,
         new_password: 'Saumy_2026!',
         confirm_password: 'Saumy_2026!'
       })

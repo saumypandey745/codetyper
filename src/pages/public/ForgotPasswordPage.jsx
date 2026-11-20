@@ -49,7 +49,9 @@ export function ForgotPasswordPage({ onNavigate }) {
     setError('');
     try {
       const res = await api.auth.forgotPassword(trimmed);
-      if (res && res.devResetToken) {
+      if (res && res.devOtp) {
+        setToken(res.devOtp);
+      } else if (res && res.devResetToken) {
         setToken(res.devResetToken);
       }
       // Always show "sent" screen regardless of whether account exists (security: no account enumeration)
@@ -194,7 +196,7 @@ export function ForgotPasswordPage({ onNavigate }) {
 
             <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Check Your Email</h2>
             <p style={{ fontSize: '0.925rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              If an account exists for <strong>{email}</strong>, a reset link has been sent. Check your inbox and click the link in the email.
+              We've dispatched a <strong>6-digit OTP</strong> and secure reset link to <strong>{email}</strong>. Check your inbox to complete your password reset.
             </p>
 
             <div
@@ -213,23 +215,29 @@ export function ForgotPasswordPage({ onNavigate }) {
               <ul style={{ margin: '0.35rem 0 0 1.1rem', padding: 0 }}>
                 <li>Check your Spam, Junk, or Promotions folder.</li>
                 <li>Make sure the email address was typed correctly.</li>
-                <li>Links expire in 15 minutes — request a new one if needed.</li>
+                <li>OTP and links expire in 15 minutes — request a new one if needed.</li>
               </ul>
             </div>
 
-            {/* Allow entering the token manually (e.g. copy from email body) */}
+            {/* Enter OTP or token directly */}
             <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-              <p style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', marginBottom: '0.6rem' }}>
-                Have the reset token from the email? Enter it directly:
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                Enter the 6-Digit OTP from your email:
               </p>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Paste reset token here"
+                  placeholder="e.g. 583920 or paste reset token"
                   value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  style={{ flex: 1, fontSize: '0.85rem' }}
+                  onChange={(e) => setToken(e.target.value.trim())}
+                  style={{
+                    flex: 1,
+                    fontSize: '1rem',
+                    letterSpacing: token && /^\d+$/.test(token) ? '4px' : 'normal',
+                    fontWeight: token && /^\d+$/.test(token) ? 700 : 400
+                  }}
+                  autoFocus
                 />
                 <button
                   type="button"
@@ -242,7 +250,7 @@ export function ForgotPasswordPage({ onNavigate }) {
                     }
                   }}
                 >
-                  Continue
+                  Verify OTP
                 </button>
               </div>
             </div>
@@ -284,18 +292,39 @@ export function ForgotPasswordPage({ onNavigate }) {
 
             <form onSubmit={handleApplyReset} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               {/* Show token field only if it wasn't auto-filled from URL */}
-              {!token && (
+              {!token ? (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="reset-token">Reset Token</label>
+                  <label className="form-label" htmlFor="reset-token">6-Digit OTP or Reset Token</label>
                   <input
                     id="reset-token"
                     type="text"
                     className="form-input"
-                    placeholder="Paste the token from your email"
+                    placeholder="Enter 6-digit OTP or paste token"
                     value={token}
-                    onChange={(e) => setToken(e.target.value)}
+                    onChange={(e) => setToken(e.target.value.trim())}
                     required
                   />
+                </div>
+              ) : (
+                <div style={{
+                  padding: '0.65rem 0.85rem',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.85rem',
+                  color: 'var(--color-primary-forest)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>✓ Reset code / OTP entered</span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                    onClick={() => setToken('')}
+                  >
+                    Change Code
+                  </button>
                 </div>
               )}
 

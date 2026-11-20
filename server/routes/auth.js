@@ -202,6 +202,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
   let emailDispatched = false;
   let rawToken = null;
+  let otpCode = null;
 
   if (user) {
     // Invalidate all existing unused tokens for this user before creating a new one
@@ -209,24 +210,35 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
     rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    // Generate secure 6-digit numeric OTP for mobile & fast entry
+    otpCode = crypto.randomInt(100000, 1000000).toString();
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    db.prepare(`
+    const insertResetStmt = db.prepare(`
       INSERT INTO password_resets (user_id, token_hash, expires_at)
       VALUES (?, ?, ?)
-    `).run(user.id, tokenHash, expiresAt);
+    `);
+
+    // Store both 1-click URL token and 6-digit OTP hashes
+    insertResetStmt.run(user.id, tokenHash, expiresAt);
+    insertResetStmt.run(user.id, otpHash, expiresAt);
 
     const origin = req.get('origin') || (req.protocol + '://' + req.get('host'));
     const mailRes = await sendPasswordResetEmail({
       toEmail: user.email,
       resetToken: rawToken,
+      otpCode,
       origin
     });
 
     emailDispatched = !!mailRes.delivered;
 
-    // In development only: log token to console so devs can test without real email
+    // In development only: log token and OTP to console so devs can test without real email
     if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Password reset OTP for ${user.email}: ${otpCode}`);
       console.log(`[DEV] Password reset token for ${user.email}: ${rawToken}`);
       console.log(`[DEV] Reset link: ${origin}/#forgot-password?token=${rawToken}`);
     }
@@ -237,9 +249,10 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
     emailDispatched
   };
 
-  // In non-production environments, expose devResetToken for test suites and dev convenience
+  // In non-production environments, expose devResetToken and devOtp for test suites and dev convenience
   if (process.env.NODE_ENV !== 'production' && user) {
     response.devResetToken = rawToken;
+    response.devOtp = otpCode;
   }
 
   return res.json(response);
@@ -284,7 +297,8 @@ router.post('/reset-password', resetLimiter, (req, res) => {
   const hash = bcrypt.hashSync(new_password, salt);
 
   db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hash, resetRecord.user_id);
-  db.prepare('UPDATE password_resets SET used_at = CURRENT_TIMESTAMP WHERE id = ?').run(resetRecord.id);
+  // Mark all active reset tokens for this user as used
+  db.prepare('UPDATE password_resets SET used_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(resetRecord.user_id);
   db.prepare('DELETE FROM password_resets WHERE user_id = ? AND id != ?').run(resetRecord.user_id, resetRecord.id);
 
   return res.json({ message: 'Password has been reset successfully. You can now log in.' });
