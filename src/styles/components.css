@@ -267,6 +267,208 @@
   gap: var(--space-1);
 }
 
+/* Form Aliases & Utilities */
+.input-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.input {
+  width: 100%;
+  padding: 0.65rem 0.95rem;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--color-primary-forest);
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .form-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Botanical Avatar Presets Grid */
+.avatar-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.avatar-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.5rem;
+  background-color: var(--color-bg-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+  color: var(--color-text-primary);
+  box-sizing: border-box;
+}
+
+.avatar-preset-btn:hover {
+  border-color: var(--color-primary-sage);
+  background-color: var(--color-bg-soft);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.avatar-preset-btn.active {
+  border-color: var(--color-primary-forest);
+  background-color: var(--color-primary-light);
+  box-shadow: 0 0 0 1px var(--color-primary-forest), var(--shadow-sm);
+}
+
+.avatar-preset-btn img {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-subtle);
+  padding: 2px;
+  transition: transform var(--transition-fast);
+}
+
+.avatar-preset-btn:hover img {
+  transform: scale(1.06);
+}
+
+.avatar-preset-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.avatar-preset-desc {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.avatar-preset-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-forest);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Profile Layout Components */
+.profile-hero-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.profile-hero-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.profile-identity-group {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.profile-avatar-frame {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-avatar-frame img {
+  width: 92px;
+  height: 92px;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--color-primary-sage);
+  background-color: var(--color-bg-subtle);
+  box-shadow: 0 4px 16px rgba(46, 125, 50, 0.15);
+  display: block;
+}
+
+.profile-avatar-status {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  background-color: #10b981;
+  border: 2.5px solid var(--color-bg-surface);
+  border-radius: var(--radius-full);
+}
+
+.profile-bio-callout {
+  margin-top: 0.75rem;
+  padding: 0.65rem 1rem;
+  background: var(--color-bg-subtle);
+  border-left: 3px solid var(--color-primary-forest);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: 0.925rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  max-width: 600px;
+}
+
+.profile-edit-card {
+  margin-top: 1.75rem;
+  padding: 1.75rem;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  animation: fadeIn 200ms ease-out;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
