@@ -67,5 +67,25 @@ router.get('/room/:id', (req, res) => {
   return res.json({ room });
 });
 
+// Real-Time SSE Stream for 0ms Latency Opponent Updates
+router.get('/stream/:id', (req, res) => {
+  const roomId = req.params.id.trim().toUpperCase();
+  const room = multiplayerManager.getRoom(roomId);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (res.flushHeaders) res.flushHeaders();
+
+  // Send current state on connection
+  res.write(`data: ${JSON.stringify(room)}\n\n`);
+
+  multiplayerManager.subscribe(roomId, res);
+});
+
 export default router;
 

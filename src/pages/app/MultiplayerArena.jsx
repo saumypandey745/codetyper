@@ -30,16 +30,66 @@ export function MultiplayerArena({ onNavigate }) {
   const [loading, setLoading] = useState(false);
 
   const pollIntervalRef = useRef(null);
+  const eventSourceRef = useRef(null);
   const myPlayerId = user?.id ? String(user.id) : useRef(`guest_${Math.floor(1000 + Math.random() * 9000)}`).current;
 
-  // Cleanup polling on unmount
+  // Cleanup connections on unmount
   useEffect(() => {
     return () => {
+      if (eventSourceRef.current) eventSourceRef.current.close();
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, []);
 
-  // Poll room state while in waiting, countdown, or racing
+  const handleRoomUpdate = (room) => {
+    if (!room) return;
+    setRoomData(room);
+
+    if (room.status === 'countdown' || room.status === 'racing') {
+      setViewState('racing');
+    } else if (room.status === 'finished') {
+      setViewState('results');
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      try {
+        confetti({ particleCount: 70, spread: 70 });
+      } catch (e) {}
+    }
+  };
+
+  // Real-Time SSE Stream with instant push notifications
+  const startRealtimeSync = (rId) => {
+    if (eventSourceRef.current) eventSourceRef.current.close();
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+
+    const cleanId = rId.trim().toUpperCase();
+
+    try {
+      const es = new EventSource(`/api/multiplayer/stream/${cleanId}`);
+      eventSourceRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const room = JSON.parse(event.data);
+          handleRoomUpdate(room);
+        } catch (e) {}
+      };
+
+      es.onerror = () => {
+        // Fallback to resilient interval polling
+        es.close();
+        eventSourceRef.current = null;
+        startPolling(cleanId);
+      };
+    } catch (e) {
+      startPolling(cleanId);
+    }
+  };
+
+  // Fallback Poller
   const startPolling = (rId) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
 
@@ -48,19 +98,9 @@ export function MultiplayerArena({ onNavigate }) {
         const res = await fetch(`/api/multiplayer/room/${rId}`);
         if (!res.ok) return;
         const data = await res.json();
-        setRoomData(data.room);
-
-        if (data.room.status === 'countdown' || data.room.status === 'racing') {
-          setViewState('racing');
-        } else if (data.room.status === 'finished') {
-          setViewState('results');
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          try {
-            confetti({ particleCount: 70, spread: 70 });
-          } catch (e) {}
-        }
+        handleRoomUpdate(data.room);
       } catch (e) {}
-    }, 600);
+    }, 500);
   };
 
   // Create Battle Room
@@ -78,7 +118,7 @@ export function MultiplayerArena({ onNavigate }) {
       setRoomId(data.room.id);
       setRoomData(data.room);
       setViewState('waiting');
-      startPolling(data.room.id);
+      startRealtimeSync(data.room.id);
       toast.success(`Battle Room ${data.room.id} created! Share the code with your opponent.`);
     } catch (err) {
       toast.error(err.message || 'Could not create battle room.');
@@ -105,7 +145,7 @@ export function MultiplayerArena({ onNavigate }) {
       setRoomId(data.room.id);
       setRoomData(data.room);
       setViewState('racing');
-      startPolling(data.room.id);
+      startRealtimeSync(data.room.id);
       toast.success('Joined battle room! Get ready to race.');
     } catch (err) {
       toast.error(err.message || 'Could not join room.');

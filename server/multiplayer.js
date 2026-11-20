@@ -6,9 +6,41 @@ import { db } from './db.js';
 class MultiplayerManager {
   constructor() {
     this.rooms = new Map();
+    this.subscribers = new Map(); // roomId -> Set of response streams
     // Auto-clean rooms older than 1 hour (unref so it doesn't block process exit)
     const cleaner = setInterval(() => this.cleanup(), 15 * 60 * 1000);
     if (cleaner.unref) cleaner.unref();
+  }
+
+  subscribe(roomId, res) {
+    const cleanId = roomId.trim().toUpperCase();
+    if (!this.subscribers.has(cleanId)) {
+      this.subscribers.set(cleanId, new Set());
+    }
+    const set = this.subscribers.get(cleanId);
+    set.add(res);
+
+    res.on('close', () => {
+      set.delete(res);
+      if (set.size === 0) {
+        this.subscribers.delete(cleanId);
+      }
+    });
+  }
+
+  broadcast(roomId, room) {
+    const cleanId = roomId.trim().toUpperCase();
+    const set = this.subscribers.get(cleanId);
+    if (!set || set.size === 0) return;
+
+    const payload = `data: ${JSON.stringify(room)}\n\n`;
+    for (const client of set) {
+      try {
+        client.write(payload);
+      } catch (err) {
+        set.delete(client);
+      }
+    }
   }
 
   generateRoomCode() {
@@ -103,6 +135,7 @@ class MultiplayerManager {
     if (Object.keys(room.players).length === 2 && room.status === 'waiting') {
       room.status = 'countdown';
       room.countdown = 3;
+      this.broadcast(cleanId, room);
 
       const countdownInterval = setInterval(() => {
         room.countdown -= 1;
@@ -111,15 +144,19 @@ class MultiplayerManager {
           room.status = 'racing';
           room.startTime = Date.now();
         }
+        this.broadcast(cleanId, room);
       }, 1000);
       if (countdownInterval.unref) countdownInterval.unref();
+    } else {
+      this.broadcast(cleanId, room);
     }
 
     return room;
   }
 
   updateProgress({ roomId, playerId, progressPercent, wpm, accuracy }) {
-    const room = this.rooms.get(roomId.trim().toUpperCase());
+    const cleanId = roomId.trim().toUpperCase();
+    const room = this.rooms.get(cleanId);
     if (!room) return null;
 
     const player = room.players[playerId];
@@ -149,6 +186,7 @@ class MultiplayerManager {
       }
     }
 
+    this.broadcast(cleanId, room);
     return room;
   }
 
