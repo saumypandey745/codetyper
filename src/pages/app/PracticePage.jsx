@@ -103,6 +103,10 @@ export function PracticePage({
 
   const activeRoadmapPillRef = useRef(null);
 
+  // Roadmap drawer toggle and flow focus state
+  const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
+  const [engineStatus, setEngineStatus] = useState('idle');
+
   // Result state
   const [completedResult, setCompletedResult] = useState(null);
   const [engineKey, setEngineKey] = useState(Date.now());
@@ -288,14 +292,20 @@ export function PracticePage({
     toast.success(`🎯 Generated Weakness Drill targeting: [ ${weakKeys.join(', ')} ]`);
   };
 
-  // Auto-scroll active pill into view in roadmap strip
+  // Auto-scroll active pill into view within roadmap strip without scrolling the window
   useEffect(() => {
     if (activeRoadmapPillRef.current) {
-      activeRoadmapPillRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
-      });
+      const pill = activeRoadmapPillRef.current;
+      const parent = pill.parentElement;
+      if (parent) {
+        const offsetLeft = pill.offsetLeft;
+        const pillWidth = pill.offsetWidth;
+        const parentWidth = parent.clientWidth;
+        parent.scrollTo({
+          left: Math.max(0, offsetLeft - parentWidth / 2 + pillWidth / 2),
+          behavior: 'smooth'
+        });
+      }
     }
   }, [currentSnippet?.id]);
 
@@ -497,251 +507,255 @@ export function PracticePage({
   const targetText = currentSnippet?.content || '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', maxWidth: '1080px', margin: '0 auto' }}>
-      {/* Top Header & Mode Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-            {practiceType === 'coding' && <Code2 size={22} color="var(--color-primary-forest)" />}
-            {practiceType === 'english' && <BookOpen size={22} color="var(--color-primary-forest)" />}
-            {practiceType === 'test' && <Timer size={22} color="var(--color-primary-forest)" />}
-            {practiceType === 'practice' && <Keyboard size={22} color="var(--color-primary-forest)" />}
-            <h1 style={{ fontSize: '1.75rem', margin: 0, textTransform: 'capitalize' }}>
-              {practiceType === 'coding' && 'Coding Practice'}
-              {practiceType === 'english' && 'English Practice'}
-              {practiceType === 'test' && 'Typing Speed Test'}
-              {practiceType === 'practice' && 'Quick Practice'}
-            </h1>
+    <div className={`typing-stage-wrapper ${engineStatus === 'typing' ? 'flow-focus-active' : ''}`}>
+      {/* Studio Command Deck: Mode Navigation & Pacing Controls */}
+      <div className="studio-command-deck">
+        <div className="deck-primary-row">
+          <div className="deck-title-group">
+            <div className="deck-title-icon">
+              {practiceType === 'coding' && <Code2 size={20} />}
+              {practiceType === 'english' && <BookOpen size={20} />}
+              {practiceType === 'test' && <Timer size={20} />}
+              {practiceType === 'practice' && <Keyboard size={20} />}
+            </div>
+            <div className="deck-title-text">
+              <h1>
+                {practiceType === 'coding' && 'Coding Practice'}
+                {practiceType === 'english' && 'English Practice'}
+                {practiceType === 'test' && 'Typing Speed Test'}
+                {practiceType === 'practice' && 'Quick Practice'}
+              </h1>
+              <p>
+                {practiceType === 'coding' && 'Refine muscle memory for syntactical punctuation, indentation, and logic.'}
+                {practiceType === 'english' && 'Cultivate fluid cadence, common word flows, and high accuracy.'}
+                {practiceType === 'test' && 'Standardized timed test under exam conditions to establish your rating.'}
+                {practiceType === 'practice' && 'Distraction-free everyday typing warm-up.'}
+              </p>
+            </div>
           </div>
-          <p style={{ margin: 0, fontSize: '0.95rem' }}>
-            {practiceType === 'coding' && 'Refine muscle memory for syntactical punctuation, indentation, and logic.'}
-            {practiceType === 'english' && 'Cultivate fluid cadence, common word flows, and high accuracy.'}
-            {practiceType === 'test' && 'Standardized timed test under exam conditions to establish your rating.'}
-            {practiceType === 'practice' && 'Distraction-free everyday typing warm-up.'}
-          </p>
-        </div>
 
-        {/* Practice Mode Switcher Pills */}
-        <div style={{ display: 'inline-flex', padding: '0.25rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
-          <button
-            className={`btn btn-sm ${practiceType === 'practice' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => { setPracticeType('practice'); setCompletedResult(null); }}
-          >
-            <Keyboard size={15} />
-            <span>Quick</span>
-          </button>
-          <button
-            className={`btn btn-sm ${practiceType === 'coding' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => { setPracticeType('coding'); setCompletedResult(null); }}
-          >
-            <Code2 size={15} />
-            <span>Coding</span>
-          </button>
-          <button
-            className={`btn btn-sm ${practiceType === 'english' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => { setPracticeType('english'); setCompletedResult(null); }}
-          >
-            <BookOpen size={15} />
-            <span>English</span>
-          </button>
-          <button
-            className={`btn btn-sm ${practiceType === 'test' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => { setPracticeType('test'); setDuration(60); setMode('time'); setCompletedResult(null); }}
-          >
-            <Timer size={15} />
-            <span>Speed Test</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Control Bar: Filters, Languages, Difficulty, Timer */}
-      <div className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          {/* Coding Language Dropdown */}
-          {practiceType === 'coding' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Language:</span>
-              <select
-                className="input"
-                style={{ padding: '0.4rem 0.75rem', width: 'auto', minWidth: '140px', fontSize: '0.875rem' }}
-                value={selectedLanguage}
-                onChange={(e) => {
-                  setSelectedLanguage(e.target.value);
-                  setIsCustomMode(false);
-                  setCompletedResult(null);
-                }}
-              >
-                {programmingLanguages.map((lang) => (
-                  <option key={lang} value={lang}>{lang}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* English Category Dropdown */}
-          {practiceType === 'english' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Category:</span>
-              <select
-                className="input"
-                style={{ padding: '0.4rem 0.75rem', width: 'auto', minWidth: '150px', fontSize: '0.875rem' }}
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setIsCustomMode(false);
-                  setCompletedResult(null);
-                }}
-              >
-                <option value="All">All Categories</option>
-                {englishCategories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Difficulty Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginRight: '0.25rem' }}>
-              Level:
-            </span>
-            {['all', 'beginner', 'intermediate', 'advanced'].map((lvl) => (
-              <button
-                key={lvl}
-                className={`btn btn-sm ${selectedDifficulty === lvl ? 'btn-primary' : 'btn-outline'}`}
-                style={{ textTransform: 'capitalize', padding: '0.25rem 0.65rem', fontSize: '0.8rem' }}
-                onClick={() => {
-                  setSelectedDifficulty(lvl);
-                  setIsCustomMode(false);
-                  setCompletedResult(null);
-                }}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Right side controls: Mode, Duration, Shuffle, Custom */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* Mode Switcher: Time vs Words vs Complete Passage */}
-          {!isTest && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <button
-                className={`btn btn-sm ${mode === 'time' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setMode('time')}
-                title="Time-based countdown"
-              >
-                Time
-              </button>
-              <button
-                className={`btn btn-sm ${mode === 'words' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setMode('words')}
-                title="Fixed word count"
-              >
-                Words
-              </button>
-              <button
-                className={`btn btn-sm ${mode === 'text' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setMode('text')}
-                title="Complete full snippet"
-              >
-                Passage
-              </button>
-            </div>
-          )}
-
-          {/* Duration selectors */}
-          {mode === 'time' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              {(isTest ? [30, 60, 120, 300] : [15, 30, 60, 120]).map((sec) => (
-                <button
-                  key={sec}
-                  className={`btn btn-sm ${duration === sec ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: '38px' }}
-                  onClick={() => { setDuration(sec); setCompletedResult(null); setEngineKey(Date.now()); }}
-                >
-                  {sec >= 60 ? `${sec / 60}m` : `${sec}s`}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Word count selectors */}
-          {mode === 'words' && !isTest && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              {[10, 25, 50, 100].map((w) => (
-                <button
-                  key={w}
-                  className={`btn btn-sm ${wordCount === w ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: '36px' }}
-                  onClick={() => { setWordCount(w); setCompletedResult(null); setEngineKey(Date.now()); }}
-                >
-                  {w}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Shuffle / Next Snippet */}
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={handleNextSnippet}
-            title="Load another passage"
-          >
-            <Shuffle size={14} />
-            <span>Next</span>
-          </button>
-
-          {/* Custom text button */}
-          <button
-            className={`btn btn-sm ${isCustomMode ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setShowCustomModal(true)}
-            title="Paste custom text or code"
-          >
-            <FileText size={14} />
-            <span>Custom</span>
-          </button>
-
-          {/* Smart Weakness Drill Button */}
-          <button
-            className={`btn btn-sm ${currentSnippet?.isWeaknessDrill ? 'btn-primary' : 'btn-outline'}`}
-            onClick={handleStartWeaknessDrill}
-            title="Generate intelligent drill targeting your most error-prone keys and symbols"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            <Target size={14} />
-            <span>Target Weaknesses</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Lesson Curriculum & Level Progression Bar */}
-      {!isCustomMode && !isTest && totalLessons > 0 && (
-        <div
-          className="card"
-          style={{
-            padding: '0.85rem 1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderLeft: '4px solid var(--color-primary-forest)'
-          }}
-        >
-          {/* Left: Lesson Number, Title & Level Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <span
-              className="badge badge-forest"
-              style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.3rem 0.65rem' }}
+          {/* Segmented Mode Switcher */}
+          <div className="segmented-modes" role="tablist" aria-label="Practice Modes">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'practice'}
+              className={`segmented-mode-btn ${practiceType === 'practice' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('practice'); setCompletedResult(null); }}
             >
+              <Keyboard size={14} />
+              <span>Quick</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'coding'}
+              className={`segmented-mode-btn ${practiceType === 'coding' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('coding'); setCompletedResult(null); }}
+            >
+              <Code2 size={14} />
+              <span>Coding</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'english'}
+              className={`segmented-mode-btn ${practiceType === 'english' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('english'); setCompletedResult(null); }}
+            >
+              <BookOpen size={14} />
+              <span>English</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'test'}
+              className={`segmented-mode-btn ${practiceType === 'test' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('test'); setDuration(60); setMode('time'); setCompletedResult(null); }}
+            >
+              <Timer size={14} />
+              <span>Speed Test</span>
+            </button>
+          </div>
+
+          {/* Mode & Pacing Selectors (Time / Words / Passage & Durations) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {!isTest && (
+              <div className="deck-micro-pills">
+                <span className="micro-pill-label">Mode</span>
+                <button
+                  type="button"
+                  className={`micro-pill-btn ${mode === 'time' ? 'active' : ''}`}
+                  onClick={() => setMode('time')}
+                  title="Time-based countdown"
+                >
+                  Time
+                </button>
+                <button
+                  type="button"
+                  className={`micro-pill-btn ${mode === 'words' ? 'active' : ''}`}
+                  onClick={() => setMode('words')}
+                  title="Fixed word count"
+                >
+                  Words
+                </button>
+                <button
+                  type="button"
+                  className={`micro-pill-btn ${mode === 'text' ? 'active' : ''}`}
+                  onClick={() => setMode('text')}
+                  title="Complete full snippet"
+                >
+                  Passage
+                </button>
+              </div>
+            )}
+
+            {/* Duration Selector */}
+            {mode === 'time' && (
+              <div className="deck-micro-pills">
+                <span className="micro-pill-label">Time</span>
+                {(isTest ? [30, 60, 120, 300] : [15, 30, 60, 120, 300]).map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    className={`micro-pill-btn ${duration === sec ? 'active' : ''}`}
+                    onClick={() => { setDuration(sec); setCompletedResult(null); setEngineKey(Date.now()); }}
+                  >
+                    {sec >= 60 ? `${sec / 60}m` : `${sec}s`}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Word Count Selector */}
+            {mode === 'words' && !isTest && (
+              <div className="deck-micro-pills">
+                <span className="micro-pill-label">Words</span>
+                {[10, 25, 50, 100].map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    className={`micro-pill-btn ${wordCount === w ? 'active' : ''}`}
+                    onClick={() => { setWordCount(w); setCompletedResult(null); setEngineKey(Date.now()); }}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Secondary Row: Specific Filters, Difficulty, and Quick Tools */}
+        <div className="deck-secondary-row">
+          <div className="deck-filter-group">
+            {/* Coding Language Dropdown */}
+            {practiceType === 'coding' && (
+              <div className="deck-pill-select-wrapper">
+                <Code2 size={14} style={{ color: 'var(--color-primary-forest)' }} />
+                <span>Lang:</span>
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => {
+                    setSelectedLanguage(e.target.value);
+                    setIsCustomMode(false);
+                    setCompletedResult(null);
+                  }}
+                  aria-label="Select Programming Language"
+                >
+                  {programmingLanguages.map((lang) => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* English Category Dropdown */}
+            {practiceType === 'english' && (
+              <div className="deck-pill-select-wrapper">
+                <BookOpen size={14} style={{ color: 'var(--color-primary-forest)' }} />
+                <span>Category:</span>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => {
+                    setSelectedCategory(e.target.value);
+                    setIsCustomMode(false);
+                    setCompletedResult(null);
+                  }}
+                  aria-label="Select English Practice Category"
+                >
+                  <option value="All">All Categories</option>
+                  {englishCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Difficulty Filter */}
+            <div className="deck-micro-pills">
+              <span className="micro-pill-label">Level</span>
+              {['all', 'beginner', 'intermediate', 'advanced'].map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  className={`micro-pill-btn ${selectedDifficulty === lvl ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedDifficulty(lvl);
+                    setIsCustomMode(false);
+                    setCompletedResult(null);
+                  }}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Action Tools */}
+          <div className="deck-action-group">
+            <button
+              type="button"
+              className="action-pill-btn"
+              onClick={handleNextSnippet}
+              title="Load another passage (Shuffle)"
+            >
+              <Shuffle size={13} />
+              <span>Next</span>
+            </button>
+
+            <button
+              type="button"
+              className={`action-pill-btn ${isCustomMode ? 'active' : ''}`}
+              onClick={() => setShowCustomModal(true)}
+              title="Paste custom snippet or import from GitHub"
+            >
+              <FileCode size={13} />
+              <span>Custom / GitHub</span>
+            </button>
+
+            <button
+              type="button"
+              className={`action-pill-btn ${currentSnippet?.isWeaknessDrill ? 'active' : ''}`}
+              onClick={handleStartWeaknessDrill}
+              title="Generate intelligent drill targeting your most error-prone keys and symbols"
+            >
+              <Target size={13} />
+              <span>Target Weaknesses</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Integrated Smart Curriculum Bar */}
+      {!isCustomMode && !isTest && totalLessons > 0 && (
+        <div className="curriculum-bar">
+          <div className="curriculum-info-left">
+            <span className="curriculum-lesson-badge">
               Lesson {currentLessonNumber} of {totalLessons}
             </span>
 
-            <span style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--color-text-primary)' }}>
+            <span className="curriculum-title-text" title={currentSnippet?.title || 'Focused Practice'}>
               {currentSnippet?.title || 'Focused Practice'}
             </span>
 
@@ -753,12 +767,12 @@ export function PracticePage({
                   ? 'badge-sand'
                   : 'badge-terracotta'
               }`}
-              style={{ textTransform: 'capitalize', fontSize: '0.75rem' }}
+              style={{ textTransform: 'capitalize', fontSize: '0.725rem', padding: '0.15rem 0.5rem' }}
             >
               {currentSnippet?.difficulty || 'Practice'}
             </span>
 
-            {/* A-Z Alphabet Pangram indicator */}
+            {/* A-Z Pangram badge */}
             {(() => {
               if (!currentSnippet?.content) return null;
               const clean = currentSnippet.content.toLowerCase().replace(/[^a-z]/g, '');
@@ -767,14 +781,7 @@ export function PracticePage({
               return (
                 <span
                   className="badge badge-sage"
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.2rem 0.55rem'
-                  }}
+                  style={{ fontSize: '0.725rem', padding: '0.15rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
                   title="This passage contains all 26 English letters (A-Z) for comprehensive keyboard dexterity practice."
                 >
                   ✨ A–Z Pangram
@@ -789,68 +796,43 @@ export function PracticePage({
                   alignItems: 'center',
                   gap: '0.25rem',
                   color: 'var(--color-primary-forest)',
-                  fontSize: '0.8rem',
+                  fontSize: '0.775rem',
                   fontWeight: 600
                 }}
               >
-                <CheckCircle2 size={15} />
+                <CheckCircle2 size={14} />
                 <span>Completed</span>
               </span>
             )}
           </div>
 
-          {/* Right: Progress % Bar & Prev / Next Navigation & All Lessons Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            {/* Progress Bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '160px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  fontSize: '0.75rem',
-                  color: 'var(--color-text-muted)'
-                }}
-              >
-                <span>Curriculum Progress</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-primary-forest)' }}>
-                  {completedCount}/{totalLessons} ({progressPercent}%)
-                </span>
+          <div className="curriculum-right-controls">
+            {/* Slim Curriculum Progress */}
+            <div className="curriculum-progress-mini">
+              <div className="curriculum-progress-labels">
+                <span>Curriculum</span>
+                <strong>{completedCount}/{totalLessons} ({progressPercent}%)</strong>
               </div>
-              <div
-                style={{
-                  width: '100%',
-                  height: '6px',
-                  backgroundColor: 'var(--color-bg-soft)',
-                  borderRadius: '999px',
-                  overflow: 'hidden'
-                }}
-              >
-                <div
-                  style={{
-                    width: `${progressPercent}%`,
-                    height: '100%',
-                    backgroundColor: 'var(--color-primary-forest)',
-                    borderRadius: '999px',
-                    transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                />
+              <div className="curriculum-progress-track">
+                <div className="curriculum-progress-fill" style={{ width: `${progressPercent}%` }} />
               </div>
             </div>
 
             {/* Quick Prev / Next Arrows */}
-            <div style={{ display: 'inline-flex', gap: '0.25rem' }}>
+            <div className="curriculum-nav-group">
               <button
-                className="btn btn-outline btn-sm"
+                type="button"
+                className="curriculum-nav-btn"
                 disabled={!prevLesson}
                 onClick={handlePrevSnippet}
                 title={prevLesson ? `Previous: Lesson ${currentLessonNumber - 1} (${prevLesson.title})` : 'First lesson'}
-                style={{ padding: '0.35rem 0.55rem' }}
+                aria-label="Previous lesson"
               >
-                <ArrowLeft size={14} />
+                <ArrowLeft size={13} />
               </button>
               <button
-                className="btn btn-outline btn-sm"
+                type="button"
+                className="curriculum-nav-btn"
                 disabled={!nextLesson || !isLessonUnlocked(currentLessonIndex + 1)}
                 onClick={handleNextSnippet}
                 title={
@@ -860,58 +842,52 @@ export function PracticePage({
                     ? 'Next lesson locked (Complete this lesson first)'
                     : `Next: Lesson ${currentLessonNumber + 1} (${nextLesson.title})`
                 }
-                style={{ padding: '0.35rem 0.55rem' }}
+                aria-label="Next lesson"
               >
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
               </button>
             </div>
 
-            {/* Curriculum Modal Trigger */}
+            {/* Collapsible Roadmap Drawer Toggle */}
             <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => setShowCurriculumModal(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}
+              type="button"
+              className={`roadmap-toggle-btn ${isRoadmapOpen ? 'open' : ''}`}
+              onClick={() => setIsRoadmapOpen((prev) => !prev)}
+              aria-expanded={isRoadmapOpen}
+              title="Toggle horizontal lesson roadmap strip"
             >
-              <ListOrdered size={15} />
+              <span>Roadmap</span>
+              <span style={{ fontSize: '0.7rem' }}>{isRoadmapOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {/* All Lessons Modal Trigger */}
+            <button
+              type="button"
+              className="roadmap-toggle-btn"
+              onClick={() => setShowCurriculumModal(true)}
+              title="Open full searchable curriculum syllabus"
+            >
+              <ListOrdered size={14} />
               <span>All Lessons ({totalLessons})</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* 50-Lesson Quick Progress & Unlock Strip (Horizontal Scroll Roadmap) */}
+      {/* Collapsible Roadmap Drawer (Horizontal Scroll Strip) */}
       {!isCustomMode && !isTest && totalLessons > 0 && (
-        <div
-          className="card"
-          style={{
-            padding: '0.75rem 1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem' }}>
-            <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span>Lesson Roadmap (1 to {totalLessons})</span>
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>• Complete a lesson to unlock the next</span>
+        <div className={`roadmap-drawer ${isRoadmapOpen ? 'open' : 'closed'}`}>
+          <div className="roadmap-header-stats">
+            <span style={{ fontWeight: 600 }}>
+              Lesson Roadmap (1 to {totalLessons}) • <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>Complete each lesson to unlock the next</span>
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem' }}>
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                🔓 <strong>{unlockedLessonsCount}</strong> Unlocked
-              </span>
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                ✓ <strong style={{ color: 'var(--color-primary-forest)' }}>{completedCount}</strong> Completed
-              </span>
-              <span style={{ color: 'var(--color-text-muted)' }}>
-                🔒 <strong>{totalLessons - unlockedLessonsCount}</strong> Locked
-              </span>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <span>🔓 <strong>{unlockedLessonsCount}</strong> Unlocked</span>
+              <span>✓ <strong style={{ color: 'var(--color-primary-forest)' }}>{completedCount}</strong> Completed</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>🔒 <strong>{totalLessons - unlockedLessonsCount}</strong> Locked</span>
             </div>
           </div>
 
-          {/* Horizontally scrollable pill strip */}
           <div className="lesson-roadmap-strip">
             {contentList.map((item, idx) => {
               const isSelected = item.id === currentSnippet?.id;
@@ -1004,6 +980,7 @@ export function PracticePage({
           mode={mode}
           duration={duration}
           onComplete={handleSessionComplete}
+          onStatusChange={setEngineStatus}
         />
       )}
 
