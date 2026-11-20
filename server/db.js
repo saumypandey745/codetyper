@@ -347,7 +347,7 @@ function seedInitialData() {
     const existingSaumy = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'saumypandey745@gmail.com'").get();
     if (!existingSaumy) {
       const salt = bcrypt.genSaltSync(10);
-      const saumyPassword = process.env.SAUMY_USER_PASSWORD || 'Saumy_2026!';
+      const saumyPassword = process.env.SAUMY_USER_PASSWORD || 'text@123';
       const saumyHash = bcrypt.hashSync(saumyPassword, salt);
 
       const saumyRes = db.prepare(`
