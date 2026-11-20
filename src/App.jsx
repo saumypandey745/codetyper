@@ -46,8 +46,12 @@ export function App() {
   // Keep URL hash in sync for back/forward navigation and bookmarks
   useEffect(() => {
     const raw = window.location.hash.replace('#', '');
-    const query = raw.includes('?') ? '?' + raw.split('?')[1] : '';
-    window.location.hash = currentView + query;
+    const currentHashView = raw.split('?')[0];
+    const query = currentHashView === currentView && raw.includes('?') ? '?' + raw.split('?')[1] : '';
+    const targetHash = currentView + query;
+    if (window.location.hash.replace('#', '') !== targetHash) {
+      window.location.hash = targetHash;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
 
@@ -62,6 +66,13 @@ export function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [currentView]);
+
+  // If user is authenticated, automatically transition away from login/signup/forgot-password pages
+  useEffect(() => {
+    if (user && (currentView === 'login' || currentView === 'signup' || currentView === 'forgot-password')) {
+      setCurrentView('dashboard');
+    }
+  }, [user, currentView]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -78,8 +89,10 @@ export function App() {
   const navigateTo = (view, options = {}) => {
     // Protected views requiring authentication
     const authRequiredViews = ['dashboard', 'history', 'statistics', 'profile', 'admin'];
+    const hasToken = !!localStorage.getItem('codetyper_token');
 
-    if (authRequiredViews.includes(view) && !user && !loading) {
+    // Check both user and token to avoid race condition right after login/register
+    if (authRequiredViews.includes(view) && !user && !hasToken && !loading) {
       toast.info('Please sign in or create an account to access this page.');
       setCurrentView('login');
       return;

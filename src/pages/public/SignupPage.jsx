@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 export function SignupPage({ onNavigate }) {
-  const { register } = useAuth();
+  const { user, register } = useAuth();
   const toast = useToast();
 
   const [fullName, setFullName] = useState('');
@@ -16,6 +16,13 @@ export function SignupPage({ onNavigate }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // If already authenticated, redirect to dashboard immediately
+  React.useEffect(() => {
+    if (user) {
+      onNavigate('dashboard');
+    }
+  }, [user, onNavigate]);
 
   // Password strength calculation
   const getPasswordStrength = (pwd) => {

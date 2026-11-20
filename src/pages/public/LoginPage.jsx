@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 export function LoginPage({ onNavigate }) {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const toast = useToast();
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -14,6 +14,13 @@ export function LoginPage({ onNavigate }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // If already authenticated, redirect to dashboard immediately
+  useEffect(() => {
+    if (user) {
+      onNavigate('dashboard');
+    }
+  }, [user, onNavigate]);
 
   useEffect(() => {
     // Parse error/success flags from hash-based routing (e.g. /#login?error=google_cancelled)
