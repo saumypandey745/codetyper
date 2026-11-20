@@ -82,9 +82,13 @@ export function PublicFooter({ onNavigate }) {
         <div>
           &copy; {new Date().getFullYear()} CodeTyper. Designed for clarity, speed, and endurance.
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <span>Crafted for developers with</span>
           <Heart size={14} fill="var(--color-primary-sage)" color="var(--color-primary-sage)" />
+          <span>by</span>
+          <strong style={{ color: 'var(--color-primary-forest)', fontWeight: 600, letterSpacing: '0.01em' }}>
+            Saumy Pandey
+          </strong>
         </div>
       </div>
     </footer>

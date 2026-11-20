@@ -51,6 +51,23 @@ export function AboutPage({ onNavigate }) {
           </p>
         </div>
       </div>
+
+      <div className="card" style={{ padding: '1.75rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', border: '1px solid var(--color-border)' }}>
+        <img
+          src="https://api.dicebear.com/7.x/identicon/svg?seed=sage"
+          alt="Saumy Pandey"
+          style={{ width: '68px', height: '68px', borderRadius: 'var(--radius-full)', border: '2.5px solid var(--color-primary-forest)', backgroundColor: 'var(--color-bg-subtle)' }}
+        />
+        <div style={{ flex: 1, minWidth: '220px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Saumy Pandey</h3>
+            <span className="badge badge-forest">Lead Developer &amp; Architect</span>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+            Creator and lead architect of CodeTyper. Dedicated to building peaceful, distraction-free tools that cultivate deep focus, clean muscle memory, and fluid typing cadence for programmers and writers.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
