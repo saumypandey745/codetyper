@@ -201,12 +201,13 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   const user = db.prepare('SELECT id, email FROM users WHERE LOWER(email) = ?').get(trimmedEmail);
 
   let emailDispatched = false;
+  let rawToken = null;
 
   if (user) {
     // Invalidate all existing unused tokens for this user before creating a new one
     db.prepare('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL').run(user.id);
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
+    rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
@@ -231,11 +232,17 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
     }
   }
 
-  // Always return the same response regardless of whether the account exists (prevent account enumeration)
-  return res.json({
-    message: 'If an account exists with this email, a password reset link has been sent to your inbox.',
+  const response = {
+    message: 'If an account exists with this email, a password reset link has been dispatched to your inbox.',
     emailDispatched
-  });
+  };
+
+  // In non-production environments, expose devResetToken for test suites and dev convenience
+  if (process.env.NODE_ENV !== 'production' && user) {
+    response.devResetToken = rawToken;
+  }
+
+  return res.json(response);
 });
 
 router.post('/reset-password', resetLimiter, (req, res) => {

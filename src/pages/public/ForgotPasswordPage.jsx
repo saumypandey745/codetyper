@@ -48,7 +48,10 @@ export function ForgotPasswordPage({ onNavigate }) {
     setLoading(true);
     setError('');
     try {
-      await api.auth.forgotPassword(trimmed);
+      const res = await api.auth.forgotPassword(trimmed);
+      if (res && res.devResetToken) {
+        setToken(res.devResetToken);
+      }
       // Always show "sent" screen regardless of whether account exists (security: no account enumeration)
       setStage('sent');
     } catch (err) {
