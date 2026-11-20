@@ -23,3 +23,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ToastProvider>
   </React.StrictMode>
 );
+
+// Register PWA Service Worker in production/supporting environments
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('SW registration skipped or failed:', err);
+    });
+  });
+}
+

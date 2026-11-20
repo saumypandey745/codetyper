@@ -37,6 +37,7 @@ import { api } from '../../utils/api.js';
 import { TypingEngine } from '../../components/typing/TypingEngine.jsx';
 import { ResultsCard } from '../../components/typing/ResultsCard.jsx';
 import { keyStatsManager } from '../../utils/gamificationEngine.js';
+import { generateCodingSnippet, getAvailableTopics } from '../../utils/snippetGenerator.js';
 import { programmingLanguages, englishCategories } from '../../../server/seedData.js';
 
 const GUEST_COMPLETED_KEY = 'codetyper_completed_lessons';
@@ -75,6 +76,10 @@ export function PracticePage({
   const [githubUrl, setGithubUrl] = useState('');
   const [githubLoading, setGithubLoading] = useState(false);
   const [githubPreview, setGithubPreview] = useState(null);
+  const [generatorLang, setGeneratorLang] = useState('JavaScript');
+  const [generatorTopic, setGeneratorTopic] = useState('');
+  const [generatorDifficulty, setGeneratorDifficulty] = useState('intermediate');
+  const [generatorPreview, setGeneratorPreview] = useState(null);
   const [showCurriculumModal, setShowCurriculumModal] = useState(false);
 
   // Curriculum modal search & filter
@@ -455,6 +460,27 @@ export function PracticePage({
     setCompletedResult(null);
     setEngineKey(Date.now());
     toast.success(`Loaded ${githubPreview.title} into practice!`);
+  };
+
+  const handleGenerateSnippet = () => {
+    const drill = generateCodingSnippet(generatorLang, generatorTopic, generatorDifficulty);
+    setGeneratorPreview(drill);
+  };
+
+  const handleApplyGeneratedSnippet = () => {
+    if (!generatorPreview?.content) return;
+    setIsCustomMode(true);
+    setCurrentSnippet({
+      id: null,
+      title: `${generatorPreview.title} (${generatorPreview.language})`,
+      language: generatorPreview.language,
+      difficulty: generatorPreview.difficulty,
+      content: generatorPreview.content
+    });
+    setShowCustomModal(false);
+    setCompletedResult(null);
+    setEngineKey(Date.now());
+    toast.success(`Loaded generated drill: ${generatorPreview.title}!`);
   };
 
   const handleDeleteSavedSnippet = async (id, e) => {
@@ -1022,6 +1048,20 @@ export function PracticePage({
                 <Globe size={15} />
                 <span>Import from GitHub</span>
               </button>
+              <button
+                className={`btn btn-sm ${customModalTab === 'generator' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0', borderBottom: 'none' }}
+                onClick={() => {
+                  setCustomModalTab('generator');
+                  if (!generatorPreview) {
+                    const initial = generateCodingSnippet('JavaScript', 'Async / Await Pipeline', 'intermediate');
+                    setGeneratorPreview(initial);
+                  }
+                }}
+              >
+                <Sparkles size={15} />
+                <span>AI Drill Generator</span>
+              </button>
             </div>
 
             {customModalTab === 'custom' ? (
@@ -1132,7 +1172,7 @@ export function PracticePage({
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : customModalTab === 'github' ? (
               /* GitHub Importer Tab */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
@@ -1201,6 +1241,110 @@ export function PracticePage({
                       onClick={handleApplyGithubSnippet}
                     >
                       Start Typing This File
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* AI Drill Generator Tab */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                      Target Language / Domain
+                    </label>
+                    <select
+                      className="input"
+                      value={generatorLang}
+                      onChange={(e) => {
+                        const newLang = e.target.value;
+                        setGeneratorLang(newLang);
+                        const topics = getAvailableTopics(newLang);
+                        const defaultTopic = topics[0] || '';
+                        setGeneratorTopic(defaultTopic);
+                        const initial = generateCodingSnippet(newLang, defaultTopic, generatorDifficulty);
+                        setGeneratorPreview(initial);
+                      }}
+                    >
+                      {['JavaScript', 'TypeScript', 'Python', 'Rust', 'Go', 'SQL', 'Algorithms (DSA)'].map((l) => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                      Curated Topic Concept
+                    </label>
+                    <select
+                      className="input"
+                      value={generatorTopic}
+                      onChange={(e) => {
+                        const t = e.target.value;
+                        setGeneratorTopic(t);
+                        const res = generateCodingSnippet(generatorLang, t, generatorDifficulty);
+                        setGeneratorPreview(res);
+                      }}
+                    >
+                      {getAvailableTopics(generatorLang).map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                    Or Custom Concept Search
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="e.g. Trie, LRU, Mutex, Recursive, Reducer..."
+                      value={generatorTopic}
+                      onChange={(e) => setGeneratorTopic(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleGenerateSnippet();
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleGenerateSnippet}
+                    >
+                      <Sparkles size={16} />
+                      <span>Synthesize</span>
+                    </button>
+                  </div>
+                </div>
+
+                {generatorPreview && (
+                  <div className="card" style={{ padding: '1rem', backgroundColor: 'var(--color-bg-subtle)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <strong style={{ fontSize: '0.9rem' }}>{generatorPreview.title}</strong>
+                      <span className="badge badge-sage">{generatorPreview.language}</span>
+                    </div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--color-bg-card)',
+                        borderRadius: 'var(--radius-sm)',
+                        maxHeight: '180px',
+                        overflowY: 'auto',
+                        fontSize: '0.825rem',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    >
+                      {generatorPreview.content}
+                    </pre>
+
+                    <button
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginTop: '0.85rem' }}
+                      onClick={handleApplyGeneratedSnippet}
+                    >
+                      Start Typing This Generated Drill
                     </button>
                   </div>
                 )}
