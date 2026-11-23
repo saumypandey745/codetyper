@@ -363,10 +363,10 @@ export function PracticePage({
       gross_wpm: metrics.grossWpm,
       net_wpm: metrics.netWpm,
       accuracy: metrics.accuracy,
-      total_characters: metrics.totalChars,
-      correct_characters: metrics.correctChars,
-      incorrect_characters: metrics.incorrectChars,
-      error_count: metrics.errorCount,
+      total_characters: metrics.totalCharacters ?? metrics.totalChars ?? 0,
+      correct_characters: metrics.correctCharacters ?? metrics.correctChars ?? 0,
+      incorrect_characters: metrics.incorrectCharacters ?? metrics.incorrectChars ?? 0,
+      error_count: metrics.errorCount ?? metrics.totalErrors ?? 0,
       raw_timeline_json: metrics.timeline || []
     };
 

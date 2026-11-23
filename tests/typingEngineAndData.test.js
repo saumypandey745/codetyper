@@ -16,9 +16,9 @@ describe('Typing Engine, Timezone & Data Integrity Suite', () => {
     });
 
     assert.equal(metrics.grossWpm, 150);
-    // Net WPM = ((745/5)/1) - (2/1) = 149 - 2 = 147
-    assert.equal(metrics.netWpm, 147);
-    assert.equal(metrics.accuracy, 99.3);
+    // Net WPM = 150 Gross WPM - (2 errors / 1 min) = 148 Net WPM
+    assert.equal(metrics.netWpm, 148);
+    assert.equal(metrics.accuracy, 99.33);
   });
 
   it('correctly clamps accuracy to 0% and Net WPM to 0 when errors exceed typed characters', () => {

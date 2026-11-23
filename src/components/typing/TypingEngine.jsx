@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useTypingEngine } from '../../hooks/useTypingEngine.js';
 import { useSettings } from '../../context/SettingsContext.jsx';
-import { formatTimer } from '../../utils/wpmCalculator.js';
+import { formatTimer, formatTwoDecimals } from '../../utils/wpmCalculator.js';
 import { VirtualKeyboard } from './VirtualKeyboard.jsx';
 import { ambientEngine } from '../../utils/ambientSoundEngine.js';
 
@@ -243,22 +243,22 @@ export function TypingEngine({
             {settings.show_wpm && (
               <div className="hud-stat-item">
                 <span className="hud-stat-label">WPM</span>
-                <span className="hud-stat-value highlight">{liveMetrics.netWpm}</span>
+                <span className="hud-stat-value highlight">{formatTwoDecimals(liveMetrics.netWpm)}</span>
               </div>
             )}
 
             {settings.show_accuracy && (
               <div className="hud-stat-item">
                 <span className="hud-stat-label">Accuracy</span>
-                <span className="hud-stat-value">{liveMetrics.accuracy}%</span>
+                <span className="hud-stat-value">{formatTwoDecimals(liveMetrics.accuracy)}%</span>
               </div>
             )}
 
             {settings.show_errors && (
               <div className="hud-stat-item">
                 <span className="hud-stat-label">Errors</span>
-                <span className="hud-stat-value" style={{ color: liveMetrics.errorCount > 0 ? 'var(--color-error)' : 'inherit' }}>
-                  {liveMetrics.errorCount}
+                <span className="hud-stat-value" style={{ color: (liveMetrics.errorCount ?? liveMetrics.totalErrors) > 0 ? 'var(--color-error)' : 'inherit' }}>
+                  {liveMetrics.errorCount ?? liveMetrics.totalErrors ?? 0}
                 </span>
               </div>
             )}

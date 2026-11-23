@@ -18,7 +18,6 @@ export function useTypingEngine({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(duration);
   const [wpmTimeline, setWpmTimeline] = useState([]);
-  const [totalErrors, setTotalErrors] = useState(0);
   const [lastPressedKey, setLastPressedKey] = useState(null);
   const [lastMatchState, setLastMatchState] = useState(null);
 
@@ -39,8 +38,8 @@ export function useTypingEngine({
   const typedTextRef = useRef('');
   typedTextRef.current = typedText;
 
-  const totalErrorsRef = useRef(0);
-  totalErrorsRef.current = totalErrors;
+  const remainingSecondsRef = useRef(duration);
+  remainingSecondsRef.current = remainingSeconds;
 
   const wpmTimelineRef = useRef([]);
   wpmTimelineRef.current = wpmTimeline;
@@ -62,7 +61,7 @@ export function useTypingEngine({
     }
   }, [ghostStorageKey]);
 
-  // Compute live character correctness
+  // Compute live character correctness (Typing Master style: uncorrected errors)
   let correctCount = 0;
   let incorrectCount = 0;
   for (let i = 0; i < typedText.length; i++) {
@@ -72,6 +71,11 @@ export function useTypingEngine({
       incorrectCount++;
     }
   }
+
+  // Active uncorrected errors in typed text
+  const totalErrors = incorrectCount;
+  const totalErrorsRef = useRef(0);
+  totalErrorsRef.current = incorrectCount;
 
   const metricsRef = useRef({ correctCount: 0, incorrectCount: 0 });
   metricsRef.current = { correctCount, incorrectCount };
@@ -87,7 +91,6 @@ export function useTypingEngine({
     setElapsedSeconds(0);
     setRemainingSeconds(duration);
     setWpmTimeline([]);
-    setTotalErrors(0);
     setLastPressedKey(null);
     setLastMatchState(null);
     startTimeRef.current = null;
@@ -96,12 +99,18 @@ export function useTypingEngine({
     peakBurstWpmRef.current = 0;
   }, [duration]);
 
+  // Real-time live metrics updated on keystrokes and timer ticks
+  const currentElapsedSeconds = startTimeRef.current && status === 'typing'
+    ? Math.max(0, (Date.now() - startTimeRef.current) / 1000)
+    : elapsedSeconds;
+
   const liveMetrics = calculateMetrics({
     totalCharacters: typedText.length,
     correctCharacters: correctCount,
     incorrectCharacters: incorrectCount,
-    errorCount: totalErrors,
-    durationSeconds: elapsedSeconds > 0 ? elapsedSeconds : 1
+    errorCount: incorrectCount,
+    totalErrors: incorrectCount,
+    durationSeconds: currentElapsedSeconds
   });
 
   // Finish session
@@ -122,16 +131,21 @@ export function useTypingEngine({
     }
 
     const elapsed = startTimeRef.current
-      ? Math.max(1, (Date.now() - startTimeRef.current) / 1000)
-      : (elapsedSeconds > 0 ? elapsedSeconds : 1);
+      ? Math.max(0.1, (Date.now() - startTimeRef.current) / 1000)
+      : Math.max(0.1, elapsedSeconds);
 
-    const finalSecs = mode === 'time' ? duration : elapsed;
+    // If time mode and timer expired (remaining <= 0), use full test duration.
+    // If finished early or text mode, use the actual elapsed time.
+    const finalSecs = (mode === 'time' && remainingSecondsRef.current <= 0)
+      ? duration
+      : elapsed;
 
     const finalMetrics = calculateMetrics({
       totalCharacters: currentTyped.length,
       correctCharacters: finalCorrect,
       incorrectCharacters: finalIncorrect,
-      errorCount: totalErrorsRef.current,
+      errorCount: finalIncorrect,
+      totalErrors: finalIncorrect,
       durationSeconds: finalSecs
     });
 
@@ -162,7 +176,12 @@ export function useTypingEngine({
         totalCharacters: currentTyped.length,
         correctCharacters: finalCorrect,
         incorrectCharacters: finalIncorrect,
-        errorCount: totalErrorsRef.current,
+        errorCount: finalIncorrect,
+        totalErrors: finalIncorrect,
+        totalChars: currentTyped.length,
+        correctChars: finalCorrect,
+        incorrectChars: finalIncorrect,
+        durationSeconds: finalSecs,
         timeline: wpmTimelineRef.current,
         burstWpm: finalBurstWpm,
         consistency,
@@ -356,7 +375,6 @@ export function useTypingEngine({
           soundEngine.playKeypress();
         } else {
           soundEngine.playError();
-          setTotalErrors((err) => err + 1);
         }
 
         // Live Virtual Keyboard & Heatmap Telemetry

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap, Sparkles } from 'lucide-react';
-import { formatDuration } from '../../utils/wpmCalculator.js';
+import { formatDuration, formatTwoDecimals } from '../../utils/wpmCalculator.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { computeSessionXp, calculateLevelFromXp } from '../../utils/gamificationEngine.js';
 import { TypingCertificateModal } from './TypingCertificateModal.jsx';
@@ -156,18 +156,18 @@ export function ResultsCard({
       {/* Main KPI Highlights */}
       <div className="results-highlight-grid">
         <div className="result-metric-card">
-          <div className="result-metric-val">{result.netWpm}</div>
+          <div className="result-metric-val">{formatTwoDecimals(result.netWpm)}</div>
           <div className="result-metric-lbl">Net WPM</div>
         </div>
 
         <div className="result-metric-card">
-          <div className="result-metric-val">{result.accuracy}%</div>
+          <div className="result-metric-val">{formatTwoDecimals(result.accuracy)}%</div>
           <div className="result-metric-lbl">Accuracy</div>
         </div>
 
         <div className="result-metric-card">
           <div className="result-metric-val">{formatDuration(result.durationSeconds)}</div>
-          <div className="result-metric-lbl">Practice Time</div>
+          <div className="result-metric-lbl">Test Duration</div>
         </div>
       </div>
 
@@ -189,7 +189,7 @@ export function ResultsCard({
             This Session
           </span>
           <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-forest)' }}>
-            {result.netWpm} WPM
+            {formatTwoDecimals(result.netWpm)} WPM
           </div>
         </div>
 
@@ -198,7 +198,7 @@ export function ResultsCard({
             Your Average
           </span>
           <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            {avgWpm} WPM
+            {formatTwoDecimals(avgWpm)} WPM
           </div>
         </div>
 
@@ -207,7 +207,7 @@ export function ResultsCard({
             Your Best Record
           </span>
           <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-forest)' }}>
-            {bestWpm} WPM
+            {formatTwoDecimals(bestWpm)} WPM
           </div>
         </div>
       </div>
@@ -220,7 +220,7 @@ export function ResultsCard({
             <span style={{ color: '#ef4444' }}>🔥 Peak</span>
           </div>
           <div className="value">
-            {result.burstWpm || result.netWpm} <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>WPM</span>
+            {formatTwoDecimals(result.burstWpm || result.netWpm)} <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>WPM</span>
           </div>
           <div className="subtext">Highest 2-second speed spike during run</div>
         </div>
@@ -260,39 +260,43 @@ export function ResultsCard({
         </div>
       </div>
 
-      {/* Detailed Diagnostics Table */}
+      {/* Detailed Diagnostics Table: Typing Master Standards */}
       <table className="results-breakdown-table">
         <tbody>
           <tr>
-            <td>Raw (Gross) WPM</td>
-            <td>{result.grossWpm} WPM</td>
+            <td>Gross WPM</td>
+            <td><strong>{formatTwoDecimals(result.grossWpm)} WPM</strong></td>
           </tr>
           <tr>
-            <td>Net WPM (Penalized for mistakes)</td>
-            <td>{result.netWpm} WPM</td>
+            <td>Net WPM</td>
+            <td><strong>{formatTwoDecimals(result.netWpm)} WPM</strong></td>
           </tr>
           <tr>
-            <td>Accuracy Rate</td>
-            <td>{result.accuracy}%</td>
+            <td>Accuracy (%)</td>
+            <td><strong>{formatTwoDecimals(result.accuracy)}%</strong></td>
           </tr>
           <tr>
-            <td>Total Characters Typed</td>
-            <td>{result.totalCharacters}</td>
-          </tr>
-          <tr>
-            <td>Correct Characters</td>
-            <td style={{ color: 'var(--color-primary-forest)' }}>{result.correctCharacters}</td>
-          </tr>
-          <tr>
-            <td>Incorrect Characters</td>
-            <td style={{ color: result.incorrectCharacters > 0 ? 'var(--color-error)' : 'inherit' }}>
-              {result.incorrectCharacters}
+            <td>Total Errors</td>
+            <td style={{ color: (result.errorCount ?? result.totalErrors ?? result.incorrectCharacters) > 0 ? 'var(--color-error)' : 'inherit', fontWeight: 600 }}>
+              {result.errorCount ?? result.totalErrors ?? result.incorrectCharacters ?? 0}
             </td>
           </tr>
           <tr>
-            <td>Uncorrected Mistakes / Errors</td>
-            <td style={{ color: result.errorCount > 0 ? 'var(--color-error)' : 'inherit' }}>
-              {result.errorCount}
+            <td>Correct Characters</td>
+            <td style={{ color: 'var(--color-primary-forest)', fontWeight: 600 }}>
+              {result.correctCharacters ?? 0}
+            </td>
+          </tr>
+          <tr>
+            <td>Total Typed Characters</td>
+            <td style={{ fontWeight: 600 }}>
+              {result.totalCharacters ?? 0}
+            </td>
+          </tr>
+          <tr>
+            <td>Test Duration</td>
+            <td>
+              {formatDuration(result.durationSeconds)} ({formatTwoDecimals(result.durationSeconds)}s)
             </td>
           </tr>
         </tbody>
