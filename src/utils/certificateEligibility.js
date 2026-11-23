@@ -1,0 +1,119 @@
+/**
+ * Official CodeTyper Certificate Eligibility & Accreditation Standards
+ *
+ * Requirements:
+ * 1. Minimum Duration: ≥ 55 seconds (standard 60s timed assessment).
+ * 2. Minimum Characters: ≥ 150 characters (prevents single-word or idle cheats).
+ * 3. Minimum Net WPM: ≥ 35.00 Net WPM (professional typing competency benchmark).
+ * 4. Minimum Accuracy: ≥ 90.00% (Typing Master accredited precision standard).
+ */
+
+export const CERTIFICATE_REQUIREMENTS = {
+  minDurationSeconds: 55, // Full standard timed assessment (~60s)
+  minCharacters: 150,     // Substantial typing volume
+  minNetWpm: 35,          // Professional touch-typing speed benchmark
+  minAccuracy: 90         // High-precision accuracy threshold
+};
+
+export function checkCertificateEligibility(result) {
+  if (!result) {
+    return {
+      isEligible: false,
+      checks: [],
+      passedCount: 0,
+      totalCount: 4,
+      progressPercent: 0,
+      tierTitle: 'Uncertified',
+      tierBadge: 'None'
+    };
+  }
+
+  const durationSec = Math.round(Number(result.durationSeconds) || 0);
+  const totalChars = Number(result.totalCharacters ?? result.totalChars) || 0;
+  const netWpm = Math.round((Number(result.netWpm) || 0) * 100) / 100;
+  const accuracy = Math.round((Number(result.accuracy) || 0) * 100) / 100;
+
+  const checks = [
+    {
+      id: 'duration',
+      title: 'Examination Duration',
+      required: `≥ ${CERTIFICATE_REQUIREMENTS.minDurationSeconds}s (60s Test)`,
+      current: `${durationSec}s`,
+      passed: durationSec >= CERTIFICATE_REQUIREMENTS.minDurationSeconds,
+      description: 'Session must be a formal full-length timed assessment.'
+    },
+    {
+      id: 'characters',
+      title: 'Typed Characters Volume',
+      required: `≥ ${CERTIFICATE_REQUIREMENTS.minCharacters} Chars`,
+      current: `${totalChars} chars`,
+      passed: totalChars >= CERTIFICATE_REQUIREMENTS.minCharacters,
+      description: 'Substantial text volume to prove consistent typing cadence without idle pauses.'
+    },
+    {
+      id: 'speed',
+      title: 'Net Typing Speed',
+      required: `≥ ${CERTIFICATE_REQUIREMENTS.minNetWpm}.00 Net WPM`,
+      current: `${netWpm.toFixed(2)} WPM`,
+      passed: netWpm >= CERTIFICATE_REQUIREMENTS.minNetWpm,
+      description: 'Meets the recognized professional touch-typing speed benchmark.'
+    },
+    {
+      id: 'accuracy',
+      title: 'Typing Accuracy Rate',
+      required: `≥ ${CERTIFICATE_REQUIREMENTS.minAccuracy}.00%`,
+      current: `${accuracy.toFixed(2)}%`,
+      passed: accuracy >= CERTIFICATE_REQUIREMENTS.minAccuracy,
+      description: 'Maintains high precision with low uncorrected errors.'
+    }
+  ];
+
+  const passedCount = checks.filter((c) => c.passed).length;
+  const isEligible = passedCount === checks.length;
+  const progressPercent = Math.round((passedCount / checks.length) * 100);
+
+  // Rank Tier determination
+  let tierTitle = 'Certified Typist (Silver Tier)';
+  let tierBadge = 'Silver';
+  let tierGrade = 'Grade B';
+  let tierPercentile = 'Professional Competent';
+
+  if (netWpm >= 120) {
+    tierTitle = 'Grandmaster Typist';
+    tierBadge = 'Grandmaster';
+    tierGrade = 'Grade A+ Exceptional';
+    tierPercentile = 'Top 0.1% Worldwide';
+  } else if (netWpm >= 90) {
+    tierTitle = 'Master Typist';
+    tierBadge = 'Diamond';
+    tierGrade = 'Grade A+ Distinguished';
+    tierPercentile = 'Top 1% Worldwide';
+  } else if (netWpm >= 70) {
+    tierTitle = 'Pro Elite Typist';
+    tierBadge = 'Platinum';
+    tierGrade = 'Grade A Advanced';
+    tierPercentile = 'Top 5% Worldwide';
+  } else if (netWpm >= 50) {
+    tierTitle = 'Advanced Typist';
+    tierBadge = 'Gold';
+    tierGrade = 'Grade B+ Professional';
+    tierPercentile = 'Top 15% Worldwide';
+  } else {
+    tierTitle = 'Certified Typist';
+    tierBadge = 'Silver';
+    tierGrade = 'Grade B Competent';
+    tierPercentile = 'Standard Professional';
+  }
+
+  return {
+    isEligible,
+    checks,
+    passedCount,
+    totalCount: checks.length,
+    progressPercent,
+    tierTitle,
+    tierBadge,
+    tierGrade,
+    tierPercentile
+  };
+}

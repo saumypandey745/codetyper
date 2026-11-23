@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap, Sparkles } from 'lucide-react';
+import { RotateCcw, ArrowRight, BarChart2, Home, CheckCircle2, Award, Zap, Sparkles, Lock } from 'lucide-react';
 import { formatDuration, formatTwoDecimals } from '../../utils/wpmCalculator.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { computeSessionXp, calculateLevelFromXp } from '../../utils/gamificationEngine.js';
 import { TypingCertificateModal } from './TypingCertificateModal.jsx';
+import { checkCertificateEligibility } from '../../utils/certificateEligibility.js';
 
 export function ResultsCard({
   result,
@@ -14,6 +15,8 @@ export function ResultsCard({
 }) {
   const { userStats } = useAuth();
   const [showCertModal, setShowCertModal] = useState(false);
+
+  const eligibility = useMemo(() => checkCertificateEligibility(result), [result]);
 
   const earnedXp = useMemo(() => {
     return computeSessionXp({
@@ -98,6 +101,25 @@ export function ResultsCard({
           {result.isZen && (
             <span className="badge badge-sage" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
               🌿 Zen Focus Bonus (+20%)
+            </span>
+          )}
+          {eligibility.isEligible && (
+            <span
+              className="badge"
+              style={{
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                color: '#eab308',
+                border: '1px solid rgba(234, 179, 8, 0.4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
+            >
+              <Award size={14} />
+              Accredited Certificate Unlocked ({eligibility.tierBadge})
             </span>
           )}
         </div>
@@ -323,14 +345,41 @@ export function ResultsCard({
           <span>View Statistics</span>
         </button>
 
-        <button
-          className="btn btn-outline"
-          style={{ borderColor: 'rgba(234, 179, 8, 0.5)', color: '#EAB308' }}
-          onClick={() => setShowCertModal(true)}
-        >
-          <Award size={16} />
-          <span>Claim Certificate</span>
-        </button>
+        {eligibility.isEligible ? (
+          <button
+            className="btn btn-primary"
+            style={{
+              background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)',
+              color: '#0f172a',
+              border: '1px solid #eab308',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(234, 179, 8, 0.35)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}
+            onClick={() => setShowCertModal(true)}
+          >
+            <Award size={16} />
+            <span>Claim Official Certificate 🎓</span>
+          </button>
+        ) : (
+          <button
+            className="btn btn-outline"
+            style={{
+              borderColor: 'rgba(234, 179, 8, 0.4)',
+              color: '#EAB308',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}
+            onClick={() => setShowCertModal(true)}
+            title="Official Certification Requirements: Click to view criteria"
+          >
+            <Lock size={15} />
+            <span>Certificate Locked ({eligibility.passedCount}/4 Met)</span>
+          </button>
+        )}
 
         <button className="btn btn-ghost" onClick={() => onNavigate('dashboard')}>
           <Home size={16} />
@@ -342,6 +391,7 @@ export function ResultsCard({
         isOpen={showCertModal}
         onClose={() => setShowCertModal(false)}
         result={result}
+        onStartCertTest={onTryAgain}
       />
     </div>
   );
