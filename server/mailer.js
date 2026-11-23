@@ -37,9 +37,18 @@ export async function sendPasswordResetEmail({ toEmail, resetToken, otpCode, ori
 
   const transport = getTransporter();
 
-  if (!transport) {
+  const isTestEnv = process.env.NODE_ENV === 'test' || process.env.SIMULATE_EMAIL === 'true';
+  const lowerEmail = (toEmail || '').toLowerCase();
+  const isMockDomain = lowerEmail.endsWith('@codetyper.dev') ||
+                       lowerEmail.endsWith('@codetyper.test') ||
+                       lowerEmail.endsWith('@example.com') ||
+                       lowerEmail.includes('mock_') ||
+                       lowerEmail.includes('test_') ||
+                       lowerEmail.includes('nonexistent_');
+
+  if (!transport || isTestEnv || isMockDomain) {
     console.log(`\n==================================================`);
-    console.log(`[Mailer] (Simulated - No SMTP Configured)`);
+    console.log(`[Mailer] (${!transport ? 'Simulated - No SMTP Configured' : 'Simulated - Test/Mock Mode'})`);
     console.log(`To: ${toEmail}`);
     console.log(`OTP Code: ${displayOtp}`);
     console.log(`Subject: Reset Your CodeTyper Password [OTP: ${displayOtp}]`);

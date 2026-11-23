@@ -141,6 +141,7 @@ class ApiClient {
     updateProfile: (profile) => this.request('/user/profile', { method: 'PUT', body: JSON.stringify(profile) }),
     updateSettings: (settings) => this.request('/user/settings', { method: 'PUT', body: JSON.stringify(settings) }),
     changePassword: (passwords) => this.request('/user/change-password', { method: 'POST', body: JSON.stringify(passwords) }),
+    sendResetOtp: () => this.request('/user/send-reset-otp', { method: 'POST' }),
     deleteAccount: () => this.request('/user/account', { method: 'DELETE' })
   };
 

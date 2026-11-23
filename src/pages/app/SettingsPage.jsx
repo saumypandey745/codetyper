@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Sliders,
@@ -15,7 +15,8 @@ import {
   Sun,
   Moon,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  Mail
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -34,8 +35,35 @@ export function SettingsPage({ onNavigate }) {
     newPassword: '',
     confirmPassword: ''
   });
+  const [resetViaOtp, setResetViaOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [otpCooldown]);
+
+  const handleRequestOtp = async () => {
+    if (otpCooldown > 0 || sendingOtp) return;
+    setSendingOtp(true);
+    try {
+      const res = await api.user.sendResetOtp();
+      toast.success(res.message || 'OTP code sent to your email.');
+      setResetViaOtp(true);
+      setOtpCooldown(60);
+    } catch (err) {
+      toast.error(err.message || 'Failed to send OTP.');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
   // Sound test button
   const handleTestSound = () => {
@@ -62,12 +90,29 @@ export function SettingsPage({ onNavigate }) {
 
     setChangingPassword(true);
     try {
-      await api.user.changePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
-      });
-      toast.success('Password updated successfully.');
+      if (resetViaOtp) {
+        if (!otpCode.trim()) {
+          toast.error('Please enter the 6-digit OTP code sent to your email.');
+          setChangingPassword(false);
+          return;
+        }
+        await api.user.changePassword({
+          otpCode: otpCode.trim(),
+          newPassword: passwordForm.newPassword,
+          confirmPassword: passwordForm.confirmPassword
+        });
+        toast.success('Password updated successfully via OTP.');
+      } else {
+        await api.user.changePassword({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+          confirmPassword: passwordForm.confirmPassword
+        });
+        toast.success('Password updated successfully.');
+      }
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setOtpCode('');
+      setResetViaOtp(false);
     } catch (err) {
       toast.error(err.message || 'Failed to update password.');
     } finally {
@@ -617,17 +662,79 @@ export function SettingsPage({ onNavigate }) {
               Ensure your account is protected with a secure password of at least 8 characters.
             </p>
 
+            {/* Toggle between Current Password and Email OTP */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <button
+                type="button"
+                className={`btn btn-sm ${!resetViaOtp ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setResetViaOtp(false)}
+              >
+                Use Current Password
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${resetViaOtp ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setResetViaOtp(true)}
+              >
+                Reset via Email OTP
+              </button>
+            </div>
+
             <form onSubmit={handleChangePassword} style={{ maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label className="input-label">Current Password</label>
-                <input
-                  type="password"
-                  className="input"
-                  required
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                />
-              </div>
+              {!resetViaOtp ? (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="input-label">Current Password</label>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: 'var(--color-primary-forest)', fontSize: '0.78rem', cursor: 'pointer', padding: 0 }}
+                      onClick={() => setResetViaOtp(true)}
+                    >
+                      Forgot current password?
+                    </button>
+                  </div>
+                  <input
+                    type="password"
+                    className="input"
+                    required={!resetViaOtp}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="input-label">6-Digit Verification OTP</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="e.g. 583920"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.trim())}
+                      style={{
+                        flex: 1,
+                        fontSize: '1rem',
+                        letterSpacing: otpCode && /^\d+$/.test(otpCode) ? '4px' : 'normal',
+                        fontWeight: otpCode && /^\d+$/.test(otpCode) ? 700 : 400
+                      }}
+                      required={resetViaOtp}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      disabled={sendingOtp || otpCooldown > 0}
+                      onClick={handleRequestOtp}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      <Mail size={15} />
+                      <span>{otpCooldown > 0 ? `Resend (${otpCooldown}s)` : (sendingOtp ? 'Sending...' : 'Send OTP')}</span>
+                    </button>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                    OTP is only dispatched to <strong>{user?.email}</strong> when you explicitly click the button.
+                  </span>
+                </div>
+              )}
 
               <div>
                 <label className="input-label">New Password</label>

@@ -12,6 +12,15 @@ export function ForgotPasswordPage({ onNavigate }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   // Auto-detect token if user clicked a reset link from email
   // Supports both: /#forgot-password?token=XYZ  and  /reset-password?token=XYZ
@@ -54,6 +63,7 @@ export function ForgotPasswordPage({ onNavigate }) {
       } else if (res && res.devResetToken) {
         setToken(res.devResetToken);
       }
+      setCooldown(60);
       // Always show "sent" screen regardless of whether account exists (security: no account enumeration)
       setStage('sent');
     } catch (err) {
@@ -255,10 +265,35 @@ export function ForgotPasswordPage({ onNavigate }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <button
                 type="button"
                 className="btn btn-outline"
+                style={{ width: '100%' }}
+                disabled={loading || cooldown > 0}
+                onClick={async () => {
+                  if (cooldown > 0 || loading) return;
+                  setLoading(true);
+                  setError('');
+                  try {
+                    const res = await api.auth.forgotPassword(email.trim());
+                    if (res && res.devOtp) {
+                      setToken(res.devOtp);
+                    }
+                    setCooldown(60);
+                  } catch (err) {
+                    setError(err.message || 'Could not resend OTP.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                {cooldown > 0 ? `Resend OTP (${cooldown}s)` : 'Resend OTP to Email'}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
                 style={{ width: '100%' }}
                 onClick={() => {
                   setStage('request');

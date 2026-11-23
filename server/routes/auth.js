@@ -216,6 +216,28 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   let otpCode = null;
 
   if (user) {
+    // Check if an OTP was recently dispatched for this user (within 60 seconds)
+    // To prevent mailbox flooding, replay spam, and accidental double clicks
+    if (process.env.NODE_ENV !== 'test') {
+      const recentReset = db.prepare(`
+        SELECT created_at FROM password_resets 
+        WHERE user_id = ? 
+        ORDER BY id DESC LIMIT 1
+      `).get(user.id);
+
+      if (recentReset && recentReset.created_at) {
+        const createdTime = new Date(recentReset.created_at.replace(' ', 'T') + 'Z').getTime();
+        const elapsedSeconds = (Date.now() - createdTime) / 1000;
+        if (elapsedSeconds < 60) {
+          const waitTime = Math.ceil(60 - elapsedSeconds);
+          return res.status(429).json({
+            error: `An OTP was already sent to this email. Please wait ${waitTime}s before requesting a new code.`,
+            retryAfter: waitTime
+          });
+        }
+      }
+    }
+
     // Invalidate all existing unused tokens for this user before creating a new one
     db.prepare('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL').run(user.id);
 

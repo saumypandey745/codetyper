@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -66,12 +67,26 @@ describe('CodeTyper API Integration Suite', () => {
     assert.equal(data.user.role, 'admin');
   });
 
-  it('verifies complete forgot-password and reset flow for Saumy account', async () => {
+  it('verifies complete forgot-password and reset flow with 6-digit OTP', async () => {
+    const resetTestEmail = `otp_suite_test_${Date.now()}@codetyper.test`;
+    const regRes = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: 'OTP Integration Typist',
+        username: `otp_test_${Date.now().toString().slice(-6)}`,
+        email: resetTestEmail,
+        password: 'InitialPassword123!',
+        confirm_password: 'InitialPassword123!'
+      })
+    });
+    assert.equal(regRes.status, 201);
+
     // 1. Request password reset
     const forgotRes = await fetch(`${baseUrl}/api/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'saumypandey745@gmail.com' })
+      body: JSON.stringify({ email: resetTestEmail })
     });
     assert.equal(forgotRes.status, 200);
     const forgotData = await forgotRes.json();
@@ -85,8 +100,8 @@ describe('CodeTyper API Integration Suite', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token: forgotData.devOtp,
-        new_password: 'Saumy_2026!',
-        confirm_password: 'Saumy_2026!'
+        new_password: 'NewResetPassword123!',
+        confirm_password: 'NewResetPassword123!'
       })
     });
     assert.equal(resetRes.status, 200);
