@@ -136,6 +136,22 @@ router.post('/save', authenticate, (req, res) => {
 
   const updatedStats = db.prepare('SELECT * FROM user_statistics WHERE user_id = ?').get(userId);
 
+  // Broadcast real-time update to all active leaderboard watchers
+  try {
+    const userRow = db.prepare('SELECT username, full_name, avatar_url FROM users WHERE id = ?').get(userId);
+    broadcastLeaderboardUpdate({
+      type: 'session_completed',
+      userId,
+      username: userRow?.username || req.user?.username,
+      display_name: userRow?.full_name || userRow?.username,
+      net_wpm,
+      accuracy,
+      language: language || 'English'
+    });
+  } catch (err) {
+    console.warn('[Leaderboard SSE] Broadcast notice error:', err);
+  }
+
   return res.status(201).json({
     message: 'Session recorded successfully.',
     sessionId,
@@ -240,22 +256,66 @@ router.get('/stats', authenticate, (req, res) => {
   });
 });
 
-const COMMUNITY_CHALLENGERS = [
-  { id: 901, username: 'neovim_deity', display_name: 'Alex "Vim" Mercer', best_wpm: 154, avg_accuracy: 99.4, total_tests: 1420, current_streak: 42, avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' },
-  { id: 902, username: 'rust_concurrency', display_name: 'Elena Rostova', best_wpm: 141, avg_accuracy: 98.8, total_tests: 980, current_streak: 28, avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150' },
-  { id: 903, username: 'syntax_god', display_name: 'Devin Chen', best_wpm: 133, avg_accuracy: 98.2, total_tests: 812, current_streak: 19, avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-  { id: 904, username: 'zen_keystrokes', display_name: 'Maya Tanaka', best_wpm: 126, avg_accuracy: 99.1, total_tests: 650, current_streak: 35, avatar_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150' },
-  { id: 905, username: 'haskell_monad', display_name: 'Lucas Silva', best_wpm: 118, avg_accuracy: 97.9, total_tests: 520, current_streak: 14, avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
-  { id: 906, username: 'react_hooks_fan', display_name: 'Sophia Patel', best_wpm: 112, avg_accuracy: 97.5, total_tests: 430, current_streak: 12, avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-  { id: 907, username: 'go_channel_king', display_name: 'Klaus Fischer', best_wpm: 104, avg_accuracy: 98.0, total_tests: 390, current_streak: 9, avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
-  { id: 908, username: 'mechanical_click', display_name: 'Aiden Brooks', best_wpm: 96, avg_accuracy: 96.8, total_tests: 280, current_streak: 7, avatar_url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150' }
-];
+// Real-Time Leaderboard Live Subscribers (SSE)
+const leaderboardSubscribers = new Set();
+
+export function broadcastLeaderboardUpdate(eventData = { type: 'update' }) {
+  if (leaderboardSubscribers.size === 0) return;
+  const payload = `data: ${JSON.stringify({ ...eventData, timestamp: Date.now() })}\n\n`;
+  for (const client of leaderboardSubscribers) {
+    try {
+      client.write(payload);
+    } catch (err) {
+      leaderboardSubscribers.delete(client);
+    }
+  }
+}
+
+function assignTier(best_wpm) {
+  if (best_wpm >= 140) return { tier: 'Grandmaster', tierIcon: '👑' };
+  if (best_wpm >= 115) return { tier: 'Master', tierIcon: '💎' };
+  if (best_wpm >= 90) return { tier: 'Diamond', tierIcon: '⚡' };
+  if (best_wpm >= 70) return { tier: 'Platinum', tierIcon: '🛡️' };
+  if (best_wpm >= 50) return { tier: 'Gold', tierIcon: '⭐' };
+  if (best_wpm >= 30) return { tier: 'Silver', tierIcon: '🥈' };
+  return { tier: 'Bronze', tierIcon: '🥉' };
+}
+
+// Real-Time SSE Stream for Live Leaderboard Telemetry
+router.get('/leaderboard/live', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (res.flushHeaders) res.flushHeaders();
+
+  // Initial handshake
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`);
+
+  leaderboardSubscribers.add(res);
+
+  // Keep-alive heartbeat every 25 seconds
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+    } catch {
+      clearInterval(heartbeat);
+      leaderboardSubscribers.delete(res);
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    leaderboardSubscribers.delete(res);
+  });
+});
 
 router.get('/leaderboard', optionalAuthenticate, (req, res) => {
   const currentUserId = req.user ? req.user.id : null;
   const { period = 'all_time', limit = 50 } = req.query;
+  const numLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
 
-  // Query real users from database
+  // Query real users strictly from the SQLite database
   let dbRows = [];
   try {
     if (period === 'weekly') {
@@ -268,11 +328,13 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
         FROM typing_sessions s
         JOIN users u ON u.id = s.user_id
         LEFT JOIN user_statistics st ON st.user_id = u.id
+        LEFT JOIN user_settings us ON us.user_id = u.id
         WHERE s.completed_at >= datetime('now', '-7 days')
-        GROUP BY u.id
-        ORDER BY best_wpm DESC
+          AND (us.public_profile IS NULL OR us.public_profile = 1)
+        GROUP BY u.id, u.username, u.full_name, u.avatar_url, st.current_streak
+        ORDER BY best_wpm DESC, avg_accuracy DESC
         LIMIT ?
-      `).all(Number(limit));
+      `).all(numLimit);
     } else if (period === 'daily') {
       dbRows = db.prepare(`
         SELECT u.id, u.username, u.full_name as display_name, u.avatar_url,
@@ -283,13 +345,15 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
         FROM typing_sessions s
         JOIN users u ON u.id = s.user_id
         LEFT JOIN user_statistics st ON st.user_id = u.id
+        LEFT JOIN user_settings us ON us.user_id = u.id
         WHERE s.completed_at >= datetime('now', '-1 day')
-        GROUP BY u.id
-        ORDER BY best_wpm DESC
+          AND (us.public_profile IS NULL OR us.public_profile = 1)
+        GROUP BY u.id, u.username, u.full_name, u.avatar_url, st.current_streak
+        ORDER BY best_wpm DESC, avg_accuracy DESC
         LIMIT ?
-      `).all(Number(limit));
+      `).all(numLimit);
     } else {
-      // All-time
+      // All-time: strictly users from the database with tests completed
       dbRows = db.prepare(`
         SELECT u.id, u.username, u.full_name as display_name, u.avatar_url,
                COALESCE(st.best_wpm, 0) as best_wpm,
@@ -298,68 +362,71 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
                COALESCE(st.current_streak, 0) as current_streak
         FROM users u
         JOIN user_statistics st ON st.user_id = u.id
-        WHERE st.total_tests > 0
+        LEFT JOIN user_settings us ON us.user_id = u.id
+        WHERE st.total_tests > 0 AND st.best_wpm > 0
+          AND (us.public_profile IS NULL OR us.public_profile = 1)
         ORDER BY st.best_wpm DESC, st.avg_accuracy DESC
         LIMIT ?
-      `).all(Number(limit));
+      `).all(numLimit);
     }
   } catch (err) {
     console.error('Leaderboard query error:', err.message);
   }
 
-  // Combine real users with community challengers if pool is small
-  const combinedMap = new Map();
-  dbRows.forEach((r) => {
-    combinedMap.set(r.id, {
-      ...r,
-      isCurrentUser: currentUserId === r.id
-    });
+  // Format real database typists with tiers and ranks
+  const leaderboard = dbRows.map((item, index) => {
+    const { tier, tierIcon } = assignTier(item.best_wpm);
+    return {
+      rank: index + 1,
+      ...item,
+      isCurrentUser: currentUserId === item.id,
+      tier,
+      tierIcon
+    };
   });
 
-  COMMUNITY_CHALLENGERS.forEach((c) => {
-    if (!combinedMap.has(c.id)) {
-      combinedMap.set(c.id, {
-        ...c,
-        isCurrentUser: false
-      });
-    }
-  });
+  // Current logged in user status (even if ranked beyond limit)
+  let currentUserRankInfo = leaderboard.find((item) => item.isCurrentUser) || null;
+  if (!currentUserRankInfo && currentUserId) {
+    try {
+      const userStat = db.prepare(`
+        SELECT u.id, u.username, u.full_name as display_name, u.avatar_url,
+               COALESCE(st.best_wpm, 0) as best_wpm,
+               COALESCE(st.avg_accuracy, 0) as avg_accuracy,
+               COALESCE(st.total_tests, 0) as total_tests,
+               COALESCE(st.current_streak, 0) as current_streak
+        FROM users u
+        JOIN user_statistics st ON st.user_id = u.id
+        WHERE u.id = ?
+      `).get(currentUserId);
 
-  const sortedList = Array.from(combinedMap.values())
-    .sort((a, b) => b.best_wpm - a.best_wpm)
-    .slice(0, Number(limit))
-    .map((item, index) => {
-      let tier = 'Challenger';
-      let tierIcon = '🎯';
-      if (item.best_wpm >= 140) {
-        tier = 'Grandmaster';
-        tierIcon = '👑';
-      } else if (item.best_wpm >= 115) {
-        tier = 'Master';
-        tierIcon = '💎';
-      } else if (item.best_wpm >= 90) {
-        tier = 'Diamond';
-        tierIcon = '⚡';
-      } else if (item.best_wpm >= 70) {
-        tier = 'Platinum';
-        tierIcon = '🛡️';
-      } else if (item.best_wpm >= 50) {
-        tier = 'Gold';
-        tierIcon = '⭐';
+      if (userStat && userStat.total_tests > 0) {
+        const rankRow = db.prepare(`
+          SELECT COUNT(*) + 1 as rank
+          FROM user_statistics
+          WHERE total_tests > 0 AND (best_wpm > ? OR (best_wpm = ? AND avg_accuracy > ?))
+        `).get(userStat.best_wpm, userStat.best_wpm, userStat.avg_accuracy);
+
+        const { tier, tierIcon } = assignTier(userStat.best_wpm);
+        currentUserRankInfo = {
+          rank: rankRow ? rankRow.rank : null,
+          ...userStat,
+          isCurrentUser: true,
+          tier,
+          tierIcon
+        };
       }
-
-      return {
-        rank: index + 1,
-        ...item,
-        tier,
-        tierIcon
-      };
-    });
+    } catch (e) {
+      console.warn('Could not compute current user rank:', e);
+    }
+  }
 
   return res.json({
     period,
-    leaderboard: sortedList,
-    total: sortedList.length
+    leaderboard,
+    total: leaderboard.length,
+    currentUser: currentUserRankInfo,
+    liveStreamUrl: '/api/sessions/leaderboard/live'
   });
 });
 
