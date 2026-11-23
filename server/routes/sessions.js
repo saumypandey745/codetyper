@@ -315,7 +315,7 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
   const { period = 'all_time', limit = 50 } = req.query;
   const numLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
 
-  // Query real users strictly from the SQLite database
+  // Query real users strictly from the SQLite database (filtering out demo accounts and test suite typists)
   let dbRows = [];
   try {
     if (period === 'weekly') {
@@ -329,7 +329,10 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
         JOIN users u ON u.id = s.user_id
         LEFT JOIN user_statistics st ON st.user_id = u.id
         LEFT JOIN user_settings us ON us.user_id = u.id
-        WHERE s.completed_at >= datetime('now', '-7 days')
+        WHERE s.net_wpm > 0
+          AND s.completed_at >= datetime('now', '-7 days')
+          AND u.email NOT IN ('demo@codetyper.dev', 'admin@codetyper.dev')
+          AND u.email NOT LIKE '%@codetyper.test'
           AND (us.public_profile IS NULL OR us.public_profile = 1)
         GROUP BY u.id, u.username, u.full_name, u.avatar_url, st.current_streak
         ORDER BY best_wpm DESC, avg_accuracy DESC
@@ -346,14 +349,17 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
         JOIN users u ON u.id = s.user_id
         LEFT JOIN user_statistics st ON st.user_id = u.id
         LEFT JOIN user_settings us ON us.user_id = u.id
-        WHERE s.completed_at >= datetime('now', '-1 day')
+        WHERE s.net_wpm > 0
+          AND s.completed_at >= datetime('now', '-1 day')
+          AND u.email NOT IN ('demo@codetyper.dev', 'admin@codetyper.dev')
+          AND u.email NOT LIKE '%@codetyper.test'
           AND (us.public_profile IS NULL OR us.public_profile = 1)
         GROUP BY u.id, u.username, u.full_name, u.avatar_url, st.current_streak
         ORDER BY best_wpm DESC, avg_accuracy DESC
         LIMIT ?
       `).all(numLimit);
     } else {
-      // All-time: strictly users from the database with tests completed
+      // All-time: strictly real registered users from the database with tests completed
       dbRows = db.prepare(`
         SELECT u.id, u.username, u.full_name as display_name, u.avatar_url,
                COALESCE(st.best_wpm, 0) as best_wpm,
@@ -364,6 +370,8 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
         JOIN user_statistics st ON st.user_id = u.id
         LEFT JOIN user_settings us ON us.user_id = u.id
         WHERE st.total_tests > 0 AND st.best_wpm > 0
+          AND u.email NOT IN ('demo@codetyper.dev', 'admin@codetyper.dev')
+          AND u.email NOT LIKE '%@codetyper.test'
           AND (us.public_profile IS NULL OR us.public_profile = 1)
         ORDER BY st.best_wpm DESC, st.avg_accuracy DESC
         LIMIT ?

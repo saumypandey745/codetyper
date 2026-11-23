@@ -371,56 +371,15 @@ function seedInitialData() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      // Seed demo stats & sessions
-      statsStmt.run(demoId, 12, 1440, 78.4, 68.2, 97.4, 4, new Date().toISOString().split('T')[0]);
-      statsStmt.run(adminId, 5, 600, 84.1, 74.5, 98.6, 2, new Date().toISOString().split('T')[0]);
+      // Initialize clean statistics for demo & admin accounts
+      statsStmt.run(demoId, 0, 0, 0, 0, 0, 0, null);
+      statsStmt.run(adminId, 0, 0, 0, 0, 0, 0, null);
     } catch (seedErr) {
       // Ignore unique constraint error if another concurrent process seeded users first
       if (!seedErr.message.includes('UNIQUE constraint failed')) {
         throw seedErr;
       }
     }
-
-    // Seed realistic sample sessions for demo user
-    const sampleSessions = [
-      { practice_type: 'english', lang: 'English', diff: 'intermediate', dur: 60, gross: 66, net: 64, acc: 96.5, err: 2, daysAgo: 4 },
-      { practice_type: 'code', lang: 'JavaScript', diff: 'intermediate', dur: 120, gross: 62, net: 60, acc: 95.8, err: 3, daysAgo: 3 },
-      { practice_type: 'code', lang: 'TypeScript', diff: 'beginner', dur: 90, gross: 68, net: 67, acc: 98.1, err: 1, daysAgo: 3 },
-      { practice_type: 'test', lang: 'English', diff: 'advanced', dur: 60, gross: 72, net: 71, acc: 97.8, err: 2, daysAgo: 2 },
-      { practice_type: 'code', lang: 'Python', diff: 'intermediate', dur: 120, gross: 70, net: 69, acc: 98.5, err: 1, daysAgo: 1 },
-      { practice_type: 'english', lang: 'English', diff: 'beginner', dur: 60, gross: 80, net: 78.4, acc: 99.1, err: 1, daysAgo: 0 }
-    ];
-
-    const sessionStmt = db.prepare(`
-      INSERT INTO typing_sessions (
-        user_id, content_id, practice_type, language, difficulty,
-        duration_seconds, gross_wpm, net_wpm, accuracy,
-        total_characters, correct_characters, incorrect_characters, error_count, completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', ? || ' days'))
-    `);
-
-    for (const s of sampleSessions) {
-      const totalChars = Math.round((s.gross * 5 * s.dur) / 60);
-      const incorrect = Math.round(totalChars * (1 - s.acc / 100));
-      const correct = totalChars - incorrect;
-      sessionStmt.run(
-        demoId,
-        1,
-        s.practice_type,
-        s.lang,
-        s.diff,
-        s.dur,
-        s.gross,
-        s.net,
-        s.acc,
-        totalChars,
-        correct,
-        incorrect,
-        s.err,
-        `-${s.daysAgo}`
-      );
-    }
-    console.log('[DB] Demo user and history seeded successfully.');
   }
 
   // Seed Saumy Pandey Admin Account independently
