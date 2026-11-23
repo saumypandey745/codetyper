@@ -243,6 +243,63 @@ describe('CodeTyper API Integration Suite', () => {
     const metrics = await adminRes.json();
     assert.ok(metrics.users >= 2);
     assert.ok(metrics.contentItems >= 30);
+
+    // 1. Test Bulk Content Import
+    const bulkImportRes = await fetch(`${baseUrl}/api/admin/content/bulk-import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminData.token}`
+      },
+      body: JSON.stringify({
+        items: [
+          {
+            title: 'Test Bulk Snippet 1',
+            is_code: 1,
+            language: 'Python',
+            category: 'Algorithms',
+            difficulty: 'beginner',
+            content: 'print("Testing bulk import admin feature")'
+          }
+        ]
+      })
+    });
+    assert.equal(bulkImportRes.status, 200);
+    const bulkData = await bulkImportRes.json();
+    assert.equal(bulkData.importedCount, 1);
+
+    // 2. Test System Settings & Global Announcement
+    const settingsUpdateRes = await fetch(`${baseUrl}/api/admin/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminData.token}`
+      },
+      body: JSON.stringify({
+        announcement_text: 'Admin governance features successfully verified.',
+        announcement_type: 'announcement',
+        announcement_enabled: '1'
+      })
+    });
+    assert.equal(settingsUpdateRes.status, 200);
+
+    // Verify public announcement endpoint returns the banner
+    const publicBannerRes = await fetch(`${baseUrl}/api/system/announcement`);
+    assert.equal(publicBannerRes.status, 200);
+    const bannerData = await publicBannerRes.json();
+    assert.equal(bannerData.enabled, true);
+    assert.equal(bannerData.text, 'Admin governance features successfully verified.');
+    assert.equal(bannerData.type, 'announcement');
+
+    // 3. Test Audit Logs retrieval
+    const auditRes = await fetch(`${baseUrl}/api/admin/audit-logs`, {
+      headers: { Authorization: `Bearer ${adminData.token}` }
+    });
+    assert.equal(auditRes.status, 200);
+    const auditData = await auditRes.json();
+    assert.ok(Array.isArray(auditData.logs));
+    assert.ok(auditData.logs.some(l => l.action === 'UPDATE_SYSTEM_SETTINGS'));
+    assert.ok(auditData.logs.some(l => l.action === 'BULK_IMPORT_CONTENT'));
   });
 
   it('GET /api/sessions/leaderboard returns ranked typists and tier badges', async () => {

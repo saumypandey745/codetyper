@@ -37,14 +37,17 @@ router.post('/save', authenticate, (req, res) => {
     return res.json({ message: 'Session completed. (History saving disabled in preferences)', id: null });
   }
 
+  // Anti-cheat heuristic: flag suspicious speeds (>175 WPM or inhuman bursts) for admin review
+  const isFlagged = (Number(net_wpm) > 175 || (Number(net_wpm) > 140 && Number(accuracy) === 100 && Number(duration_seconds) < 15)) ? 1 : 0;
+
   // Insert session
   const insertStmt = db.prepare(`
     INSERT INTO typing_sessions (
       user_id, content_id, practice_type, language, difficulty,
       duration_seconds, gross_wpm, net_wpm, accuracy,
       total_characters, correct_characters, incorrect_characters,
-      error_count, raw_timeline_json, completed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      error_count, raw_timeline_json, is_flagged, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `);
 
   const result = insertStmt.run(
@@ -61,7 +64,8 @@ router.post('/save', authenticate, (req, res) => {
     Number(correct_characters || 0),
     Number(incorrect_characters || 0),
     Number(error_count || 0),
-    raw_timeline_json ? JSON.stringify(raw_timeline_json) : null
+    raw_timeline_json ? JSON.stringify(raw_timeline_json) : null,
+    isFlagged
   );
 
   const sessionId = Number(result.lastInsertRowid);
@@ -334,6 +338,9 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
           AND u.email NOT IN ('demo@codetyper.dev', 'admin@codetyper.dev')
           AND u.email NOT LIKE '%@codetyper.test'
           AND (us.public_profile IS NULL OR us.public_profile = 1)
+          AND COALESCE(u.is_banned, 0) = 0
+          AND COALESCE(u.shadowbanned, 0) = 0
+          AND COALESCE(s.is_disqualified, 0) = 0
         GROUP BY u.id, u.username, u.full_name, u.avatar_url, st.current_streak
         ORDER BY best_wpm DESC, avg_accuracy DESC
         LIMIT ?
@@ -354,6 +361,9 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
           AND u.email NOT IN ('demo@codetyper.dev', 'admin@codetyper.dev')
           AND u.email NOT LIKE '%@codetyper.test'
           AND (us.public_profile IS NULL OR us.public_profile = 1)
+          AND COALESCE(u.is_banned, 0) = 0
+          AND COALESCE(u.shadowbanned, 0) = 0
+          AND COALESCE(s.is_disqualified, 0) = 0
         GROUP BY u.id, u.username, u.full_name, u.avatar_url, st.current_streak
         ORDER BY best_wpm DESC, avg_accuracy DESC
         LIMIT ?
@@ -373,6 +383,8 @@ router.get('/leaderboard', optionalAuthenticate, (req, res) => {
           AND u.email NOT IN ('demo@codetyper.dev', 'admin@codetyper.dev')
           AND u.email NOT LIKE '%@codetyper.test'
           AND (us.public_profile IS NULL OR us.public_profile = 1)
+          AND COALESCE(u.is_banned, 0) = 0
+          AND COALESCE(u.shadowbanned, 0) = 0
         ORDER BY st.best_wpm DESC, st.avg_accuracy DESC
         LIMIT ?
       `).all(numLimit);

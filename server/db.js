@@ -139,19 +139,61 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_password_resets_hash ON password_resets(token_hash);
     CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
     CREATE INDEX IF NOT EXISTS idx_custom_snippets_user ON custom_snippets(user_id);
+
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER,
+      admin_username TEXT,
+      action TEXT NOT NULL,
+      target_type TEXT,
+      target_id TEXT,
+      details TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON admin_audit_logs(action);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_time ON admin_audit_logs(created_at);
   `);
 
-  try {
-    db.exec('ALTER TABLE practice_content ADD COLUMN lesson_number INTEGER DEFAULT 1;');
-  } catch (e) {
-    // Column already exists
-  }
+  // Safe migrations for newly added columns
+  try { db.exec('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0;'); } catch (e) {}
+  try { db.exec('ALTER TABLE users ADD COLUMN ban_reason TEXT;'); } catch (e) {}
+  try { db.exec('ALTER TABLE users ADD COLUMN shadowbanned INTEGER DEFAULT 0;'); } catch (e) {}
+  try { db.exec('ALTER TABLE typing_sessions ADD COLUMN is_flagged INTEGER DEFAULT 0;'); } catch (e) {}
+  try { db.exec('ALTER TABLE typing_sessions ADD COLUMN is_disqualified INTEGER DEFAULT 0;'); } catch (e) {}
+  try { db.exec('ALTER TABLE typing_sessions ADD COLUMN disqualified_reason TEXT;'); } catch (e) {}
+  try { db.exec('ALTER TABLE practice_content ADD COLUMN is_published INTEGER DEFAULT 1;'); } catch (e) {}
+  try { db.exec('ALTER TABLE practice_content ADD COLUMN lesson_number INTEGER DEFAULT 1;'); } catch (e) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_content_lang_lesson ON practice_content(is_code, language, lesson_number);'); } catch (e) {}
 
-  try {
-    db.exec('CREATE INDEX IF NOT EXISTS idx_content_lang_lesson ON practice_content(is_code, language, lesson_number);');
-  } catch (e) { }
+  // Initialize default system settings
+  const initSetting = (key, val) => {
+    db.prepare('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)').run(key, val);
+  };
+  initSetting('announcement_text', '');
+  initSetting('announcement_type', 'info');
+  initSetting('announcement_enabled', '0');
+  initSetting('maintenance_mode', '0');
 
   seedInitialData();
+}
+
+export function logAdminAudit(adminUser, action, targetType = null, targetId = null, details = null) {
+  try {
+    const adminId = adminUser?.id || null;
+    const adminUsername = adminUser?.username || 'system';
+    db.prepare(`
+      INSERT INTO admin_audit_logs (admin_id, admin_username, action, target_type, target_id, details)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(adminId, adminUsername, action, targetType, targetId ? String(targetId) : null, typeof details === 'object' ? JSON.stringify(details) : details);
+  } catch (err) {
+    console.warn('[DB] Failed to log admin audit entry:', err.message);
+  }
 }
 
 function seedInitialData() {

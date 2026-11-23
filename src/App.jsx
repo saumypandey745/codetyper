@@ -6,6 +6,7 @@ import { PublicFooter } from './components/layout/PublicFooter.jsx';
 import { Sidebar } from './components/layout/Sidebar.jsx';
 import { Header } from './components/layout/Header.jsx';
 import { QuickSearchModal } from './components/common/QuickSearchModal.jsx';
+import { AnnouncementBanner } from './components/common/AnnouncementBanner.jsx';
 
 // Public pages
 import { LandingPage } from './pages/public/LandingPage.jsx';
@@ -219,6 +220,7 @@ export function App() {
 
   return (
     <>
+      <AnnouncementBanner />
       {isPublicView ? (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <PublicHeader onNavigate={navigateTo} />

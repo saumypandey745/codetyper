@@ -123,7 +123,7 @@ router.post('/login', authLimiter, (req, res) => {
 
   const query = login.trim().toLowerCase();
   const user = db.prepare(`
-    SELECT id, email, username, full_name, password_hash, avatar_url, role, bio, created_at
+    SELECT id, email, username, full_name, password_hash, avatar_url, role, bio, is_banned, ban_reason, created_at
     FROM users
     WHERE LOWER(email) = ? OR LOWER(username) = ?
   `).get(query, query);
@@ -146,6 +146,14 @@ router.post('/login', authLimiter, (req, res) => {
 
   if (!isMatch) {
     return res.status(401).json({ error: 'Invalid username/email or password.' });
+  }
+
+  if (user.is_banned) {
+    return res.status(403).json({
+      error: user.ban_reason
+        ? `Account suspended by platform administration: ${user.ban_reason}`
+        : 'Your account has been suspended by platform administration.'
+    });
   }
 
   const payload = {

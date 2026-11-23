@@ -145,17 +145,39 @@ class ApiClient {
     deleteAccount: () => this.request('/user/account', { method: 'DELETE' })
   };
 
-  // Admin
+  // System
+  system = {
+    getAnnouncement: () => this.request('/system/announcement')
+  };
+
+  // Admin Portal & Platform Governance
   admin = {
     getStats: () => this.request('/admin/stats'),
+    getSecuritySummary: () => this.request('/admin/security-summary'),
     getContent: (params = {}) => {
       const query = new URLSearchParams(params).toString();
       return this.request(`/admin/content?${query}`);
     },
     createContent: (content) => this.request('/admin/content', { method: 'POST', body: JSON.stringify(content) }),
     updateContent: (id, content) => this.request(`/admin/content/${id}`, { method: 'PUT', body: JSON.stringify(content) }),
+    togglePublish: (id) => this.request(`/admin/content/${id}/toggle-publish`, { method: 'PUT' }),
     deleteContent: (id) => this.request(`/admin/content/${id}`, { method: 'DELETE' }),
-    getUsers: () => this.request('/admin/users')
+    bulkImport: (items) => this.request('/admin/content/bulk-import', { method: 'POST', body: JSON.stringify({ items }) }),
+    getUsers: () => this.request('/admin/users'),
+    updateUserRole: (id, role) => this.request(`/admin/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
+    banUser: (id, payload) => this.request(`/admin/users/${id}/ban`, { method: 'PUT', body: JSON.stringify(payload) }),
+    shadowbanUser: (id, shadowbanned) => this.request(`/admin/users/${id}/shadowban`, { method: 'PUT', body: JSON.stringify({ shadowbanned }) }),
+    resetUserPassword: (id, new_password) => this.request(`/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ new_password }) }),
+    deleteUser: (id) => this.request(`/admin/users/${id}`, { method: 'DELETE' }),
+    getScores: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return this.request(`/admin/scores?${query}`);
+    },
+    disqualifyScore: (id, reason) => this.request(`/admin/scores/${id}/disqualify`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+    deleteScore: (id) => this.request(`/admin/scores/${id}`, { method: 'DELETE' }),
+    getSettings: () => this.request('/admin/settings'),
+    updateSettings: (settings) => this.request('/admin/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+    getAuditLogs: () => this.request('/admin/audit-logs')
   };
 }
 

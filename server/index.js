@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { initDatabase } from './db.js';
+import { initDatabase, db } from './db.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import practiceRoutes from './routes/practice.js';
@@ -111,6 +111,25 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: Math.round(process.uptime())
   });
+});
+
+// System & Announcement Routes
+app.get('/api/system/announcement', (req, res) => {
+  try {
+    const textRow = db.prepare("SELECT value FROM system_settings WHERE key = 'announcement_text'").get();
+    const typeRow = db.prepare("SELECT value FROM system_settings WHERE key = 'announcement_type'").get();
+    const enabledRow = db.prepare("SELECT value FROM system_settings WHERE key = 'announcement_enabled'").get();
+    const maintenanceRow = db.prepare("SELECT value FROM system_settings WHERE key = 'maintenance_mode'").get();
+
+    return res.json({
+      enabled: enabledRow?.value === '1',
+      text: textRow?.value || '',
+      type: typeRow?.value || 'info',
+      maintenance_mode: maintenanceRow?.value === '1'
+    });
+  } catch (err) {
+    return res.json({ enabled: false, text: '', type: 'info', maintenance_mode: false });
+  }
 });
 
 app.use('/api/auth', authRoutes);
