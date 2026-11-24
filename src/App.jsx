@@ -149,7 +149,8 @@ export function App() {
     'contact',
     'privacy',
     'terms',
-    'verify'
+    'verify',
+    ...(!user && currentView === 'certificate' ? ['certificate'] : [])
   ].includes(currentView);
 
   // Render Page Content

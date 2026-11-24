@@ -44,6 +44,9 @@ export function PublicFooter({ onNavigate }) {
         <div>
           <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem' }}>Platform</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
+            <button className="public-nav-link" style={{ textAlign: 'left', color: '#eab308' }} onClick={() => onNavigate('certificate')}>
+              Official Certificates 🎓
+            </button>
             <button className="public-nav-link" style={{ textAlign: 'left' }} onClick={() => onNavigate('dashboard')}>
               Personal Dashboard
             </button>

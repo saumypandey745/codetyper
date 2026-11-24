@@ -21,7 +21,8 @@ import { api } from '../../utils/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   getLinkedInCertificationUrl,
-  getSocialShareUrls
+  getSocialShareUrls,
+  CERTIFICATE_THEME_TIERS
 } from '../../utils/certificateEligibility.js';
 import { TypingCertificateModal } from '../../components/typing/TypingCertificateModal.jsx';
 import { soundEngine } from '../../utils/soundEngine.js';
@@ -341,23 +342,44 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 {certData.recipientName}
               </h2>
 
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.3rem 0.85rem',
-                  borderRadius: '9999px',
-                  backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                  color: '#38bdf8',
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  marginTop: '0.35rem'
-                }}
-              >
-                <Sparkles size={14} />
-                <span>{certData.titleRole || 'Touch-Typing Specialist'}</span>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.45rem' }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.3rem 0.85rem',
+                    borderRadius: '9999px',
+                    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                    color: '#38bdf8',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    border: '1px solid rgba(56, 189, 248, 0.3)'
+                  }}
+                >
+                  <Sparkles size={14} />
+                  <span>{certData.titleRole || 'Touch-Typing Specialist'}</span>
+                </div>
+
+                {CERTIFICATE_THEME_TIERS[certData.theme] && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.3rem 0.85rem',
+                      borderRadius: '9999px',
+                      backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                      color: '#facc15',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      border: '1px solid rgba(234, 179, 8, 0.4)'
+                    }}
+                  >
+                    <Award size={14} />
+                    <span>{CERTIFICATE_THEME_TIERS[certData.theme].badge} (Tier {CERTIFICATE_THEME_TIERS[certData.theme].tier} Cleared)</span>
+                  </div>
+                )}
               </div>
             </div>
 

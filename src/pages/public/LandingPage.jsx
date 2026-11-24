@@ -12,12 +12,15 @@ import {
   TrendingUp,
   Brain,
   Zap,
-  Terminal
+  Terminal,
+  Award,
+  ExternalLink
 } from 'lucide-react';
 import { programmingLanguages } from '../../../server/seedData.js';
 import { HeroInteractiveEditor } from '../../components/landing/HeroInteractiveEditor.jsx';
 
 const ROTATING_PHRASES = [
+  "Earn Accredited Certificates.",
   "Improve Every Day.",
   "Code Without Friction.",
   "Master 25+ Tech Stacks.",
@@ -87,10 +90,16 @@ export function LandingPage({ onNavigate, onStartPractice }) {
         {/* Center Hero Content */}
         <div className="hero-content">
           {/* Shimmer Badge with Live Pulse Indicator */}
-          <div className="hero-badge-shimmer">
+          <div
+            className="hero-badge-shimmer"
+            onClick={() => onNavigate('certificate')}
+            style={{ cursor: 'pointer' }}
+            title="Explore Official Accredited Typing Certificates"
+          >
             <span className="hero-badge-pulse-dot" />
-            <Sparkles size={16} />
-            <span>Peaceful, Distraction-Free Typing for Modern Developers & Writers</span>
+            <Award size={16} color="#eab308" />
+            <span>Earn Official Accredited Typing Certificates • 4 Collectible Luxury Tiers</span>
+            <ArrowRight size={13} color="#eab308" />
           </div>
 
           {/* Master Heading: "Type Better. Code Faster. Improve Every Day." */}
@@ -105,7 +114,7 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           </h1>
 
           <p className="hero-description">
-            Build calm typing speed, pinpoint accuracy, and effortless muscle memory with a peaceful distraction-free flow designed for everyday prose and 25+ real-world programming languages.
+            Build calm typing speed, pinpoint accuracy, and effortless muscle memory with a peaceful distraction-free flow designed for everyday prose and 25+ real-world programming languages. Complete milestones to unlock official diplomas signed personally by founder Saumy Pandey.
           </p>
 
           {/* Premium CTA Buttons */}
@@ -114,14 +123,37 @@ export function LandingPage({ onNavigate, onStartPractice }) {
               <span>Start Typing Free</span>
               <ArrowRight size={18} className="btn-icon-slide" />
             </button>
+            <button
+              className="btn-glass-hero"
+              onClick={() => onNavigate('certificate')}
+              style={{
+                borderColor: 'rgba(234, 179, 8, 0.4)',
+                backgroundColor: 'rgba(234, 179, 8, 0.08)'
+              }}
+            >
+              <Award size={18} color="#eab308" />
+              <span style={{ color: '#facc15' }}>Official Certificates 🎓</span>
+            </button>
             <button className="btn-glass-hero" onClick={() => onNavigate('coding')}>
               <Code2 size={18} color="var(--color-primary-forest)" />
-              <span>Explore Practice Modes</span>
+              <span>Practice Coding</span>
             </button>
           </div>
 
           {/* Quick Tactile Badges Ribbon */}
           <div className="hero-pills-ribbon" aria-hidden="true">
+            <div
+              className="ribbon-pill"
+              onClick={() => onNavigate('certificate')}
+              style={{
+                cursor: 'pointer',
+                border: '1px solid rgba(234, 179, 8, 0.4)',
+                background: 'rgba(234, 179, 8, 0.12)'
+              }}
+            >
+              <Award size={14} color="#eab308" />
+              <span style={{ color: '#facc15', fontWeight: 650 }}>Accredited Certificates 🎓</span>
+            </div>
             <div className="ribbon-pill">
               <span className="chip-key">⌘ K</span>
               <span>Quick Jump</span>
@@ -133,10 +165,6 @@ export function LandingPage({ onNavigate, onStartPractice }) {
             <div className="ribbon-pill">
               <Code2 size={14} color="var(--color-primary-forest)" />
               <span>25+ Real Stacks</span>
-            </div>
-            <div className="ribbon-pill">
-              <CheckCircle2 size={14} color="var(--color-primary-forest)" />
-              <span>Zero Distractions</span>
             </div>
           </div>
 
@@ -263,6 +291,216 @@ export function LandingPage({ onNavigate, onStartPractice }) {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* =========================================================================
+          OFFICIAL ACCREDITED CERTIFICATES SHOWCASE (4 THEMES & TASKS)
+          ========================================================================= */}
+      <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', width: '100%' }}>
+        <div
+          className="card"
+          style={{
+            padding: '3.25rem 2.25rem',
+            background: 'linear-gradient(135deg, rgba(10, 15, 29, 0.96) 0%, rgba(4, 7, 16, 0.98) 100%)',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.55)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Ambient Glow */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '-15%',
+              right: '-10%',
+              width: '400px',
+              height: '400px',
+              background: 'radial-gradient(circle, rgba(234, 179, 8, 0.14) 0%, transparent 70%)',
+              pointerEvents: 'none'
+            }}
+          />
+
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem', position: 'relative', zIndex: 1 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.35rem 0.95rem',
+                borderRadius: '9999px',
+                background: 'rgba(234, 179, 8, 0.15)',
+                border: '1px solid rgba(234, 179, 8, 0.45)',
+                color: '#facc15',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                marginBottom: '1rem'
+              }}
+            >
+              <Award size={16} />
+              <span>Official Accredited Typing Credentials</span>
+            </span>
+            <h2 style={{ fontSize: '2.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+              Earn Official Certificates As You Type & Practice
+            </h2>
+            <p style={{ maxWidth: '640px', margin: '0 auto', color: '#94a3b8', fontSize: '1.05rem', lineHeight: 1.6 }}>
+              Create a free account or log in, complete milestone challenges across typing drills, coding syntax, and multiplayer duels, and unlock 4 collectible luxury certificate tiers personally signed by Founder <strong>Saumy Pandey</strong>.
+            </p>
+          </div>
+
+          {/* 4 Collectible Themes Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem', position: 'relative', zIndex: 1 }}>
+            {[
+              {
+                tier: 'Tier 1 Milestone',
+                name: 'Imperial Ivory Parchment',
+                badge: '📜 Vintage Ivory',
+                subtitle: 'Touch-Typing Apprentice',
+                tasks: ['≥ 35 Net WPM', '≥ 90% Accuracy', '5 Completed Tests'],
+                swatch: 'linear-gradient(135deg, #fef9c3 0%, #b45309 100%)',
+                accent: '#b45309'
+              },
+              {
+                tier: 'Tier 2 Milestone',
+                name: 'Royal Obsidian & 24K Gold',
+                badge: '👑 Royal Gold',
+                subtitle: 'Professional Velocity',
+                tasks: ['≥ 60 Net WPM', '≥ 95% Accuracy', '3-Day Practice Streak'],
+                swatch: 'linear-gradient(135deg, #090e1c 0%, #ca8a04 100%)',
+                accent: '#eab308'
+              },
+              {
+                tier: 'Tier 3 Milestone',
+                name: 'Emerald Sovereign & Gold',
+                badge: '🌿 Grandmaster Emerald',
+                subtitle: 'Syntax Polyglot & Code Master',
+                tasks: ['≥ 75 Net WPM', '≥ 97% Accuracy', '3+ Coding Languages'],
+                swatch: 'linear-gradient(135deg, #064e3b 0%, #10b981 100%)',
+                accent: '#10b981'
+              },
+              {
+                tier: 'Tier 4 Milestone',
+                name: 'Midnight Titanium & Platinum',
+                badge: '💎 Celestial Platinum',
+                subtitle: 'Apex Legend & Arena Champion',
+                tasks: ['≥ 90 Net WPM', '≥ 98% Accuracy', 'Arena Wins & 7-Day Streak'],
+                swatch: 'linear-gradient(135deg, #1e293b 0%, #60a5fa 100%)',
+                accent: '#60a5fa'
+              }
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  border: `1px solid ${item.accent}55`,
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '1.35rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                  position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: item.accent, textTransform: 'uppercase' }}>
+                    {item.tier}
+                  </span>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: item.swatch, border: '1px solid rgba(255, 255, 255, 0.4)' }} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>{item.badge}</h4>
+                  <div style={{ fontSize: '0.8rem', color: item.accent, fontWeight: 600 }}>{item.subtitle}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem' }}>
+                  {item.tasks.map((task, tIdx) => (
+                    <div key={tIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                      <CheckCircle2 size={13} color="#4ade80" />
+                      <span>{task}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Certificate Credential Features Bar */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem',
+              padding: '1.25rem',
+              background: 'rgba(5, 9, 20, 0.8)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              marginBottom: '2rem',
+              position: 'relative',
+              zIndex: 1
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <ShieldCheck size={20} color="#38bdf8" />
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>SHA-256 Ledger Verified</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Immutable tamper-proof record</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Award size={20} color="#eab308" />
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>Signed by Saumy Pandey</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>App Owner & Founder signature</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <ExternalLink size={20} color="#60a5fa" />
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>1-Click LinkedIn Add</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Add credential to profile</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Sparkles size={20} color="#facc15" />
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>Ultra HD 4K Canvas</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>2400x1600 rasterized PNG</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action CTAs */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={() => onNavigate('signup')}
+              style={{
+                background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)',
+                color: '#070b14',
+                fontWeight: 750,
+                border: 'none',
+                boxShadow: '0 6px 20px rgba(234, 179, 8, 0.45)',
+                padding: '0.85rem 1.85rem'
+              }}
+            >
+              <span>Sign Up & Claim Your Certificate 🎓</span>
+              <ArrowRight size={18} />
+            </button>
+            <button
+              className="btn btn-outline btn-lg"
+              onClick={() => onNavigate('certificate')}
+              style={{
+                borderColor: 'rgba(234, 179, 8, 0.45)',
+                color: '#facc15',
+                backgroundColor: 'rgba(234, 179, 8, 0.08)',
+                padding: '0.85rem 1.85rem'
+              }}
+            >
+              <Award size={18} />
+              <span>Preview Official Certificates 📜</span>
+            </button>
+          </div>
         </div>
       </section>
 

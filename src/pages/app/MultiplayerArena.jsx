@@ -54,6 +54,12 @@ export function MultiplayerArena({ onNavigate }) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
+      if (room.winner && room.winner.id === myPlayerId) {
+        try {
+          const currentWins = parseInt(localStorage.getItem('codetyper_arena_wins') || '0', 10);
+          localStorage.setItem('codetyper_arena_wins', (currentWins + 1).toString());
+        } catch (e) {}
+      }
       try {
         confetti({ particleCount: 70, spread: 70 });
       } catch (e) {}

@@ -13,6 +13,10 @@ import {
   ArrowRight,
   Sparkles,
   Lock,
+  Unlock,
+  Trophy,
+  Flame,
+  Zap,
   Briefcase,
   ExternalLink
 } from 'lucide-react';
@@ -22,6 +26,8 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { api } from '../../utils/api.js';
 import {
   checkCertificateEligibility,
+  evaluateThemeTiers,
+  CERTIFICATE_THEME_TIERS,
   CERTIFICATE_ROLES,
   getLinkedInCertificationUrl,
   getSocialShareUrls
@@ -169,16 +175,36 @@ export function CertificatePage({ onNavigate }) {
     });
   }, []);
 
+  const wpm = userStats?.best_wpm || (user ? 40 : 65);
+  const grossWpm = Math.round(wpm * 1.05);
+  const accuracy = userStats?.avg_accuracy || (user ? 92 : 98.4);
+  const duration = 60;
+  const language = 'All Disciplines (English & Programming)';
+
+  const themeTiers = useMemo(() => {
+    const arenaWins = typeof window !== 'undefined'
+      ? parseInt(localStorage.getItem('codetyper_arena_wins') || '0', 10)
+      : 0;
+    return evaluateThemeTiers({
+      wpm,
+      accuracy,
+      totalTests: userStats?.total_tests || 0,
+      streak: userStats?.current_streak || 1,
+      totalChars: userStats?.total_characters || 0,
+      languagesCount: 3,
+      arenaWins,
+      duration
+    });
+  }, [wpm, accuracy, userStats, duration]);
+
   const handleThemeChange = (themeId) => {
     setActiveTheme(themeId);
     soundEngine.playWaxSealStamp();
+    const tierMeta = themeTiers.tiers[themeId];
+    if (tierMeta && !tierMeta.isUnlocked) {
+      toast.info(`Previewing locked theme: ${tierMeta.name} (${tierMeta.passedCount}/4 Tasks Cleared). Complete its tasks to unlock official downloading.`);
+    }
   };
-
-  const wpm = userStats?.best_wpm || 72;
-  const grossWpm = Math.round(wpm * 1.05);
-  const accuracy = userStats?.avg_accuracy || 98.4;
-  const duration = 60;
-  const language = 'All Disciplines (English & Programming)';
 
   const sessionResult = useMemo(() => ({
     netWpm: wpm,
@@ -753,17 +779,27 @@ export function CertificatePage({ onNavigate }) {
   }, [drawCertificate]);
 
   const handleDownload = () => {
+    const selectedTier = themeTiers.tiers[activeTheme];
+    if (selectedTier && !selectedTier.isUnlocked) {
+      toast.error(`🔒 ${selectedTier.name} is locked (${selectedTier.passedCount}/${selectedTier.totalCount} tasks completed)! Complete all tasks below to unlock this certificate.`);
+      return;
+    }
     if (!canvasRef.current) return;
     const dataUrl = canvasRef.current.toDataURL('image/png');
     const link = document.createElement('a');
     const safeName = (recipientName || 'Typist').replace(/[^a-zA-Z0-9]/g, '_');
-    link.download = `CodeTyper_Certificate_${safeName}_${wpm.toFixed(0)}WPM_Signed_SaumyPandey.png`;
+    link.download = `CodeTyper_Certificate_${safeName}_${wpm.toFixed(0)}WPM_${activeTheme}_Signed_SaumyPandey.png`;
     link.href = dataUrl;
     link.click();
     toast.success('Official Certificate downloaded in ultra high resolution (2400x1600 4K)!');
   };
 
   const handlePrint = () => {
+    const selectedTier = themeTiers.tiers[activeTheme];
+    if (selectedTier && !selectedTier.isUnlocked) {
+      toast.error(`🔒 ${selectedTier.name} is locked! Complete all tasks below to print or export this certificate.`);
+      return;
+    }
     if (!canvasRef.current) return;
     const dataUrl = canvasRef.current.toDataURL('image/png');
     const printWindow = window.open('', '_blank');
@@ -890,6 +926,307 @@ export function CertificatePage({ onNavigate }) {
         </button>
       </div>
 
+      {/* Guest Banner if not logged in */}
+      {!user && (
+        <div
+          style={{
+            padding: '1rem 1.35rem',
+            borderRadius: 'var(--radius-xl)',
+            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.05) 100%)',
+            border: '1px solid rgba(56, 189, 248, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: 'rgba(56, 189, 248, 0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#38bdf8',
+                flexShrink: 0
+              }}
+            >
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.975rem' }}>
+                Log In or Sign Up to Unlock All 4 Official Certificate Tiers
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                You are currently previewing diploma themes as a guest. Create a free account to track your typing milestones, complete theme challenges, and receive accredited credentials registered on the tamper-proof ledger!
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.65rem' }}>
+            <button className="btn btn-outline btn-sm" onClick={() => onNavigate('login')} style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}>
+              Log In
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('signup')} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)', color: '#040d1a', fontWeight: 700 }}>
+              <span>Sign Up Free</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          THEME QUEST & MILESTONE ROADMAP (4 LUXURY TIERS)
+          ========================================================================= */}
+      <div
+        className="card"
+        style={{
+          padding: '1.5rem',
+          backgroundColor: '#070b16',
+          border: '1px solid rgba(234, 179, 8, 0.35)',
+          borderRadius: 'var(--radius-xl)'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Trophy size={20} color="#eab308" />
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                Certificate Quest & Milestone Roadmap
+              </h2>
+            </div>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
+              Complete required velocity, accuracy, streak, and volume benchmarks to unlock official luxury themes.
+            </p>
+          </div>
+          <div
+            style={{
+              padding: '0.35rem 0.85rem',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(234, 179, 8, 0.15)',
+              border: '1px solid rgba(234, 179, 8, 0.4)',
+              color: '#facc15',
+              fontSize: '0.825rem',
+              fontWeight: 700
+            }}
+          >
+            <span>Themes Unlocked: {themeTiers.totalUnlocked} of 4</span>
+          </div>
+        </div>
+
+        {/* 4-Tier Interactive Cards Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+          {Object.values(themeTiers.tiers).map((tier) => {
+            const isSelected = activeTheme === tier.id;
+            return (
+              <div
+                key={tier.id}
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '1.15rem',
+                  backgroundColor: isSelected ? 'rgba(15, 23, 42, 0.95)' : 'rgba(11, 17, 33, 0.75)',
+                  border: isSelected
+                    ? `2px solid ${tier.accentColor}`
+                    : (tier.isUnlocked ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)'),
+                  boxShadow: isSelected
+                    ? `0 0 18px ${tier.accentColor}33`
+                    : 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {/* Header: Tier Number & Status Badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      color: tier.accentColor,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}
+                  >
+                    Tier {tier.tier} Milestone
+                  </span>
+                  {tier.isUnlocked ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '9999px',
+                        backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                        border: '1px solid rgba(34, 197, 94, 0.4)',
+                        color: '#4ade80',
+                        fontSize: '0.725rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                      <span>Unlocked</span>
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '9999px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        color: '#f87171',
+                        fontSize: '0.725rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      <Lock size={11} />
+                      <span>Locked ({tier.passedCount}/4)</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Theme Title & Swatch */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: tier.swatch,
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      flexShrink: 0
+                    }}
+                  />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                      {tier.name}
+                    </h3>
+                    <div style={{ fontSize: '0.78rem', color: tier.accentColor, fontWeight: 600 }}>
+                      {tier.roleTag}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.3rem', color: '#94a3b8' }}>
+                    <span>Quest Progress</span>
+                    <span style={{ fontWeight: 700, color: tier.isUnlocked ? '#4ade80' : '#facc15' }}>
+                      {tier.progressPercent}%
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '6px',
+                      borderRadius: '9999px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${tier.progressPercent}%`,
+                        height: '100%',
+                        backgroundColor: tier.isUnlocked ? '#22c55e' : tier.accentColor,
+                        borderRadius: '9999px',
+                        transition: 'width 0.4s ease'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* 4 Tasks Checklist */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8rem' }}>
+                  {tier.tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.35rem 0.5rem',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: task.passed ? 'rgba(34, 197, 94, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                        border: task.passed ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        {task.passed ? (
+                          <div style={{ width: '15px', height: '15px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#040711', flexShrink: 0 }}>
+                            <Check size={10} strokeWidth={3} />
+                          </div>
+                        ) : (
+                          <div style={{ width: '15px', height: '15px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', flexShrink: 0 }}>
+                            <Lock size={9} />
+                          </div>
+                        )}
+                        <span style={{ color: task.passed ? '#e2e8f0' : '#94a3b8', fontWeight: task.passed ? 600 : 400 }}>
+                          {task.title}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: task.passed ? '#4ade80' : '#facc15', fontWeight: 600 }}>
+                          {task.current}
+                        </span>
+                        {!task.passed && (
+                          <button
+                            onClick={() => onNavigate(task.actionRoute)}
+                            className="btn btn-ghost"
+                            style={{ padding: '0.1rem 0.35rem', fontSize: '0.7rem', color: '#38bdf8', height: 'auto' }}
+                            title={`Go to ${task.actionText}`}
+                          >
+                            <span>{task.actionText} →</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Card Action Button */}
+                <button
+                  onClick={() => handleThemeChange(tier.id)}
+                  className="btn btn-sm"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'center',
+                    marginTop: 'auto',
+                    backgroundColor: isSelected
+                      ? tier.accentColor
+                      : (tier.isUnlocked ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.08)'),
+                    color: isSelected
+                      ? (tier.id === 'imperial-ivory' ? '#0f172a' : '#070b14')
+                      : (tier.isUnlocked ? '#4ade80' : '#cbd5e1'),
+                    border: isSelected
+                      ? 'none'
+                      : (tier.isUnlocked ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid rgba(255, 255, 255, 0.15)'),
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isSelected ? (
+                    <span>✨ Active Diploma Preview</span>
+                  ) : tier.isUnlocked ? (
+                    <span>Select Theme 📜</span>
+                  ) : (
+                    <span>Preview Locked Theme 👁️</span>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Customization Toolbar */}
       <div
         className="card"
@@ -953,30 +1290,43 @@ export function CertificatePage({ onNavigate }) {
           </select>
         </div>
 
-        {/* Theme Selector */}
+        {/* Theme Selector with Lock Indicators */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <Palette size={16} color="#eab308" />
           <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Theme:</span>
-          {Object.values(CERT_THEMES).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => handleThemeChange(t.id)}
-              style={{
-                background: t.swatch,
-                color: '#ffffff',
-                border: activeTheme === t.id ? '2px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: activeTheme === t.id ? '0 0 12px rgba(234, 179, 8, 0.6)' : 'none',
-                borderRadius: 'var(--radius-full)',
-                padding: '0.25rem 0.75rem',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-              title={t.name}
-            >
-              {t.badge}
-            </button>
-          ))}
+          {Object.values(CERT_THEMES).map((t) => {
+            const tierMeta = themeTiers.tiers[t.id];
+            const isUnlocked = tierMeta?.isUnlocked;
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleThemeChange(t.id)}
+                style={{
+                  background: t.swatch,
+                  color: '#ffffff',
+                  border: activeTheme === t.id ? '2px solid #ffffff' : (isUnlocked ? '1px solid rgba(234, 179, 8, 0.4)' : '1px dashed rgba(255, 255, 255, 0.25)'),
+                  boxShadow: activeTheme === t.id ? '0 0 12px rgba(234, 179, 8, 0.6)' : 'none',
+                  borderRadius: 'var(--radius-full)',
+                  padding: '0.25rem 0.75rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  opacity: isUnlocked || activeTheme === t.id ? 1 : 0.75
+                }}
+                title={`${t.name} - ${isUnlocked ? 'Unlocked' : `Locked (${tierMeta?.passedCount || 0}/4 tasks completed)`}`}
+              >
+                <span>{t.badge}</span>
+                {isUnlocked ? (
+                  <Check size={12} color="#4ade80" strokeWidth={3} />
+                ) : (
+                  <Lock size={12} color="#facc15" />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Signature Style Switcher */}
@@ -1021,6 +1371,45 @@ export function CertificatePage({ onNavigate }) {
           transition: 'transform 0.1s ease-out'
         }}
       >
+        {/* Dynamic Theme Accreditation or Locked Status Overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '1.25rem',
+            right: '1.25rem',
+            zIndex: 10,
+            background: 'rgba(7, 11, 22, 0.88)',
+            backdropFilter: 'blur(12px)',
+            border: themeTiers.tiers[activeTheme]?.isUnlocked
+              ? '1px solid #22c55e'
+              : '1px solid rgba(234, 179, 8, 0.5)',
+            padding: '0.4rem 0.9rem',
+            borderRadius: '9999px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: themeTiers.tiers[activeTheme]?.isUnlocked
+              ? '0 0 15px rgba(34, 197, 94, 0.3)'
+              : '0 0 15px rgba(234, 179, 8, 0.25)'
+          }}
+        >
+          {themeTiers.tiers[activeTheme]?.isUnlocked ? (
+            <>
+              <ShieldCheck size={15} color="#4ade80" />
+              <span style={{ color: '#4ade80', fontSize: '0.825rem', fontWeight: 700 }}>
+                Accredited & Ready to Download
+              </span>
+            </>
+          ) : (
+            <>
+              <Lock size={15} color="#facc15" />
+              <span style={{ color: '#fde047', fontSize: '0.825rem', fontWeight: 700 }}>
+                Previewing Locked Theme ({themeTiers.tiers[activeTheme]?.passedCount || 0}/4 Tasks)
+              </span>
+            </>
+          )}
+        </div>
+
         {/* Dynamic Gold Holographic Glare */}
         <div
           style={{

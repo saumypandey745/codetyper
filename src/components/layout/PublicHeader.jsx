@@ -30,6 +30,13 @@ export function PublicHeader({ onNavigate }) {
         <button className="public-nav-link" onClick={() => onNavigate('test')}>
           Typing Test
         </button>
+        <button
+          className="public-nav-link"
+          onClick={() => onNavigate('certificate')}
+          style={{ color: '#eab308', fontWeight: 650 }}
+        >
+          Certificates 🎓
+        </button>
         <button className="public-nav-link" onClick={() => onNavigate('about')}>
           About
         </button>

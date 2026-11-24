@@ -24,6 +24,8 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { api } from '../../utils/api.js';
 import {
   checkCertificateEligibility,
+  evaluateThemeTiers,
+  CERTIFICATE_THEME_TIERS,
   CERTIFICATE_ROLES,
   getLinkedInCertificationUrl,
   getSocialShareUrls
@@ -140,7 +142,7 @@ const CERT_THEMES = {
 
 export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTest }) {
   const canvasRef = useRef(null);
-  const { user } = useAuth();
+  const { user, userStats } = useAuth();
   const toast = useToast();
 
   const defaultName = user?.display_name || user?.username || 'Saumy Pandey';
@@ -171,6 +173,28 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   const eligibility = useMemo(() => checkCertificateEligibility(result), [result]);
   const [activeTab, setActiveTab] = useState(eligibility.isEligible ? 'certificate' : 'requirements');
 
+  const wpm = result?.netWpm !== undefined ? Number(result.netWpm) : 60;
+  const grossWpm = result?.grossWpm !== undefined ? Number(result.grossWpm) : wpm;
+  const accuracy = result?.accuracy !== undefined ? Number(result.accuracy) : 100;
+  const duration = result?.durationSeconds !== undefined ? Math.round(Number(result.durationSeconds)) : 60;
+  const language = result?.language || 'All Disciplines (English & Code)';
+
+  const themeTiers = useMemo(() => {
+    const arenaWins = typeof window !== 'undefined'
+      ? parseInt(localStorage.getItem('codetyper_arena_wins') || '0', 10)
+      : 0;
+    return evaluateThemeTiers({
+      wpm: Math.max(wpm, userStats?.best_wpm || 0),
+      accuracy: Math.max(accuracy, userStats?.avg_accuracy || 0),
+      totalTests: (userStats?.total_tests || 0) + 1,
+      streak: userStats?.current_streak || 1,
+      totalChars: (userStats?.total_characters || 0) + Math.round(wpm * 5),
+      languagesCount: 3,
+      arenaWins,
+      duration
+    });
+  }, [wpm, accuracy, userStats, duration]);
+
   // When eligibility changes, update activeTab accordingly
   useEffect(() => {
     if (eligibility.isEligible) {
@@ -196,13 +220,11 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   const handleThemeChange = (themeId) => {
     setActiveTheme(themeId);
     soundEngine.playWaxSealStamp();
+    const tierMeta = themeTiers.tiers[themeId];
+    if (tierMeta && !tierMeta.isUnlocked) {
+      toast.info(`Previewing locked theme: ${tierMeta.name} (${tierMeta.passedCount}/4 Tasks Cleared). Complete its tasks to unlock official downloading.`);
+    }
   };
-
-  const wpm = result?.netWpm !== undefined ? Number(result.netWpm) : 60;
-  const grossWpm = result?.grossWpm !== undefined ? Number(result.grossWpm) : wpm;
-  const accuracy = result?.accuracy !== undefined ? Number(result.accuracy) : 100;
-  const duration = result?.durationSeconds !== undefined ? Math.round(Number(result.durationSeconds)) : 60;
-  const language = result?.language || 'All Disciplines (English & Code)';
 
   const { tierTitle, tierGrade, tierBadge } = eligibility;
 
@@ -805,17 +827,27 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   // --- ACTIONS ---
   const handleDownload = () => {
+    const selectedTier = themeTiers.tiers[activeTheme];
+    if (selectedTier && !selectedTier.isUnlocked) {
+      toast.error(`🔒 ${selectedTier.name} is locked (${selectedTier.passedCount}/${selectedTier.totalCount} tasks completed)! Complete all tasks to unlock this certificate.`);
+      return;
+    }
     if (!canvasRef.current) return;
     const dataUrl = canvasRef.current.toDataURL('image/png');
     const link = document.createElement('a');
     const safeName = (recipientName || 'Typist').replace(/[^a-zA-Z0-9]/g, '_');
-    link.download = `CodeTyper_Certificate_${safeName}_${wpm.toFixed(0)}WPM_Signed_SaumyPandey.png`;
+    link.download = `CodeTyper_Certificate_${safeName}_${wpm.toFixed(0)}WPM_${activeTheme}_Signed_SaumyPandey.png`;
     link.href = dataUrl;
     link.click();
     toast.success('Official Certificate downloaded in ultra high resolution (2400x1600 4K)!');
   };
 
   const handlePrint = () => {
+    const selectedTier = themeTiers.tiers[activeTheme];
+    if (selectedTier && !selectedTier.isUnlocked) {
+      toast.error(`🔒 ${selectedTier.name} is locked! Complete all tasks to print or export this certificate.`);
+      return;
+    }
     if (!canvasRef.current) return;
     const dataUrl = canvasRef.current.toDataURL('image/png');
     const printWindow = window.open('', '_blank');
@@ -1190,27 +1222,40 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                 <Palette size={15} color="#eab308" />
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Theme:</span>
-                {Object.values(CERT_THEMES).map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => handleThemeChange(t.id)}
-                    style={{
-                      background: t.swatch,
-                      color: '#ffffff',
-                      border: activeTheme === t.id ? '2px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.2)',
-                      boxShadow: activeTheme === t.id ? '0 0 10px rgba(234, 179, 8, 0.6)' : 'none',
-                      borderRadius: 'var(--radius-full)',
-                      padding: '0.2rem 0.65rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'transform 0.15s ease'
-                    }}
-                    title={t.name}
-                  >
-                    {t.badge}
-                  </button>
-                ))}
+                {Object.values(CERT_THEMES).map((t) => {
+                  const tierMeta = themeTiers.tiers[t.id];
+                  const isUnlocked = tierMeta?.isUnlocked;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => handleThemeChange(t.id)}
+                      style={{
+                        background: t.swatch,
+                        color: '#ffffff',
+                        border: activeTheme === t.id ? '2px solid #ffffff' : (isUnlocked ? '1px solid rgba(234, 179, 8, 0.4)' : '1px dashed rgba(255, 255, 255, 0.25)'),
+                        boxShadow: activeTheme === t.id ? '0 0 10px rgba(234, 179, 8, 0.6)' : 'none',
+                        borderRadius: 'var(--radius-full)',
+                        padding: '0.2rem 0.65rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        opacity: isUnlocked || activeTheme === t.id ? 1 : 0.75,
+                        transition: 'transform 0.15s ease'
+                      }}
+                      title={`${t.name} - ${isUnlocked ? 'Unlocked' : `Locked (${tierMeta?.passedCount || 0}/4 tasks completed)`}`}
+                    >
+                      <span>{t.badge}</span>
+                      {isUnlocked ? (
+                        <Check size={11} color="#4ade80" strokeWidth={3} />
+                      ) : (
+                        <Lock size={11} color="#facc15" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Signature Style Switcher */}
@@ -1255,6 +1300,43 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                 transition: 'transform 0.1s ease-out'
               }}
             >
+              {/* Dynamic Theme Status Overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '0.75rem',
+                  right: '0.75rem',
+                  zIndex: 10,
+                  background: 'rgba(7, 11, 22, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: themeTiers.tiers[activeTheme]?.isUnlocked
+                    ? '1px solid #22c55e'
+                    : '1px solid rgba(234, 179, 8, 0.5)',
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '9999px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
+                }}
+              >
+                {themeTiers.tiers[activeTheme]?.isUnlocked ? (
+                  <>
+                    <ShieldCheck size={13} color="#4ade80" />
+                    <span style={{ color: '#4ade80', fontSize: '0.75rem', fontWeight: 700 }}>
+                      Accredited & Ready
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={13} color="#facc15" />
+                    <span style={{ color: '#fde047', fontSize: '0.75rem', fontWeight: 700 }}>
+                      Previewing Locked Theme ({themeTiers.tiers[activeTheme]?.passedCount || 0}/4)
+                    </span>
+                  </>
+                )}
+              </div>
+
               {/* Dynamic Gold Holographic Glare */}
               <div
                 style={{

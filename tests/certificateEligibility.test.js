@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkCertificateEligibility, CERTIFICATE_REQUIREMENTS } from '../src/utils/certificateEligibility.js';
+import {
+  checkCertificateEligibility,
+  CERTIFICATE_REQUIREMENTS,
+  evaluateThemeTiers,
+  CERTIFICATE_THEME_TIERS
+} from '../src/utils/certificateEligibility.js';
 
 describe('Certificate Eligibility & Accreditation Standards Suite', () => {
   it('rejects single-word / trivial typing sessions (< 150 characters or < 55 seconds)', () => {
@@ -108,5 +113,72 @@ describe('Certificate Eligibility & Accreditation Standards Suite', () => {
     assert.ok(shares.whatsapp.includes('whatsapp.com'));
     assert.ok(shares.telegram.includes('t.me'));
     assert.ok(shares.verifyUrl.includes('CT-2026-LINKED1'));
+  });
+
+  it('correctly locks all themes for a brand new user with 0 practice stats', () => {
+    const res = evaluateThemeTiers({ wpm: 0, accuracy: 0, totalTests: 0, streak: 0 });
+    assert.equal(res.unlockedThemeIds.length, 0);
+    assert.equal(res.tiers['imperial-ivory'].isUnlocked, false);
+    assert.equal(res.tiers['royal-obsidian'].isUnlocked, false);
+    assert.equal(res.tiers['emerald-sovereign'].isUnlocked, false);
+    assert.equal(res.tiers['midnight-platinum'].isUnlocked, false);
+    assert.equal(res.tiers['imperial-ivory'].passedCount, 0);
+  });
+
+  it('progressively unlocks themes as user meets milestone tasks', () => {
+    // 1. User passes Tier 1 (Imperial Ivory)
+    const tier1User = {
+      wpm: 42,
+      accuracy: 94,
+      totalTests: 6,
+      duration: 60
+    };
+    const res1 = evaluateThemeTiers(tier1User);
+    assert.ok(res1.tiers['imperial-ivory'].isUnlocked);
+    assert.equal(res1.tiers['royal-obsidian'].isUnlocked, false); // needs 60 WPM & 3-day streak
+
+    // 2. User passes Tier 2 (Royal Obsidian & 24K Gold)
+    const tier2User = {
+      wpm: 65,
+      accuracy: 96,
+      totalTests: 18,
+      streak: 4
+    };
+    const res2 = evaluateThemeTiers(tier2User);
+    assert.ok(res2.tiers['imperial-ivory'].isUnlocked);
+    assert.ok(res2.tiers['royal-obsidian'].isUnlocked);
+    assert.equal(res2.tiers['emerald-sovereign'].isUnlocked, false); // needs 75 WPM & 3 languages
+
+    // 3. User passes Tier 3 (Emerald Sovereign)
+    const tier3User = {
+      wpm: 78,
+      accuracy: 98,
+      totalTests: 22,
+      streak: 5,
+      languagesCount: 4,
+      totalChars: 2500
+    };
+    const res3 = evaluateThemeTiers(tier3User);
+    assert.ok(res3.tiers['imperial-ivory'].isUnlocked);
+    assert.ok(res3.tiers['royal-obsidian'].isUnlocked);
+    assert.ok(res3.tiers['emerald-sovereign'].isUnlocked);
+    assert.equal(res3.tiers['midnight-platinum'].isUnlocked, false); // needs 90 WPM & arena wins/high volume
+
+    // 4. Apex User passes Tier 4 (Midnight Platinum)
+    const apexUser = {
+      wpm: 95,
+      accuracy: 99,
+      totalTests: 40,
+      streak: 8,
+      arenaWins: 5,
+      languagesCount: 5,
+      totalChars: 8000
+    };
+    const res4 = evaluateThemeTiers(apexUser);
+    assert.ok(res4.tiers['imperial-ivory'].isUnlocked);
+    assert.ok(res4.tiers['royal-obsidian'].isUnlocked);
+    assert.ok(res4.tiers['emerald-sovereign'].isUnlocked);
+    assert.ok(res4.tiers['midnight-platinum'].isUnlocked);
+    assert.equal(res4.highestUnlockedThemeId, 'midnight-platinum');
   });
 });
