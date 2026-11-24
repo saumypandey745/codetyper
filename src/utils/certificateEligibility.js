@@ -117,3 +117,39 @@ export function checkCertificateEligibility(result) {
     tierPercentile
   };
 }
+
+export const CERTIFICATE_ROLES = [
+  'Touch-Typing Specialist',
+  'Full-Stack Software Engineer',
+  'Frontend Web Developer',
+  'Backend & Systems Architect',
+  'Competitive Typist & Grandmaster',
+  'Data Scientist & AI Practitioner',
+  'Technical Writer & Typist',
+  'DevOps & Cloud Engineer',
+  'Computer Science Scholar'
+];
+
+export function getLinkedInCertificationUrl({ certId, recipientName, wpm, tierTitle, issueDate }) {
+  const certName = `Accredited Touch-Typing Competency - ${tierTitle} (${Math.round(wpm)} WPM)`;
+  const orgName = 'CodeTyper';
+  const certUrl = `https://codetyper.dev/#verify/${encodeURIComponent(certId)}`;
+  const dateObj = issueDate ? new Date(issueDate) : new Date();
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1;
+
+  return `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(certName)}&organizationName=${encodeURIComponent(orgName)}&issueYear=${year}&issueMonth=${month}&certUrl=${encodeURIComponent(certUrl)}&certId=${encodeURIComponent(certId)}`;
+}
+
+export function getSocialShareUrls({ certId, recipientName, wpm, accuracy, tierTitle }) {
+  const verifyUrl = `https://codetyper.dev/#verify/${encodeURIComponent(certId)}`;
+  const text = `🏆 I just earned my official Accredited Typing Certificate on CodeTyper with ${Number(wpm).toFixed(1)} WPM and ${Number(accuracy).toFixed(1)}% accuracy, signed by Founder & App Owner Saumy Pandey! Verify my credential here: ${verifyUrl}`;
+
+  return {
+    verifyUrl,
+    linkedInShare: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+    whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
+    telegram: `https://t.me/share/url?url=${encodeURIComponent(verifyUrl)}&text=${encodeURIComponent(`🏆 CodeTyper Accredited Certificate - ${Number(wpm).toFixed(1)} WPM, signed by Saumy Pandey`)}`
+  };
+}

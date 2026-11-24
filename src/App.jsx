@@ -27,6 +27,7 @@ import { MultiplayerArena } from './pages/app/MultiplayerArena.jsx';
 import { LeaderboardPage } from './pages/app/LeaderboardPage.jsx';
 import { KeyHeatmap } from './components/typing/KeyHeatmap.jsx';
 import { CertificatePage } from './pages/app/CertificatePage.jsx';
+import { VerifyCertificatePage } from './pages/public/VerifyCertificatePage.jsx';
 
 export function App() {
   const { user, loading } = useAuth();
@@ -35,6 +36,7 @@ export function App() {
   const [currentView, setCurrentView] = useState(() => {
     // Check initial route or saved view
     const raw = window.location.hash.replace('#', '');
+    if (raw.startsWith('verify')) return 'verify';
     const view = raw.split('?')[0];
     return view || 'landing';
   });
@@ -46,9 +48,28 @@ export function App() {
     language: null
   });
 
+  const getVerifyCertId = () => {
+    const raw = window.location.hash.replace('#', '');
+    if (!raw.startsWith('verify')) return '';
+    if (raw.includes('/')) return raw.split('/')[1]?.split('?')[0] || '';
+    if (raw.includes('?')) {
+      const params = new URLSearchParams(raw.split('?')[1]);
+      return params.get('id') || params.get('certId') || '';
+    }
+    return '';
+  };
+
   // Keep URL hash in sync for back/forward navigation and bookmarks
   useEffect(() => {
     const raw = window.location.hash.replace('#', '');
+    if (currentView === 'verify') {
+      const certId = getVerifyCertId();
+      const targetHash = certId ? `verify/${certId}` : 'verify';
+      if (raw !== targetHash && !raw.startsWith('verify')) {
+        window.location.hash = targetHash;
+      }
+      return;
+    }
     const currentHashView = raw.split('?')[0];
     const query = currentHashView === currentView && raw.includes('?') ? '?' + raw.split('?')[1] : '';
     const targetHash = currentView + query;
@@ -61,7 +82,8 @@ export function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const raw = window.location.hash.replace('#', '');
-      const view = raw.split('?')[0];
+      let view = raw.split('?')[0];
+      if (raw.startsWith('verify')) view = 'verify';
       if (view && view !== currentView) {
         setCurrentView(view);
       }
@@ -126,7 +148,8 @@ export function App() {
     'about',
     'contact',
     'privacy',
-    'terms'
+    'terms',
+    'verify'
   ].includes(currentView);
 
   // Render Page Content
@@ -149,6 +172,8 @@ export function App() {
         return <PrivacyPage />;
       case 'terms':
         return <TermsPage />;
+      case 'verify':
+        return <VerifyCertificatePage certId={getVerifyCertId()} onNavigate={navigateTo} />;
 
       // App Views
       case 'dashboard':

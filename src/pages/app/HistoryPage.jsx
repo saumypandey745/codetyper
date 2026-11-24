@@ -12,12 +12,15 @@ import {
   Clock,
   ArrowRight,
   CheckCircle2,
+  Award,
   X
 } from 'lucide-react';
 import { api } from '../../utils/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { formatDuration, formatDate } from '../../utils/wpmCalculator.js';
 import { programmingLanguages } from '../../../server/seedData.js';
+import { TypingCertificateModal } from '../../components/typing/TypingCertificateModal.jsx';
+import { checkCertificateEligibility } from '../../utils/certificateEligibility.js';
 
 export function HistoryPage({ onNavigate, onStartPractice }) {
   const toast = useToast();
@@ -27,6 +30,7 @@ export function HistoryPage({ onNavigate, onStartPractice }) {
   const [typeFilter, setTypeFilter] = useState('all');
   const [languageFilter, setLanguageFilter] = useState('all');
   const [selectedSession, setSelectedSession] = useState(null);
+  const [certSession, setCertSession] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
   // Load history from API
@@ -323,6 +327,17 @@ export function HistoryPage({ onNavigate, onStartPractice }) {
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                         <button
                           className="btn btn-ghost btn-sm"
+                          style={{
+                            padding: '0.3rem 0.5rem',
+                            color: s.net_wpm >= 35 && s.accuracy >= 90 ? '#eab308' : 'var(--color-text-muted)'
+                          }}
+                          onClick={() => setCertSession(s)}
+                          title="Generate Accredited Certificate"
+                        >
+                          <Award size={15} />
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
                           style={{ padding: '0.3rem 0.5rem' }}
                           onClick={() => setSelectedSession(s)}
                           title="View detailed session metrics"
@@ -404,25 +419,63 @@ export function HistoryPage({ onNavigate, onStartPractice }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button className="btn btn-outline" onClick={() => setSelectedSession(null)}>
-                Close
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary btn-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 100%)',
+                  color: '#070b14',
+                  fontWeight: 700,
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(234, 179, 8, 0.35)'
+                }}
                 onClick={() => {
+                  setCertSession(selectedSession);
                   setSelectedSession(null);
-                  onStartPractice?.({
-                    type: selectedSession.practice_type,
-                    language: selectedSession.language
-                  });
                 }}
               >
-                Practice Again
+                <Award size={15} />
+                <span>Generate Official Diploma 🎓</span>
               </button>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn btn-outline" onClick={() => setSelectedSession(null)}>
+                  Close
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setSelectedSession(null);
+                    onStartPractice?.({
+                      type: selectedSession.practice_type,
+                      language: selectedSession.language
+                    });
+                  }}
+                >
+                  Practice Again
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Accredited Diploma Modal for past session */}
+      {certSession && (
+        <TypingCertificateModal
+          isOpen={Boolean(certSession)}
+          onClose={() => setCertSession(null)}
+          result={{
+            netWpm: certSession.net_wpm,
+            grossWpm: certSession.gross_wpm,
+            accuracy: certSession.accuracy,
+            durationSeconds: Math.round(certSession.duration_seconds),
+            totalCharacters: certSession.total_characters,
+            language: certSession.language || certSession.practice_type,
+            completedAt: certSession.completed_at
+          }}
+          onStartCertTest={() => onStartPractice?.({ type: 'test' })}
+        />
       )}
     </div>
   );

@@ -146,6 +146,32 @@ export function initDatabase() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS certificates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cert_id TEXT UNIQUE NOT NULL,
+      user_id INTEGER,
+      recipient_name TEXT NOT NULL,
+      title_role TEXT DEFAULT 'Touch-Typing Specialist',
+      discipline TEXT NOT NULL,
+      net_wpm REAL NOT NULL,
+      gross_wpm REAL NOT NULL,
+      accuracy REAL NOT NULL,
+      duration_seconds INTEGER NOT NULL,
+      total_characters INTEGER NOT NULL,
+      tier_title TEXT NOT NULL,
+      tier_badge TEXT NOT NULL,
+      tier_grade TEXT DEFAULT 'Grade A',
+      signatory_name TEXT DEFAULT 'Saumy Pandey',
+      signatory_title TEXT DEFAULT 'App Owner & Creator • Founder, CodeTyper',
+      sha256_fingerprint TEXT,
+      biometric_verified INTEGER DEFAULT 1,
+      theme TEXT DEFAULT 'royal-obsidian',
+      issued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_certificates_cert_id ON certificates(cert_id);
+    CREATE INDEX IF NOT EXISTS idx_certificates_user ON certificates(user_id);
+
     CREATE TABLE IF NOT EXISTS admin_audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER,

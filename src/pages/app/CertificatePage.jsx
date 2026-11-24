@@ -12,11 +12,21 @@ import {
   X,
   ArrowRight,
   Sparkles,
-  Lock
+  Lock,
+  Briefcase,
+  ExternalLink
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
-import { checkCertificateEligibility } from '../../utils/certificateEligibility.js';
+import { api } from '../../utils/api.js';
+import {
+  checkCertificateEligibility,
+  CERTIFICATE_ROLES,
+  getLinkedInCertificationUrl,
+  getSocialShareUrls
+} from '../../utils/certificateEligibility.js';
+import { soundEngine } from '../../utils/soundEngine.js';
 
 // --- LUXURY CERTIFICATE THEME PALETTES ---
 const CERT_THEMES = {
@@ -133,8 +143,36 @@ export function CertificatePage({ onNavigate }) {
 
   const defaultName = user?.display_name || user?.username || 'Saumy Pandey';
   const [recipientName, setRecipientName] = useState(defaultName);
+  const [titleRole, setTitleRole] = useState('Touch-Typing Specialist');
   const [activeTheme, setActiveTheme] = useState('royal-obsidian');
   const [signatureVariant, setSignatureVariant] = useState('calligraphy');
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rx = (0.5 - y) * 8;
+    const ry = (x - 0.5) * 8;
+    setTilt({ rx, ry, glareX: x * 100, glareY: y * 100 });
+  };
+  const handleMouseLeave = () => setTilt({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
+
+  // Sound & Confetti on mount
+  useEffect(() => {
+    soundEngine.playWaxSealStamp();
+    confetti({
+      particleCount: 50,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#facc15', '#eab308', '#38bdf8', '#ffffff']
+    });
+  }, []);
+
+  const handleThemeChange = (themeId) => {
+    setActiveTheme(themeId);
+    soundEngine.playWaxSealStamp();
+  };
 
   const wpm = userStats?.best_wpm || 72;
   const grossWpm = Math.round(wpm * 1.05);
@@ -152,7 +190,7 @@ export function CertificatePage({ onNavigate }) {
   }), [wpm, grossWpm, accuracy, duration, language]);
 
   const eligibility = useMemo(() => checkCertificateEligibility(sessionResult), [sessionResult]);
-  const { tierTitle, tierGrade } = eligibility;
+  const { tierTitle, tierGrade, tierBadge } = eligibility;
 
   const certId = useRef(`CT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`).current;
   const dateStr = useMemo(() => {
@@ -162,6 +200,25 @@ export function CertificatePage({ onNavigate }) {
       day: 'numeric'
     });
   }, []);
+
+  // Auto-register certificate in ledger database
+  useEffect(() => {
+    api.certificate.issue({
+      certId,
+      recipientName,
+      titleRole,
+      discipline: language,
+      netWpm: wpm,
+      grossWpm,
+      accuracy,
+      durationSeconds: duration,
+      totalCharacters: Math.round(wpm * 5),
+      tierTitle,
+      tierBadge: tierBadge || 'Gold',
+      tierGrade,
+      theme: activeTheme
+    }).catch((e) => console.warn('Could not auto-register certificate in ledger', e));
+  }, [certId, recipientName, titleRole, language, wpm, grossWpm, accuracy, duration, tierTitle, tierBadge, tierGrade, activeTheme]);
 
   // --- DRAW ULTRA HIGH-DEFINITION 2400x1600 ACCREDITED DIPLOMA ---
   const drawCertificate = useCallback(() => {
@@ -406,36 +463,41 @@ export function CertificatePage({ onNavigate }) {
     ctx.arc(width / 2 + 80, 595, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
+    // Candidate Subtitle / Role Selection
+    ctx.fillStyle = theme.accentColor;
+    ctx.font = '700 22px "Outfit", system-ui, sans-serif';
+    ctx.fillText(`❖   ${(titleRole || 'Touch-Typing Specialist').toUpperCase()}   ❖`, width / 2, 634);
+
     // 10. Citation
     ctx.fillStyle = theme.citationColor;
     ctx.font = '24px "Outfit", system-ui, sans-serif';
     ctx.fillText(
       'has successfully passed the comprehensive touch-typing speed and accuracy assessment,',
       width / 2,
-      650
+      674
     );
     ctx.fillText(
       'demonstrating certified motor dexterity, ergonomic cadence, and mastery of professional touch-typing.',
       width / 2,
-      690
+      710
     );
 
     // 11. Honor Tier Pill
     const pillW = 680;
     const pillH = 50;
     ctx.fillStyle = theme.cardBg;
-    ctx.fillRect(width / 2 - pillW / 2, 730, pillW, pillH);
+    ctx.fillRect(width / 2 - pillW / 2, 746, pillW, pillH);
     ctx.strokeStyle = theme.goldGradient[2];
     ctx.lineWidth = 2;
-    ctx.strokeRect(width / 2 - pillW / 2, 730, pillW, pillH);
+    ctx.strokeRect(width / 2 - pillW / 2, 746, pillW, pillH);
 
     ctx.fillStyle = theme.goldGradient[2];
     ctx.font = 'bold 22px "Outfit", system-ui, sans-serif';
-    ctx.fillText(`★  ${tierTitle.toUpperCase()} • ${tierGrade.toUpperCase()}  ★`, width / 2, 763);
+    ctx.fillText(`★  ${tierTitle.toUpperCase()} • ${tierGrade.toUpperCase()}  ★`, width / 2, 778);
 
     ctx.fillStyle = theme.accentColor;
     ctx.font = '600 18px "Outfit", system-ui, sans-serif';
-    ctx.fillText(`Specialized Curriculum: ${language} • Standardized Assessment Protocol`, width / 2, 818);
+    ctx.fillText(`Specialized Curriculum: ${language} • Standardized Assessment Protocol`, width / 2, 824);
 
     // 12. Four Metric Badges
     const metricsData = [
@@ -577,11 +639,12 @@ export function CertificatePage({ onNavigate }) {
 
     ctx.fillStyle = theme.subtextColor;
     ctx.font = '16px monospace';
-    ctx.fillText(`Certificate ID: ${certId}`, leftX + qrSize + 22, 1224);
-    ctx.fillText(`SHA-256 Digest: CT-${certId.replace(/-/g, '')}-VERIFIED-SECURE`, leftX + qrSize + 22, 1248);
-    ctx.fillText(`Conferral Date: ${dateStr}`, leftX + qrSize + 22, 1272);
-    ctx.fillText('Standard: ISO/IEC Professional Typing Competency', leftX + qrSize + 22, 1296);
-    ctx.fillText(`Verification Registry: https://codetyper.dev/verify/${certId}`, leftX + qrSize + 22, 1320);
+    ctx.fillText(`Certificate ID: ${certId}`, leftX + qrSize + 22, 1222);
+    ctx.fillText(`SHA-256 Digest: CT-${certId.replace(/-/g, '')}-VERIFIED-SECURE`, leftX + qrSize + 22, 1246);
+    ctx.fillText(`Conferral Date: ${dateStr}`, leftX + qrSize + 22, 1270);
+    ctx.fillText('Standard: ISO/IEC Professional Typing Competency', leftX + qrSize + 22, 1294);
+    ctx.fillText('Biometrics: Keystroke Flight-Time & Cadence Anti-Cheat Certified ✓', leftX + qrSize + 22, 1318);
+    ctx.fillText(`Public Registry: https://codetyper.dev/#verify/${certId}`, leftX + qrSize + 22, 1342);
     ctx.restore();
 
     // 15. Bottom-Right: SAUMY PANDEY'S FOUNDER & APP OWNER SIGNATURE
@@ -673,12 +736,12 @@ export function CertificatePage({ onNavigate }) {
     ctx.fillStyle = theme.isDark ? '#475569' : '#64748b';
     ctx.font = '15px monospace';
     ctx.fillText(
-      `Official CodeTyper Sovereign Credential • Electronically Signed by Founder & Owner Saumy Pandey • Verification: https://codetyper.dev/verify/${certId}`,
+      `Official CodeTyper Sovereign Credential • Electronically Signed by Founder & Owner Saumy Pandey • Verification: https://codetyper.dev/#verify/${certId}`,
       width / 2,
       1520
     );
     ctx.restore();
-  }, [recipientName, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr]);
+  }, [recipientName, titleRole, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr]);
 
   useEffect(() => {
     drawCertificate();
@@ -844,7 +907,7 @@ export function CertificatePage({ onNavigate }) {
         {/* Candidate Name Input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <UserCheck size={18} color="#38bdf8" />
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Candidate Name:</span>
+          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Candidate:</span>
           <input
             type="text"
             value={recipientName}
@@ -859,9 +922,35 @@ export function CertificatePage({ onNavigate }) {
               padding: '0.4rem 0.8rem',
               fontSize: '0.925rem',
               fontWeight: 700,
-              minWidth: '220px'
+              minWidth: '180px'
             }}
           />
+        </div>
+
+        {/* Candidate Role Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Briefcase size={17} color="#eab308" />
+          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Role:</span>
+          <select
+            value={titleRole}
+            onChange={(e) => setTitleRole(e.target.value)}
+            style={{
+              backgroundColor: '#040710',
+              color: '#facc15',
+              border: '1px solid rgba(234, 179, 8, 0.45)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0.4rem 0.8rem',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            {CERTIFICATE_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Theme Selector */}
@@ -871,7 +960,7 @@ export function CertificatePage({ onNavigate }) {
           {Object.values(CERT_THEMES).map((t) => (
             <button
               key={t.id}
-              onClick={() => setActiveTheme(t.id)}
+              onClick={() => handleThemeChange(t.id)}
               style={{
                 background: t.swatch,
                 color: '#ffffff',
@@ -909,13 +998,15 @@ export function CertificatePage({ onNavigate }) {
             }}
             title="Click to toggle cursive signature (Saumy Pandey / saumypandey)"
           >
-            {signatureVariant === 'calligraphy' ? 'Saumy Pandey (Calligraphy)' : 'saumypandey (Cursive Script)'}
+            {signatureVariant === 'calligraphy' ? 'Saumy Pandey' : 'saumypandey'}
           </button>
         </div>
       </div>
 
-      {/* Canvas Display Container */}
+      {/* Canvas Display Container with 3D Holographic Tilt & Dynamic Gold Glare */}
       <div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         style={{
           borderRadius: 'var(--radius-xl)',
           overflow: 'hidden',
@@ -924,9 +1015,22 @@ export function CertificatePage({ onNavigate }) {
           backgroundColor: '#04060d',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          position: 'relative',
+          transform: `perspective(1400px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+          transition: 'transform 0.1s ease-out'
         }}
       >
+        {/* Dynamic Gold Holographic Glare */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(234, 179, 8, 0.15) 0%, transparent 65%)`,
+            zIndex: 2
+          }}
+        />
         <canvas
           ref={canvasRef}
           style={{
@@ -953,12 +1057,41 @@ export function CertificatePage({ onNavigate }) {
           border: '1px solid rgba(234, 179, 8, 0.35)'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#94a3b8', fontSize: '0.875rem', flexWrap: 'wrap' }}>
           <ShieldCheck size={18} color="#38bdf8" />
-          <span>Credential ID: <code style={{ color: '#eab308', fontWeight: 700 }}>{certId}</code></span>
+          <span>Serial: <code style={{ color: '#eab308', fontWeight: 700 }}>{certId}</code></span>
+          <span style={{ color: '#64748b' }}>•</span>
+          <a
+            href={`#verify/${certId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#38bdf8', textDecoration: 'underline', fontSize: '0.85rem' }}
+          >
+            Public Ledger Verification ↗
+          </a>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* 1-Click Add to LinkedIn */}
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              const url = getLinkedInCertificationUrl({
+                certId,
+                recipientName,
+                wpm,
+                tierTitle,
+                issueDate: new Date()
+              });
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            style={{ borderColor: '#0077b5', color: '#38bdf8', backgroundColor: 'rgba(0, 119, 181, 0.1)' }}
+            title="Add Credential directly to your LinkedIn Profile"
+          >
+            <ExternalLink size={15} />
+            <span>Add to LinkedIn</span>
+          </button>
+
           <button
             className="btn btn-outline"
             onClick={handleCopyId}
@@ -974,7 +1107,7 @@ export function CertificatePage({ onNavigate }) {
             style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}
           >
             <Printer size={16} />
-            <span>Print / Save as PDF</span>
+            <span>Print / Save PDF</span>
           </button>
 
           <button

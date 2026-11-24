@@ -78,4 +78,35 @@ describe('Certificate Eligibility & Accreditation Standards Suite', () => {
     assert.equal(res.tierTitle, 'Grandmaster Typist');
     assert.equal(res.tierBadge, 'Grandmaster');
   });
+
+  it('contains curated role presets and generates valid LinkedIn & social share URLs', async () => {
+    const { CERTIFICATE_ROLES, getLinkedInCertificationUrl, getSocialShareUrls } = await import('../src/utils/certificateEligibility.js');
+
+    assert.ok(Array.isArray(CERTIFICATE_ROLES));
+    assert.ok(CERTIFICATE_ROLES.includes('Full-Stack Software Engineer'));
+    assert.ok(CERTIFICATE_ROLES.includes('Touch-Typing Specialist'));
+
+    const linkedInUrl = getLinkedInCertificationUrl({
+      certId: 'CT-2026-LINKED1',
+      recipientName: 'Saumy Pandey',
+      wpm: 95.0,
+      tierTitle: 'Master Typist',
+      issueDate: '2026-11-24'
+    });
+    assert.ok(linkedInUrl.startsWith('https://www.linkedin.com/profile/add'));
+    assert.ok(linkedInUrl.includes('CodeTyper'));
+    assert.ok(linkedInUrl.includes('CT-2026-LINKED1'));
+
+    const shares = getSocialShareUrls({
+      certId: 'CT-2026-LINKED1',
+      recipientName: 'Saumy Pandey',
+      wpm: 95.0,
+      accuracy: 99.0,
+      tierTitle: 'Master Typist'
+    });
+    assert.ok(shares.twitter.includes('twitter.com'));
+    assert.ok(shares.whatsapp.includes('whatsapp.com'));
+    assert.ok(shares.telegram.includes('t.me'));
+    assert.ok(shares.verifyUrl.includes('CT-2026-LINKED1'));
+  });
 });

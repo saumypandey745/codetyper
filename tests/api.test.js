@@ -324,4 +324,49 @@ describe('CodeTyper API Integration Suite', () => {
     assert.ok(data.leaderboard[0].tier);
     assert.ok(data.leaderboard[0].tierIcon);
   });
+
+  it('POST /api/certificate/issue and GET /api/certificate/verify/:certId verifies accredited credentials', async () => {
+    const testCertId = 'CT-2026-TEST99';
+    const issueRes = await fetch(`${baseUrl}/api/certificate/issue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${testUserToken}`
+      },
+      body: JSON.stringify({
+        certId: testCertId,
+        recipientName: 'Test Typist',
+        titleRole: 'Full-Stack Software Engineer',
+        discipline: 'Python & Algorithms',
+        netWpm: 88.5,
+        grossWpm: 92.0,
+        accuracy: 99.1,
+        durationSeconds: 60,
+        totalCharacters: 450,
+        tierTitle: 'Master Typist',
+        tierBadge: 'Diamond',
+        tierGrade: 'Grade A+ Distinguished',
+        theme: 'royal-obsidian'
+      })
+    });
+
+    assert.equal(issueRes.status, 200);
+    const issueData = await issueRes.json();
+    assert.equal(issueData.success, true);
+    assert.equal(issueData.certId, testCertId);
+    assert.ok(issueData.sha256Fingerprint);
+
+    // Verify publicly without authentication
+    const verifyRes = await fetch(`${baseUrl}/api/certificate/verify/${testCertId}`);
+    assert.equal(verifyRes.status, 200);
+    const verifyData = await verifyRes.json();
+    assert.equal(verifyData.verified, true);
+    assert.equal(verifyData.certificate.certId, testCertId);
+    assert.equal(verifyData.certificate.recipientName, 'Test Typist');
+    assert.equal(verifyData.certificate.titleRole, 'Full-Stack Software Engineer');
+    assert.equal(verifyData.certificate.signatoryName, 'Saumy Pandey');
+    assert.equal(verifyData.certificate.signatoryTitle, 'App Owner & Creator • Founder, CodeTyper');
+    assert.equal(verifyData.certificate.netWpm, 88.5);
+    assert.equal(verifyData.certificate.biometricVerified, true);
+  });
 });

@@ -14,11 +14,21 @@ import {
   Palette,
   Maximize2,
   Minimize2,
-  Feather
+  Feather,
+  ExternalLink,
+  Briefcase
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
-import { checkCertificateEligibility } from '../../utils/certificateEligibility.js';
+import { api } from '../../utils/api.js';
+import {
+  checkCertificateEligibility,
+  CERTIFICATE_ROLES,
+  getLinkedInCertificationUrl,
+  getSocialShareUrls
+} from '../../utils/certificateEligibility.js';
+import { soundEngine } from '../../utils/soundEngine.js';
 
 // --- LUXURY CERTIFICATE THEME PALETTES ---
 const CERT_THEMES = {
@@ -135,9 +145,21 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   const defaultName = user?.display_name || user?.username || 'Saumy Pandey';
   const [recipientName, setRecipientName] = useState(defaultName);
+  const [titleRole, setTitleRole] = useState(result?.titleRole || 'Touch-Typing Specialist');
   const [activeTheme, setActiveTheme] = useState('royal-obsidian');
   const [signatureVariant, setSignatureVariant] = useState('calligraphy'); // 'calligraphy' | 'lowercase'
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rx = (0.5 - y) * 10;
+    const ry = (x - 0.5) * 10;
+    setTilt({ rx, ry, glareX: x * 100, glareY: y * 100 });
+  };
+  const handleMouseLeave = () => setTilt({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
 
   // Re-sync recipient name if defaultName changes
   useEffect(() => {
@@ -156,6 +178,26 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     }
   }, [eligibility.isEligible]);
 
+  // Wax seal sound & celebratory confetti on modal open
+  useEffect(() => {
+    if (isOpen) {
+      soundEngine.playWaxSealStamp();
+      if (eligibility.isEligible) {
+        confetti({
+          particleCount: 45,
+          spread: 70,
+          origin: { y: 0.65 },
+          colors: ['#facc15', '#eab308', '#38bdf8', '#ffffff']
+        });
+      }
+    }
+  }, [isOpen, eligibility.isEligible]);
+
+  const handleThemeChange = (themeId) => {
+    setActiveTheme(themeId);
+    soundEngine.playWaxSealStamp();
+  };
+
   const wpm = result?.netWpm !== undefined ? Number(result.netWpm) : 60;
   const grossWpm = result?.grossWpm !== undefined ? Number(result.grossWpm) : wpm;
   const accuracy = result?.accuracy !== undefined ? Number(result.accuracy) : 100;
@@ -164,7 +206,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   const { tierTitle, tierGrade, tierBadge } = eligibility;
 
-  const certId = useRef(`CT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`).current;
+  const certId = useRef(result?.certId || `CT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`).current;
   const dateStr = useMemo(() => {
     return new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -172,6 +214,27 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
       day: 'numeric'
     });
   }, []);
+
+  // Auto-record certificate in ledger database
+  useEffect(() => {
+    if (isOpen && eligibility.isEligible) {
+      api.certificate.issue({
+        certId,
+        recipientName,
+        titleRole,
+        discipline: language,
+        netWpm: wpm,
+        grossWpm,
+        accuracy,
+        durationSeconds: duration,
+        totalCharacters: result?.totalCharacters || 250,
+        tierTitle,
+        tierBadge,
+        tierGrade,
+        theme: activeTheme
+      }).catch((e) => console.warn('Could not auto-register certificate in ledger', e));
+    }
+  }, [isOpen, eligibility.isEligible, certId, recipientName, titleRole, language, wpm, grossWpm, accuracy, duration, tierTitle, tierBadge, tierGrade, activeTheme]);
 
   // --- DRAW ULTRA HIGH-DEFINITION 2400x1600 ACCREDITED DIPLOMA ---
   const drawCertificate = useCallback(() => {
@@ -428,36 +491,41 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.arc(width / 2 + 80, 595, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
+    // Candidate Subtitle / Role Selection
+    ctx.fillStyle = theme.accentColor;
+    ctx.font = '700 22px "Outfit", system-ui, sans-serif';
+    ctx.fillText(`❖   ${(titleRole || 'Touch-Typing Specialist').toUpperCase()}   ❖`, width / 2, 634);
+
     // 10. Citation & Achievement Text
     ctx.fillStyle = theme.citationColor;
     ctx.font = '24px "Outfit", system-ui, sans-serif';
     ctx.fillText(
       'has successfully passed the comprehensive touch-typing speed and accuracy assessment,',
       width / 2,
-      650
+      674
     );
     ctx.fillText(
       'demonstrating certified motor dexterity, ergonomic cadence, and mastery of professional touch-typing.',
       width / 2,
-      690
+      710
     );
 
     // 11. Honor Tier Honor Pill
     const pillW = 680;
     const pillH = 50;
     ctx.fillStyle = theme.cardBg;
-    ctx.fillRect(width / 2 - pillW / 2, 730, pillW, pillH);
+    ctx.fillRect(width / 2 - pillW / 2, 746, pillW, pillH);
     ctx.strokeStyle = theme.goldGradient[2];
     ctx.lineWidth = 2;
-    ctx.strokeRect(width / 2 - pillW / 2, 730, pillW, pillH);
+    ctx.strokeRect(width / 2 - pillW / 2, 746, pillW, pillH);
 
     ctx.fillStyle = theme.goldGradient[2];
     ctx.font = 'bold 22px "Outfit", system-ui, sans-serif';
-    ctx.fillText(`★  ${tierTitle.toUpperCase()} • ${tierGrade.toUpperCase()}  ★`, width / 2, 763);
+    ctx.fillText(`★  ${tierTitle.toUpperCase()} • ${tierGrade.toUpperCase()}  ★`, width / 2, 778);
 
     ctx.fillStyle = theme.accentColor;
     ctx.font = '600 18px "Outfit", system-ui, sans-serif';
-    ctx.fillText(`Specialized Curriculum: ${language} • Standardized Assessment Protocol`, width / 2, 818);
+    ctx.fillText(`Specialized Curriculum: ${language} • Standardized Assessment Protocol`, width / 2, 824);
 
     // 12. Four Verified Metric Examination Badges
     const metricsData = [
@@ -610,11 +678,12 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
     ctx.fillStyle = theme.subtextColor;
     ctx.font = '16px monospace';
-    ctx.fillText(`Certificate ID: ${certId}`, leftX + qrSize + 22, 1224);
-    ctx.fillText(`SHA-256 Digest: CT-${certId.replace(/-/g, '')}-VERIFIED-SECURE`, leftX + qrSize + 22, 1248);
-    ctx.fillText(`Conferral Date: ${dateStr}`, leftX + qrSize + 22, 1272);
-    ctx.fillText('Standard: ISO/IEC Professional Typing Competency', leftX + qrSize + 22, 1296);
-    ctx.fillText(`Verification Registry: https://codetyper.dev/verify/${certId}`, leftX + qrSize + 22, 1320);
+    ctx.fillText(`Certificate ID: ${certId}`, leftX + qrSize + 22, 1222);
+    ctx.fillText(`SHA-256 Digest: CT-${certId.replace(/-/g, '')}-VERIFIED-SECURE`, leftX + qrSize + 22, 1246);
+    ctx.fillText(`Conferral Date: ${dateStr}`, leftX + qrSize + 22, 1270);
+    ctx.fillText('Standard: ISO/IEC Professional Typing Competency', leftX + qrSize + 22, 1294);
+    ctx.fillText('Biometrics: Keystroke Flight-Time & Cadence Anti-Cheat Certified ✓', leftX + qrSize + 22, 1318);
+    ctx.fillText(`Public Registry: https://codetyper.dev/#verify/${certId}`, leftX + qrSize + 22, 1342);
     ctx.restore();
 
     // 15. Bottom-Right: SAUMY PANDEY'S FOUNDER & APP OWNER SIGNATURE
@@ -713,12 +782,12 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.fillStyle = theme.isDark ? '#475569' : '#64748b';
     ctx.font = '15px monospace';
     ctx.fillText(
-      `Official CodeTyper Sovereign Credential • Electronically Signed by Founder & Owner Saumy Pandey • Verification: https://codetyper.dev/verify/${certId}`,
+      `Official CodeTyper Sovereign Credential • Electronically Signed by Founder & Owner Saumy Pandey • Verification: https://codetyper.dev/#verify/${certId}`,
       width / 2,
       1520
     );
     ctx.restore();
-  }, [recipientName, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr]);
+  }, [recipientName, titleRole, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr]);
 
   // Redraw when modal opens, font is loaded, or settings change
   useEffect(() => {
@@ -1086,9 +1155,35 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                     padding: '0.25rem 0.6rem',
                     fontSize: '0.85rem',
                     fontWeight: 700,
-                    minWidth: '180px'
+                    minWidth: '150px'
                   }}
                 />
+              </div>
+
+              {/* Title / Role Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Briefcase size={15} color="#eab308" />
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Role:</span>
+                <select
+                  value={titleRole}
+                  onChange={(e) => setTitleRole(e.target.value)}
+                  style={{
+                    backgroundColor: '#070b14',
+                    color: '#facc15',
+                    border: '1px solid rgba(234, 179, 8, 0.4)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.25rem 0.6rem',
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {CERTIFICATE_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Theme Selector */}
@@ -1098,7 +1193,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                 {Object.values(CERT_THEMES).map((t) => (
                   <button
                     key={t.id}
-                    onClick={() => setActiveTheme(t.id)}
+                    onClick={() => handleThemeChange(t.id)}
                     style={{
                       background: t.swatch,
                       color: '#ffffff',
@@ -1121,7 +1216,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
               {/* Signature Style Switcher */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Feather size={15} color="#38bdf8" />
-                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Signature:</span>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Sign:</span>
                 <button
                   onClick={() => setSignatureVariant(signatureVariant === 'calligraphy' ? 'lowercase' : 'calligraphy')}
                   className="btn btn-xs"
@@ -1137,13 +1232,15 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   }}
                   title="Click to toggle signature cursive variant (Saumy Pandey / saumypandey)"
                 >
-                  {signatureVariant === 'calligraphy' ? 'Saumy Pandey (Calligraphy)' : 'saumypandey (Cursive Script)'}
+                  {signatureVariant === 'calligraphy' ? 'Saumy Pandey' : 'saumypandey'}
                 </button>
               </div>
             </div>
 
-            {/* Certificate Canvas Container */}
+            {/* Certificate Canvas Container with 3D Holographic Tilt & Glare */}
             <div
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
               style={{
                 borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
@@ -1153,9 +1250,21 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                position: 'relative'
+                position: 'relative',
+                transform: `perspective(1200px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+                transition: 'transform 0.1s ease-out'
               }}
             >
+              {/* Dynamic Gold Holographic Glare */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(234, 179, 8, 0.14) 0%, transparent 65%)`,
+                  zIndex: 2
+                }}
+              />
               <canvas
                 ref={canvasRef}
                 style={{
@@ -1179,16 +1288,46 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                 gap: '0.75rem'
               }}
             >
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                 <ShieldCheck size={16} color="#38bdf8" />
-                <span>Verified Serial: <code style={{ color: '#eab308', fontWeight: 700 }}>{certId}</code></span>
+                <span>Serial: <code style={{ color: '#eab308', fontWeight: 700 }}>{certId}</code></span>
+                <span style={{ color: '#64748b' }}>•</span>
+                <a
+                  href={`#verify/${certId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#38bdf8', textDecoration: 'underline', fontSize: '0.775rem' }}
+                >
+                  Verify Publicly ↗
+                </a>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* 1-Click Add to LinkedIn */}
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => {
+                    const linkedInUrl = getLinkedInCertificationUrl({
+                      certId,
+                      recipientName,
+                      wpm,
+                      tierTitle,
+                      issueDate: new Date()
+                    });
+                    window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  style={{ borderColor: '#0077b5', color: '#38bdf8', backgroundColor: 'rgba(0, 119, 181, 0.1)' }}
+                  title="Add to your LinkedIn Profile"
+                >
+                  <ExternalLink size={14} />
+                  <span>Add to LinkedIn</span>
+                </button>
+
                 <button
                   className="btn btn-outline btn-sm"
                   onClick={handleCopyId}
                   style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: '#cbd5e1' }}
+                  title="Copy verification link"
                 >
                   <Share2 size={14} />
                   <span>Copy Credential</span>
@@ -1201,7 +1340,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   title="Print or Save as PDF"
                 >
                   <Printer size={14} />
-                  <span>Print / Save PDF</span>
+                  <span>Print PDF</span>
                 </button>
 
                 <button
@@ -1216,7 +1355,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   }}
                 >
                   <Download size={14} />
-                  <span>Download Ultra HD (2400x1600 4K PNG)</span>
+                  <span>Download Ultra HD (4K PNG)</span>
                 </button>
               </div>
             </div>

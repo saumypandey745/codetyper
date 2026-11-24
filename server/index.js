@@ -12,6 +12,7 @@ import practiceRoutes from './routes/practice.js';
 import sessionsRoutes from './routes/sessions.js';
 import adminRoutes from './routes/admin.js';
 import multiplayerRoutes from './routes/multiplayer.js';
+import certificateRoutes from './routes/certificates.js';
 import { announcementBroadcaster } from './announcements.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -129,6 +130,7 @@ app.use('/api/practice', practiceRoutes);
 app.use('/api/sessions', sessionsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/multiplayer', multiplayerRoutes);
+app.use('/api/certificate', certificateRoutes);
 
 // In production, serve Vite client build from ../dist
 const distPath = path.resolve(__dirname, '../dist');

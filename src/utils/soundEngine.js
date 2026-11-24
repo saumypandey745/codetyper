@@ -270,6 +270,65 @@ class SoundEngine {
       osc.stop(t + 0.4);
     });
   }
+
+  /**
+   * Authentic Heavy Brass Wax Seal Stamping Sound
+   * Deep mechanical wax impression thump + high-pitch brass ring harmonic
+   */
+  playWaxSealStamp() {
+    if (!this.enabled || this.volume <= 0) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const master = this.ctx.createGain();
+    master.gain.setValueAtTime(this.volume * 0.6, t);
+    master.connect(this.ctx.destination);
+
+    // 1. Heavy Wax Body Thump (Deep Sine drop 130Hz -> 38Hz)
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(140, t);
+    subOsc.frequency.exponentialRampToValueAtTime(38, t + 0.12);
+    subGain.gain.setValueAtTime(0.9, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    subOsc.connect(subGain);
+    subGain.connect(master);
+    subOsc.start(t);
+    subOsc.stop(t + 0.15);
+
+    // 2. Brass Seal Click & Parchment Compression
+    const clickOsc = this.ctx.createOscillator();
+    const clickFilter = this.ctx.createBiquadFilter();
+    const clickGain = this.ctx.createGain();
+    clickOsc.type = 'triangle';
+    clickFilter.type = 'bandpass';
+    clickFilter.frequency.setValueAtTime(750, t);
+    clickFilter.Q.setValueAtTime(4.0, t);
+    clickGain.gain.setValueAtTime(0.7, t);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    clickOsc.connect(clickFilter);
+    clickFilter.connect(clickGain);
+    clickGain.connect(master);
+    clickOsc.start(t);
+    clickOsc.stop(t + 0.07);
+
+    // 3. Golden Brass Resonant Bell Chime Ring (Harmonics at 1680Hz and 2520Hz)
+    [1680, 2520].forEach((freq, i) => {
+      const chimeOsc = this.ctx.createOscillator();
+      const chimeGain = this.ctx.createGain();
+      chimeOsc.type = 'sine';
+      chimeOsc.frequency.setValueAtTime(freq, t + 0.01);
+      chimeGain.gain.setValueAtTime(0, t);
+      chimeGain.gain.linearRampToValueAtTime(0.25 / (i + 1), t + 0.02);
+      chimeGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      chimeOsc.connect(chimeGain);
+      chimeGain.connect(master);
+      chimeOsc.start(t + 0.01);
+      chimeOsc.stop(t + 0.5);
+    });
+  }
 }
 
 export const soundEngine = new SoundEngine();

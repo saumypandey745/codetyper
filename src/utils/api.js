@@ -179,6 +179,13 @@ class ApiClient {
     updateSettings: (settings) => this.request('/admin/settings', { method: 'PUT', body: JSON.stringify(settings) }),
     getAuditLogs: () => this.request('/admin/audit-logs')
   };
+
+  // Official Accredited Certificate Registry
+  certificate = {
+    verify: (certId) => this.request(`/certificate/verify/${encodeURIComponent(certId)}`),
+    issue: (data) => this.request('/certificate/issue', { method: 'POST', body: JSON.stringify(data) }),
+    getMyCertificates: () => this.request('/certificate/my')
+  };
 }
 
 export const api = new ApiClient();
