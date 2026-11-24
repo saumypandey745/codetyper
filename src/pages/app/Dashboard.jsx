@@ -21,12 +21,14 @@ import { LineChart } from '../../components/charts/LineChart.jsx';
 import { formatDuration, formatDate } from '../../utils/wpmCalculator.js';
 import { XPProgressBar } from '../../components/gamification/XPProgressBar.jsx';
 import { DailyQuestsCard } from '../../components/gamification/DailyQuestsCard.jsx';
+import { TypingCertificateModal } from '../../components/typing/TypingCertificateModal.jsx';
 
 export function Dashboard({ onNavigate, onStartPractice }) {
   const { user, userStats } = useAuth();
   const [statsData, setStatsData] = useState(null);
   const [recentSessions, setRecentSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCertModal, setShowCertModal] = useState(false);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -279,6 +281,78 @@ export function Dashboard({ onNavigate, onStartPractice }) {
         </button>
       </div>
 
+      {/* Official Accredited Certificate Spotlight Card */}
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem',
+          padding: '1.5rem',
+          background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%)',
+          border: '1px solid rgba(234, 179, 8, 0.45)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '260px' }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-md)',
+              background: 'linear-gradient(135deg, #facc15 0%, #ca8a04 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#070b14',
+              boxShadow: '0 0 15px rgba(234, 179, 8, 0.5)',
+              flexShrink: 0
+            }}
+          >
+            <Award size={26} strokeWidth={2.5} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#f8fafc' }}>Official Accredited Typing Certificate</h3>
+              <span
+                style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.6rem',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  fontFamily: '"Pinyon Script", "Alex Brush", cursive'
+                }}
+              >
+                Signed by Saumy Pandey
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#94a3b8' }}>
+              Standardized touch-typing diploma with 24K gold guilloche borders, 3D wax seal, and the cursive signature of app owner Saumy Pandey.
+            </p>
+          </div>
+        </div>
+
+        <button
+          className="btn btn-primary"
+          style={{
+            background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)',
+            color: '#070b14',
+            fontWeight: 700,
+            border: 'none',
+            boxShadow: '0 4px 14px rgba(234, 179, 8, 0.4)'
+          }}
+          onClick={() => setShowCertModal(true)}
+        >
+          <Award size={16} />
+          <span>Claim / Preview Certificate 🎓</span>
+        </button>
+      </div>
+
       {/* Practice Categories */}
       <div>
         <h3 style={{ marginBottom: '1rem' }}>Practice Categories</h3>
@@ -387,6 +461,20 @@ export function Dashboard({ onNavigate, onStartPractice }) {
           </div>
         )}
       </div>
+
+      <TypingCertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        result={{
+          netWpm: userStats?.best_wpm || statsData?.best_wpm || 65,
+          grossWpm: Math.round((userStats?.best_wpm || statsData?.best_wpm || 65) * 1.05),
+          accuracy: userStats?.avg_accuracy || statsData?.avg_accuracy || 98.5,
+          durationSeconds: 60,
+          totalCharacters: 280,
+          language: 'All Disciplines (English & Programming)'
+        }}
+        onStartCertTest={() => onNavigate('test')}
+      />
     </div>
   );
 }

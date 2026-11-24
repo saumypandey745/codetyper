@@ -324,6 +324,99 @@ export function ResultsCard({
         </tbody>
       </table>
 
+      {/* Official Certificate Spotlight Banner */}
+      <div
+        style={{
+          margin: '1.25rem 0',
+          padding: '1.1rem 1.35rem',
+          borderRadius: 'var(--radius-lg)',
+          background: eligibility.isEligible
+            ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.16) 0%, rgba(15, 23, 42, 0.9) 100%)'
+            : 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%)',
+          border: eligibility.isEligible
+            ? '1px solid rgba(234, 179, 8, 0.5)'
+            : '1px solid rgba(56, 189, 248, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          boxShadow: eligibility.isEligible
+            ? '0 8px 24px rgba(234, 179, 8, 0.2)'
+            : '0 4px 16px rgba(0, 0, 0, 0.3)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div
+            style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '50%',
+              background: eligibility.isEligible
+                ? 'linear-gradient(135deg, #facc15 0%, #ca8a04 100%)'
+                : 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#070b14',
+              boxShadow: eligibility.isEligible
+                ? '0 0 16px rgba(234, 179, 8, 0.5)'
+                : '0 0 12px rgba(56, 189, 248, 0.4)',
+              flexShrink: 0
+            }}
+          >
+            <Award size={24} strokeWidth={2.5} />
+          </div>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 800, fontSize: '1rem', color: '#f8fafc' }}>
+                {eligibility.isEligible ? '🏆 Accredited Touch-Typing Certificate' : '📜 Official CodeTyper Certificate'}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.6rem',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  fontFamily: '"Pinyon Script", "Alex Brush", cursive'
+                }}
+              >
+                Signed by Saumy Pandey
+              </span>
+            </div>
+            <div style={{ fontSize: '0.825rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+              {eligibility.isEligible
+                ? `High distinction ${eligibility.tierTitle} diploma unlocked with verified owner signature & 4K download!`
+                : `Verified competency certificate with authentic cursive signature of founder Saumy Pandey (${eligibility.passedCount}/4 criteria met).`}
+            </div>
+          </div>
+        </div>
+
+        <button
+          className="btn btn-sm"
+          style={{
+            background: eligibility.isEligible
+              ? 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)'
+              : 'rgba(56, 189, 248, 0.15)',
+            color: eligibility.isEligible ? '#070b14' : '#38bdf8',
+            border: eligibility.isEligible ? 'none' : '1px solid rgba(56, 189, 248, 0.4)',
+            fontWeight: 700,
+            boxShadow: eligibility.isEligible ? '0 4px 14px rgba(234, 179, 8, 0.4)' : 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            padding: '0.5rem 1rem'
+          }}
+          onClick={() => setShowCertModal(true)}
+        >
+          <Award size={15} />
+          <span>{eligibility.isEligible ? 'Claim Official Certificate 🎓' : 'Preview Certificate & Signature 📜'}</span>
+        </button>
+      </div>
+
       {/* Action Buttons */}
       <div className="results-actions">
         <button className="btn btn-secondary" onClick={onTryAgain}>

@@ -26,6 +26,7 @@ import { AdminPage } from './pages/app/AdminPage.jsx';
 import { MultiplayerArena } from './pages/app/MultiplayerArena.jsx';
 import { LeaderboardPage } from './pages/app/LeaderboardPage.jsx';
 import { KeyHeatmap } from './components/typing/KeyHeatmap.jsx';
+import { CertificatePage } from './pages/app/CertificatePage.jsx';
 
 export function App() {
   const { user, loading } = useAuth();
@@ -183,6 +184,8 @@ export function App() {
         );
       case 'multiplayer':
         return <MultiplayerArena onNavigate={navigateTo} />;
+      case 'certificate':
+        return <CertificatePage onNavigate={navigateTo} />;
       case 'heatmap':
         return (
           <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
