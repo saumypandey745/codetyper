@@ -12,6 +12,7 @@ import practiceRoutes from './routes/practice.js';
 import sessionsRoutes from './routes/sessions.js';
 import adminRoutes from './routes/admin.js';
 import multiplayerRoutes from './routes/multiplayer.js';
+import { announcementBroadcaster } from './announcements.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,21 +116,11 @@ app.get('/api/health', (req, res) => {
 
 // System & Announcement Routes
 app.get('/api/system/announcement', (req, res) => {
-  try {
-    const textRow = db.prepare("SELECT value FROM system_settings WHERE key = 'announcement_text'").get();
-    const typeRow = db.prepare("SELECT value FROM system_settings WHERE key = 'announcement_type'").get();
-    const enabledRow = db.prepare("SELECT value FROM system_settings WHERE key = 'announcement_enabled'").get();
-    const maintenanceRow = db.prepare("SELECT value FROM system_settings WHERE key = 'maintenance_mode'").get();
+  return res.json(announcementBroadcaster.getCurrentAnnouncement());
+});
 
-    return res.json({
-      enabled: enabledRow?.value === '1',
-      text: textRow?.value || '',
-      type: typeRow?.value || 'info',
-      maintenance_mode: maintenanceRow?.value === '1'
-    });
-  } catch (err) {
-    return res.json({ enabled: false, text: '', type: 'info', maintenance_mode: false });
-  }
+app.get('/api/system/announcement/stream', (req, res) => {
+  announcementBroadcaster.subscribe(req, res);
 });
 
 app.use('/api/auth', authRoutes);

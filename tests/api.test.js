@@ -291,6 +291,17 @@ describe('CodeTyper API Integration Suite', () => {
     assert.equal(bannerData.text, 'Admin governance features successfully verified.');
     assert.equal(bannerData.type, 'announcement');
 
+    // Verify SSE real-time stream delivers the announcement immediately
+    const sseRes = await fetch(`${baseUrl}/api/system/announcement/stream`);
+    assert.equal(sseRes.status, 200);
+    assert.equal(sseRes.headers.get('content-type'), 'text/event-stream');
+    const reader = sseRes.body.getReader();
+    const { value } = await reader.read();
+    const streamText = new TextDecoder().decode(value);
+    assert.ok(streamText.includes('data:'));
+    assert.ok(streamText.includes('Admin governance features successfully verified.'));
+    reader.cancel();
+
     // 3. Test Audit Logs retrieval
     const auditRes = await fetch(`${baseUrl}/api/admin/audit-logs`, {
       headers: { Authorization: `Bearer ${adminData.token}` }

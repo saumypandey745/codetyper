@@ -386,8 +386,27 @@ export function AdminPage({ onNavigate }) {
     setSavingSettings(true);
     try {
       const res = await api.admin.updateSettings(systemSettings);
-      toast.success(res.message);
+      toast.success(res.message || 'System settings saved.');
       loadAdminData();
+
+      // Instantly update current page announcement banner without any delay (0ms)
+      const announcementData = {
+        enabled: systemSettings.announcement_enabled === '1',
+        text: systemSettings.announcement_text?.trim() || '',
+        type: systemSettings.announcement_type || 'info',
+        timestamp: Date.now()
+      };
+
+      window.dispatchEvent(new CustomEvent('codetyper:announcement_update', { detail: announcementData }));
+
+      // Instantly update other open tabs in the same browser
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          const bc = new BroadcastChannel('codetyper_announcements');
+          bc.postMessage(announcementData);
+          bc.close();
+        } catch {}
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to save system settings.');
     } finally {

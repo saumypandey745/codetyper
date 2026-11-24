@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
 import { db, logAdminAudit } from '../db.js';
 import { authenticate, requireAdmin } from '../authMiddleware.js';
+import { announcementBroadcaster } from '../announcements.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -516,7 +517,11 @@ router.put('/settings', (req, res) => {
   updateSetting('maintenance_mode', maintenance_mode !== undefined ? (maintenance_mode ? '1' : '0') : undefined);
 
   logAdminAudit(req.user, 'UPDATE_SYSTEM_SETTINGS', 'system_settings', null, req.body);
-  return res.json({ message: 'System settings saved successfully.' });
+  const announcement = announcementBroadcaster.broadcast();
+  return res.json({
+    message: 'System settings saved and live announcement broadcasted successfully.',
+    announcement
+  });
 });
 
 router.get('/backup', (req, res) => {
