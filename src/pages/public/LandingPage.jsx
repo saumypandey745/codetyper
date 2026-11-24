@@ -15,7 +15,7 @@ import {
   Terminal
 } from 'lucide-react';
 import { programmingLanguages } from '../../../server/seedData.js';
-import { TypingEngine } from '../../components/typing/TypingEngine.jsx';
+import { HeroInteractiveEditor } from '../../components/landing/HeroInteractiveEditor.jsx';
 
 const ROTATING_PHRASES = [
   "Improve Every Day.",
@@ -25,7 +25,6 @@ const ROTATING_PHRASES = [
 ];
 
 export function LandingPage({ onNavigate, onStartPractice }) {
-  const [demoFinished, setDemoFinished] = useState(false);
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [currentText, setCurrentText] = useState(ROTATING_PHRASES[0]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -70,11 +69,6 @@ export function LandingPage({ onNavigate, onStartPractice }) {
 
     return () => clearTimeout(timer);
   }, [currentText, isDeleting, isPaused, phraseIndex]);
-
-  const demoSnippet = `function calculateFocus(speed, precision) {
-  const flowState = speed * (precision / 100);
-  return flowState >= 70 ? "Mastery" : "Consistent Practice";
-}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '5.5rem', paddingBottom: '4rem', position: 'relative' }}>
@@ -146,50 +140,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
             </div>
           </div>
 
-          {/* Live Interactive Typing Showcase Frame */}
-          <div className="hero-showcase-wrapper">
-            {/* Floating Live Metric Pills */}
-            <div className="showcase-stat-pill showcase-stat-left" aria-hidden="true">
-              <Zap size={14} color="var(--color-primary-forest)" />
-              <span>114 WPM Flow State</span>
-            </div>
-            <div className="showcase-stat-pill showcase-stat-right" aria-hidden="true">
-              <CheckCircle2 size={14} color="var(--color-primary-forest)" />
-              <span>99.8% Precision Target</span>
-            </div>
-
-            {/* Studio Code Terminal Window */}
-            <div className="hero-terminal-frame">
-              <div className="hero-terminal-header">
-                <div className="hero-terminal-dots" aria-hidden="true">
-                  <span className="terminal-dot dot-red" />
-                  <span className="terminal-dot dot-yellow" />
-                  <span className="terminal-dot dot-green" />
-                </div>
-                <div className="hero-terminal-title">
-                  <Terminal size={14} color="var(--color-primary-forest)" />
-                  <span>interactive-flow-engine.js</span>
-                </div>
-                <div className="hero-terminal-badge">
-                  <span className="hero-badge-pulse-dot" style={{ width: 6, height: 6 }} />
-                  <span>Interactive Live Engine (Try typing below)</span>
-                </div>
-              </div>
-
-              <div className="hero-terminal-body">
-                <TypingEngine
-                  targetText={demoSnippet}
-                  title="Interactive Flow Engine"
-                  language="JavaScript"
-                  difficulty="beginner"
-                  isCode={true}
-                  mode="text"
-                  duration={60}
-                  onComplete={() => setDemoFinished(true)}
-                />
-              </div>
-            </div>
-          </div>
+          {/* Master Interactive Coding Showcase */}
+          <HeroInteractiveEditor
+            onNavigate={onNavigate}
+            onStartPractice={onStartPractice}
+          />
         </div>
       </section>
 
