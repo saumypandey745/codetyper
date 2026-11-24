@@ -11,6 +11,7 @@ import './styles/globals.css';
 import './styles/layout.css';
 import './styles/components.css';
 import './styles/typing.css';
+import './styles/landing.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

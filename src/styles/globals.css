@@ -21,23 +21,11 @@ body {
   overflow-x: hidden;
 }
 
-/* Reduced Motion Override */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-body[data-reduced-motion="true"] *,
-body[data-reduced-motion="true"] *::before,
-body[data-reduced-motion="true"] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  scroll-behavior: auto !important;
+/* Reduced Motion Handling - Follow modern web guidance: do not globally force 0.01ms */
+body[data-reduced-motion="true"] .hero-orb,
+body[data-reduced-motion="true"] .hero-badge-pulse-dot::after,
+body[data-reduced-motion="true"] .showcase-stat-pill {
+  animation: none !important;
 }
 
 /* Headings */

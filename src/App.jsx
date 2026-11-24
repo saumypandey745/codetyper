@@ -224,7 +224,7 @@ export function App() {
       {isPublicView ? (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <PublicHeader onNavigate={navigateTo} />
-          <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
+          <main style={{ flex: 1, padding: currentView === 'landing' ? '0.5rem 1.5rem 2rem' : '2rem 1.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
             {renderCurrentView()}
           </main>
           <PublicFooter onNavigate={navigateTo} />

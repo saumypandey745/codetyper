@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Code2,
   Sparkles,
@@ -17,8 +17,59 @@ import {
 import { programmingLanguages } from '../../../server/seedData.js';
 import { TypingEngine } from '../../components/typing/TypingEngine.jsx';
 
+const ROTATING_PHRASES = [
+  "Improve Every Day.",
+  "Code Without Friction.",
+  "Master 25+ Tech Stacks.",
+  "Reach 100+ WPM Flow."
+];
+
 export function LandingPage({ onNavigate, onStartPractice }) {
   const [demoFinished, setDemoFinished] = useState(false);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [currentText, setCurrentText] = useState(ROTATING_PHRASES[0]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
+
+  // Smooth typewriter cycle for the hero accent title
+  useEffect(() => {
+    // Only pause animation if user explicitly enabled reduced motion in app settings
+    if (document.body.getAttribute('data-reduced-motion') === 'true') {
+      setCurrentText(ROTATING_PHRASES[0]);
+      return;
+    }
+
+    const currentPhrase = ROTATING_PHRASES[phraseIndex];
+
+    if (isPaused) {
+      const pauseTimeout = setTimeout(() => {
+        setIsPaused(false);
+        setIsDeleting(true);
+      }, 2200);
+      return () => clearTimeout(pauseTimeout);
+    }
+
+    const typingSpeed = isDeleting ? 28 : 55;
+
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        const nextLength = currentText.length + 1;
+        setCurrentText(currentPhrase.slice(0, nextLength));
+        if (nextLength === currentPhrase.length) {
+          setIsPaused(true);
+        }
+      } else {
+        const nextLength = currentText.length - 1;
+        setCurrentText(currentPhrase.slice(0, nextLength));
+        if (nextLength === 0) {
+          setIsDeleting(false);
+          setPhraseIndex((prev) => (prev + 1) % ROTATING_PHRASES.length);
+        }
+      }
+    }, typingSpeed);
+
+    return () => clearTimeout(timer);
+  }, [currentText, isDeleting, isPaused, phraseIndex]);
 
   const demoSnippet = `function calculateFocus(speed, precision) {
   const flowState = speed * (precision / 100);
@@ -26,58 +77,125 @@ export function LandingPage({ onNavigate, onStartPractice }) {
 }`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '5rem', paddingBottom: '4rem' }}>
-      {/* Hero Section */}
-      <section style={{ maxWidth: '1100px', margin: '2rem auto 0', textAlign: 'center', padding: '0 1.5rem' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.95rem', backgroundColor: 'var(--color-primary-light)', borderRadius: 'var(--radius-full)', color: 'var(--color-primary-forest)', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1.5rem' }}>
-          <Sparkles size={16} />
-          <span>Calm, Distraction-Free Typing for Modern Developers & Writers</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5.5rem', paddingBottom: '4rem', position: 'relative' }}>
+      {/* =========================================================================
+          HERO SECTION WITH AMBIENT GLOW & FLOATING PARALLAX CHIPS
+          ========================================================================= */}
+      <section className="landing-hero-container">
+        {/* Ambient Gradient Canvas (Compositor GPU accelerated) */}
+        <div className="hero-ambient-canvas" aria-hidden="true">
+          <div className="hero-orb hero-orb-primary" />
+          <div className="hero-orb hero-orb-secondary" />
+          <div className="hero-orb hero-orb-accent" />
+          <div className="hero-dot-grid" />
         </div>
 
-        <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 800, marginBottom: '1.25rem', letterSpacing: '-0.025em', color: 'var(--color-text-primary)' }}>
-          Type Better. Code Faster.<br />
-          <span style={{ color: 'var(--color-primary-forest)' }}>Improve Every Day.</span>
-        </h1>
-
-        <p style={{ fontSize: '1.2rem', color: 'var(--color-text-secondary)', maxWidth: '680px', margin: '0 auto 2.5rem', lineHeight: 1.6 }}>
-          Build your typing speed, accuracy, and confidence through focused practice designed for everyday writing and programming across 25+ languages.
-        </p>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '3.5rem' }}>
-          <button className="btn btn-primary btn-lg" onClick={() => onNavigate('signup')}>
-            <span>Start Typing Free</span>
-            <ArrowRight size={18} />
-          </button>
-          <button className="btn btn-outline btn-lg" onClick={() => onNavigate('coding')}>
-            <Code2 size={18} />
-            <span>Explore Practice Modes</span>
-          </button>
-        </div>
-
-        {/* Live Interactive Typing Preview in Hero */}
-        <div style={{ textAlign: 'left', margin: '0 auto', maxWidth: '880px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary-forest)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Terminal size={15} />
-              Interactive Live Engine Demo (Try typing below)
-            </span>
-            <span className="badge badge-sage">JavaScript Demo</span>
+        {/* Center Hero Content */}
+        <div className="hero-content">
+          {/* Shimmer Badge with Live Pulse Indicator */}
+          <div className="hero-badge-shimmer">
+            <span className="hero-badge-pulse-dot" />
+            <Sparkles size={16} />
+            <span>Peaceful, Distraction-Free Typing for Modern Developers & Writers</span>
           </div>
 
-          <TypingEngine
-            targetText={demoSnippet}
-            title="Interactive Flow Engine"
-            language="JavaScript"
-            difficulty="beginner"
-            isCode={true}
-            mode="text"
-            duration={60}
-            onComplete={() => setDemoFinished(true)}
-          />
+          {/* Master Heading: "Type Better. Code Faster. Improve Every Day." */}
+          <h1 className="hero-title">
+            <span className="hero-title-shimmer">Type Better. Code Faster.</span>
+            <br />
+            <span className="hero-title-accent">
+              <span className="hero-typewriter-text">{currentText}</span>
+              <span className="hero-cursor">|</span>
+              <span className="hero-underline-glow" aria-hidden="true" />
+            </span>
+          </h1>
+
+          <p className="hero-description">
+            Build calm typing speed, pinpoint accuracy, and effortless muscle memory with a peaceful distraction-free flow designed for everyday prose and 25+ real-world programming languages.
+          </p>
+
+          {/* Premium CTA Buttons */}
+          <div className="hero-cta-group">
+            <button className="btn-premium-hero" onClick={() => onNavigate('signup')}>
+              <span>Start Typing Free</span>
+              <ArrowRight size={18} className="btn-icon-slide" />
+            </button>
+            <button className="btn-glass-hero" onClick={() => onNavigate('coding')}>
+              <Code2 size={18} color="var(--color-primary-forest)" />
+              <span>Explore Practice Modes</span>
+            </button>
+          </div>
+
+          {/* Quick Tactile Badges Ribbon */}
+          <div className="hero-pills-ribbon" aria-hidden="true">
+            <div className="ribbon-pill">
+              <span className="chip-key">⌘ K</span>
+              <span>Quick Jump</span>
+            </div>
+            <div className="ribbon-pill">
+              <Zap size={14} color="var(--color-primary-forest)" />
+              <span>100+ WPM Flow</span>
+            </div>
+            <div className="ribbon-pill">
+              <Code2 size={14} color="var(--color-primary-forest)" />
+              <span>25+ Real Stacks</span>
+            </div>
+            <div className="ribbon-pill">
+              <CheckCircle2 size={14} color="var(--color-primary-forest)" />
+              <span>Zero Distractions</span>
+            </div>
+          </div>
+
+          {/* Live Interactive Typing Showcase Frame */}
+          <div className="hero-showcase-wrapper">
+            {/* Floating Live Metric Pills */}
+            <div className="showcase-stat-pill showcase-stat-left" aria-hidden="true">
+              <Zap size={14} color="var(--color-primary-forest)" />
+              <span>114 WPM Flow State</span>
+            </div>
+            <div className="showcase-stat-pill showcase-stat-right" aria-hidden="true">
+              <CheckCircle2 size={14} color="var(--color-primary-forest)" />
+              <span>99.8% Precision Target</span>
+            </div>
+
+            {/* Studio Code Terminal Window */}
+            <div className="hero-terminal-frame">
+              <div className="hero-terminal-header">
+                <div className="hero-terminal-dots" aria-hidden="true">
+                  <span className="terminal-dot dot-red" />
+                  <span className="terminal-dot dot-yellow" />
+                  <span className="terminal-dot dot-green" />
+                </div>
+                <div className="hero-terminal-title">
+                  <Terminal size={14} color="var(--color-primary-forest)" />
+                  <span>interactive-flow-engine.js</span>
+                </div>
+                <div className="hero-terminal-badge">
+                  <span className="hero-badge-pulse-dot" style={{ width: 6, height: 6 }} />
+                  <span>Interactive Live Engine (Try typing below)</span>
+                </div>
+              </div>
+
+              <div className="hero-terminal-body">
+                <TypingEngine
+                  targetText={demoSnippet}
+                  title="Interactive Flow Engine"
+                  language="JavaScript"
+                  difficulty="beginner"
+                  isCode={true}
+                  mode="text"
+                  duration={60}
+                  onComplete={() => setDemoFinished(true)}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Why Practice Section */}
+      {/* =========================================================================
+          WHY PRACTICE SECTION
+          ========================================================================= */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <span className="badge badge-sage" style={{ marginBottom: '0.75rem' }}>Core Benefits</span>
@@ -122,19 +240,21 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ].map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary-forest)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={20} />
+              <div key={idx} className="feature-card-classy">
+                <div className="feature-icon-wrapper">
+                  <Icon size={22} />
                 </div>
-                <h3 style={{ fontSize: '1.15rem' }}>{item.title}</h3>
-                <p style={{ fontSize: '0.925rem' }}>{item.desc}</p>
+                <h3 style={{ fontSize: '1.18rem', fontWeight: 650 }}>{item.title}</h3>
+                <p style={{ fontSize: '0.93rem', lineHeight: 1.55 }}>{item.desc}</p>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* Practice Modes Section */}
+      {/* =========================================================================
+          PRACTICE MODES SECTION
+          ========================================================================= */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <span className="badge badge-sage" style={{ marginBottom: '0.75rem' }}>Designed For All Needs</span>
@@ -173,15 +293,15 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ].map((mode, idx) => {
             const Icon = mode.icon;
             return (
-              <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div key={idx} className="mode-card-classy">
                 <div>
-                  <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-bg-soft)', color: 'var(--color-primary-forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <div className="feature-icon-wrapper" style={{ marginBottom: '1.15rem' }}>
                     <Icon size={20} />
                   </div>
-                  <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>{mode.title}</h3>
-                  <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>{mode.desc}</p>
+                  <h3 style={{ fontSize: '1.18rem', marginBottom: '0.5rem', fontWeight: 650 }}>{mode.title}</h3>
+                  <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>{mode.desc}</p>
                 </div>
-                <button className="btn btn-secondary btn-sm" onClick={mode.action}>
+                <button className="btn btn-secondary btn-sm" onClick={mode.action} style={{ width: '100%', justifyContent: 'center' }}>
                   <span>Explore Mode</span>
                   <ArrowRight size={14} />
                 </button>
@@ -191,7 +311,9 @@ export function LandingPage({ onNavigate, onStartPractice }) {
         </div>
       </section>
 
-      {/* Supported Languages Grid */}
+      {/* =========================================================================
+          SUPPORTED LANGUAGES GRID
+          ========================================================================= */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <span className="badge badge-sage" style={{ marginBottom: '0.75rem' }}>Developer Stacks</span>
@@ -205,9 +327,8 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           {programmingLanguages.map((lang) => (
             <button
               key={lang}
-              className="btn btn-outline"
-              style={{ padding: '0.55rem 1rem', fontSize: '0.9rem', borderRadius: 'var(--radius-md)' }}
-              onClick={() => onStartPractice('code', lang)}
+              className="lang-chip-btn"
+              onClick={() => onStartPractice({ type: 'coding', language: lang })}
             >
               <Code2 size={15} color="var(--color-primary-forest)" />
               <span>{lang}</span>
@@ -216,41 +337,43 @@ export function LandingPage({ onNavigate, onStartPractice }) {
         </div>
       </section>
 
-      {/* Statistics Preview Section */}
+      {/* =========================================================================
+          STATISTICS PREVIEW SECTION
+          ========================================================================= */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', width: '100%' }}>
-        <div className="card" style={{ padding: '3rem', backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
+        <div className="card" style={{ padding: '3rem', backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '2rem', alignItems: 'center' }}>
             <div>
               <span className="badge badge-forest" style={{ marginBottom: '0.75rem' }}>Analytics Engine</span>
               <h2 style={{ marginBottom: '1rem' }}>Deep Metrics, Zero Guesswork</h2>
-              <p style={{ marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+              <p style={{ marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
                 Track your Gross WPM, Net WPM, accuracy, character distributions, error hotspots, and language comparisons over time.
               </p>
-              <button className="btn btn-primary" onClick={() => onNavigate('signup')}>
+              <button className="btn-premium-hero" onClick={() => onNavigate('signup')}>
                 <span>Create Free Profile & Track Stats</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={16} className="btn-icon-slide" />
               </button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="stat-card">
+              <div className="stat-card" style={{ padding: '1.5rem', background: 'var(--color-bg-soft)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
                 <span className="stat-label">Average Speed</span>
-                <div className="stat-value" style={{ color: 'var(--color-primary-forest)' }}>74.8</div>
+                <div className="stat-value" style={{ color: 'var(--color-primary-forest)', fontSize: '2rem', fontWeight: 800 }}>74.8</div>
                 <span className="stat-subtext">Net WPM</span>
               </div>
-              <div className="stat-card">
+              <div className="stat-card" style={{ padding: '1.5rem', background: 'var(--color-bg-soft)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
                 <span className="stat-label">Accuracy Rate</span>
-                <div className="stat-value">98.2%</div>
+                <div className="stat-value" style={{ fontSize: '2rem', fontWeight: 800 }}>98.2%</div>
                 <span className="stat-subtext">Last 30 sessions</span>
               </div>
-              <div className="stat-card">
+              <div className="stat-card" style={{ padding: '1.5rem', background: 'var(--color-bg-soft)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
                 <span className="stat-label">Practice Time</span>
-                <div className="stat-value">6.4h</div>
+                <div className="stat-value" style={{ fontSize: '2rem', fontWeight: 800 }}>6.4h</div>
                 <span className="stat-subtext">Deliberate focus</span>
               </div>
-              <div className="stat-card">
+              <div className="stat-card" style={{ padding: '1.5rem', background: 'var(--color-bg-soft)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
                 <span className="stat-label">Current Streak</span>
-                <div className="stat-value" style={{ color: 'var(--color-primary-forest)' }}>7 Days</div>
+                <div className="stat-value" style={{ color: 'var(--color-primary-forest)', fontSize: '2rem', fontWeight: 800 }}>7 Days</div>
                 <span className="stat-subtext">Daily habit</span>
               </div>
             </div>
@@ -258,17 +381,19 @@ export function LandingPage({ onNavigate, onStartPractice }) {
         </div>
       </section>
 
-      {/* Final Call to Action */}
-      <section style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--color-primary-light)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-primary-soft)' }}>
-        <h2 style={{ fontSize: '2.2rem', marginBottom: '1rem', color: 'var(--color-primary-deep)' }}>
+      {/* =========================================================================
+          FINAL CALL TO ACTION BANNER
+          ========================================================================= */}
+      <section className="final-cta-banner">
+        <h2 style={{ fontSize: '2.4rem', marginBottom: '1rem', color: 'var(--color-primary-deep)', fontWeight: 800, letterSpacing: '-0.02em' }}>
           Start Your Typing Journey Today
         </h2>
-        <p style={{ maxWidth: '520px', margin: '0 auto 2rem', color: 'var(--color-primary-forest)', fontSize: '1.05rem' }}>
-          Cultivate smooth, ergonomic speed and eliminate typing frustration in code and prose.
+        <p style={{ maxWidth: '540px', margin: '0 auto 2.2rem', color: 'var(--color-primary-forest)', fontSize: '1.1rem', lineHeight: 1.6 }}>
+          Cultivate smooth, ergonomic speed and eliminate typing frustration across real code and prose.
         </p>
-        <button className="btn btn-primary btn-lg" onClick={() => onNavigate('signup')}>
+        <button className="btn-premium-hero" onClick={() => onNavigate('signup')}>
           <span>Create Free Account</span>
-          <ArrowRight size={18} />
+          <ArrowRight size={18} className="btn-icon-slide" />
         </button>
       </section>
     </div>
