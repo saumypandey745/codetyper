@@ -42,6 +42,15 @@
   --color-char-pending: #7E9185;
   --color-cursor: #236B4D;
 
+  /* Virtual Keyboard Mechanical Styling (Light Mode) */
+  --color-key-bg: #FFFFFF;
+  --color-key-bg-mod: #EBF2ED;
+  --color-key-border: #CBDCD1;
+  --color-key-border-bottom: #9CB5A6;
+  --color-key-text: #112218;
+  --color-key-subtext: #50665A;
+  --color-key-shadow: 0 2.5px 0 #9CB5A6, 0 3px 6px rgba(22, 38, 30, 0.08);
+
   /* Glassmorphism & Glow Effects */
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(35, 107, 77, 0.12);
@@ -126,6 +135,15 @@
   --color-char-pending: #698375;
   --color-cursor: #34D399;
 
+  /* Virtual Keyboard Mechanical Styling (Dark Mode) */
+  --color-key-bg: #1A2920;
+  --color-key-bg-mod: #111E16;
+  --color-key-border: #2D4838;
+  --color-key-border-bottom: #0A140E;
+  --color-key-text: #F1F7F3;
+  --color-key-subtext: #8EAD9B;
+  --color-key-shadow: 0 3px 0 #0A140E, 0 3px 8px rgba(0, 0, 0, 0.5);
+
   /* Glassmorphism & Glow Effects (Dark Mode) */
   --glass-bg: rgba(17, 26, 21, 0.78);
   --glass-border: rgba(52, 211, 153, 0.16);
@@ -186,6 +204,15 @@
   --color-char-pending: #6c7086;
   --color-cursor: #89b4fa;
 
+  /* Virtual Keyboard Mechanical Styling (Catppuccin) */
+  --color-key-bg: #313244;
+  --color-key-bg-mod: #1E1E2E;
+  --color-key-border: #45475A;
+  --color-key-border-bottom: #11111B;
+  --color-key-text: #CDD6F4;
+  --color-key-subtext: #89B4FA;
+  --color-key-shadow: 0 3px 0 #11111B, 0 3px 8px rgba(0, 0, 0, 0.5);
+
   --glass-bg: rgba(30, 30, 46, 0.82);
   --glass-border: rgba(137, 180, 250, 0.18);
   --glow-primary: 0 0 24px rgba(137, 180, 250, 0.25);
@@ -232,6 +259,15 @@
   --color-char-wrong-bg: rgba(255, 85, 85, 0.22);
   --color-char-pending: #6272a4;
   --color-cursor: #ff79c6;
+
+  /* Virtual Keyboard Mechanical Styling (Dracula) */
+  --color-key-bg: #383A59;
+  --color-key-bg-mod: #21222C;
+  --color-key-border: #6272A4;
+  --color-key-border-bottom: #191A21;
+  --color-key-text: #F8F8F2;
+  --color-key-subtext: #BD93F9;
+  --color-key-shadow: 0 3px 0 #191A21, 0 3px 8px rgba(0, 0, 0, 0.5);
 
   --glass-bg: rgba(40, 42, 54, 0.82);
   --glass-border: rgba(189, 147, 249, 0.2);
@@ -280,6 +316,15 @@
   --color-char-pending: #565f89;
   --color-cursor: #7aa2f7;
 
+  /* Virtual Keyboard Mechanical Styling (Tokyo Night) */
+  --color-key-bg: #24283B;
+  --color-key-bg-mod: #1A1B26;
+  --color-key-border: #414868;
+  --color-key-border-bottom: #13141C;
+  --color-key-text: #C0CAF5;
+  --color-key-subtext: #7AA2F7;
+  --color-key-shadow: 0 3px 0 #13141C, 0 3px 8px rgba(0, 0, 0, 0.5);
+
   --glass-bg: rgba(26, 27, 38, 0.82);
   --glass-border: rgba(122, 162, 247, 0.18);
   --glow-primary: 0 0 24px rgba(122, 162, 247, 0.25);
@@ -327,6 +372,15 @@
   --color-char-pending: #616e88;
   --color-cursor: #88c0d0;
 
+  /* Virtual Keyboard Mechanical Styling (Nord) */
+  --color-key-bg: #3B4252;
+  --color-key-bg-mod: #2E3440;
+  --color-key-border: #4C566A;
+  --color-key-border-bottom: #1D212A;
+  --color-key-text: #ECEFF4;
+  --color-key-subtext: #88C0D0;
+  --color-key-shadow: 0 3px 0 #1D212A, 0 3px 8px rgba(0, 0, 0, 0.5);
+
   --glass-bg: rgba(46, 52, 64, 0.82);
   --glass-border: rgba(136, 192, 208, 0.18);
   --glow-primary: 0 0 24px rgba(136, 192, 208, 0.25);
@@ -373,6 +427,15 @@
   --color-char-wrong-bg: rgba(255, 0, 85, 0.25);
   --color-char-pending: #137704;
   --color-cursor: #39ff14;
+
+  /* Virtual Keyboard Mechanical Styling (Matrix) */
+  --color-key-bg: #0A1F0F;
+  --color-key-bg-mod: #040E06;
+  --color-key-border: #176628;
+  --color-key-border-bottom: #020703;
+  --color-key-text: #39FF14;
+  --color-key-subtext: #1EC805;
+  --color-key-shadow: 0 3px 0 #020703, 0 0 10px rgba(57, 255, 20, 0.3);
 
   --glass-bg: rgba(6, 17, 8, 0.85);
   --glass-border: rgba(57, 255, 20, 0.25);

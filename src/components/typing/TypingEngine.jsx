@@ -41,7 +41,24 @@ export function TypingEngine({
 
   // Advanced States: Zen Mode, Virtual Keyboard, Ambient Sound, Ghost PB, Switch Preset
   const [isZenMode, setIsZenMode] = useState(false);
-  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(() => {
+    try {
+      const saved = localStorage.getItem('codetyper_show_keyboard');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleKeyboard = () => {
+    setShowVirtualKeyboard((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('codetyper_show_keyboard', String(next));
+      } catch { }
+      return next;
+    });
+  };
   const [showGhost, setShowGhost] = useState(true);
   const [showSwitchMenu, setShowSwitchMenu] = useState(false);
   const [activeAmbientTrack, setActiveAmbientTrack] = useState(null);
@@ -212,7 +229,7 @@ export function TypingEngine({
     : 0;
 
   return (
-    <div className={`typing-container ${isZenMode ? 'zen-mode' : ''}`}>
+    <div className={`typing-container ${isZenMode ? 'zen-mode' : ''} ${showVirtualKeyboard ? 'keyboard-active' : ''}`}>
       {/* Floating pill when in Pure Zen Focus Mode */}
       {isZenMode && (
         <div className="zen-floating-pill">
@@ -237,73 +254,82 @@ export function TypingEngine({
       )}
 
       {/* HUD & Stats Bar (Hidden in Zen Mode) */}
+      {/* Integrated Unified Typing HUD Bar (Hidden in Zen Mode) */}
       {!isZenMode && (
-        <div className="typing-hud">
-          <div className="hud-stat-group">
-            {settings.show_wpm && (
-              <div className="hud-stat-item">
-                <span className="hud-stat-label">WPM</span>
-                <span className="hud-stat-value highlight">{formatTwoDecimals(liveMetrics.netWpm)}</span>
-              </div>
-            )}
+        <div className="typing-hud-unified">
+          {/* Left: Snippet Identity & Live Metrics */}
+          <div className="hud-left-section">
+            <div className="hud-snippet-badge">
+              <span className="badge badge-sage" style={{ fontSize: '0.7rem', padding: '0.12rem 0.45rem' }}>{language}</span>
+              <span className="hud-snippet-title" title={title}>{title}</span>
+            </div>
 
-            {settings.show_accuracy && (
-              <div className="hud-stat-item">
-                <span className="hud-stat-label">Accuracy</span>
-                <span className="hud-stat-value">{formatTwoDecimals(liveMetrics.accuracy)}%</span>
-              </div>
-            )}
-
-            {settings.show_errors && (
-              <div className="hud-stat-item">
-                <span className="hud-stat-label">Errors</span>
-                <span className="hud-stat-value" style={{ color: (liveMetrics.errorCount ?? liveMetrics.totalErrors) > 0 ? 'var(--color-error)' : 'inherit' }}>
-                  {liveMetrics.errorCount ?? liveMetrics.totalErrors ?? 0}
-                </span>
-              </div>
-            )}
-
-            <div className="hud-stat-item">
-              <span className="hud-stat-label">Progress</span>
-              <span className="hud-stat-value">{progressPercent}%</span>
+            <div className="hud-metrics-strip">
+              {mode === 'time' && (
+                <div className="hud-timer-badge">
+                  <Clock size={13} />
+                  <span>{formatTimer(remainingSeconds)}</span>
+                </div>
+              )}
+              {settings.show_wpm && (
+                <div className="hud-chip">
+                  <span className="hud-chip-label">WPM</span>
+                  <span className="hud-chip-value highlight">{formatTwoDecimals(liveMetrics.netWpm)}</span>
+                </div>
+              )}
+              {settings.show_accuracy && (
+                <div className="hud-chip">
+                  <span className="hud-chip-label">ACC</span>
+                  <span className="hud-chip-value">{formatTwoDecimals(liveMetrics.accuracy)}%</span>
+                </div>
+              )}
+              {settings.show_errors && (
+                <div className="hud-chip">
+                  <span className="hud-chip-label">ERR</span>
+                  <span className="hud-chip-value" style={{ color: (liveMetrics.errorCount ?? liveMetrics.totalErrors) > 0 ? 'var(--color-error)' : 'inherit' }}>
+                    {liveMetrics.errorCount ?? liveMetrics.totalErrors ?? 0}
+                  </span>
+                </div>
+              )}
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginLeft: '0.2rem' }}>
+                {typedText.length}/{targetText.length}
+              </span>
             </div>
           </div>
 
-          <div className="hud-controls" role="toolbar" aria-label="Studio audio and session controls" style={{ position: 'relative' }}>
-            {mode === 'time' && (
-              <div className="timer-pill" role="status" aria-label={`Time remaining ${formatTimer(remainingSeconds)}`}>
-                <Clock size={16} />
-                <span>{formatTimer(remainingSeconds)}</span>
-              </div>
-            )}
+          {/* Right: Direct Studio Controls */}
+          <div className="hud-right-section" role="toolbar" aria-label="Session controls">
+            {/* Virtual Keyboard Toggle */}
+            <button
+              type="button"
+              className={`btn btn-sm ${showVirtualKeyboard ? 'btn-primary' : 'btn-outline'}`}
+              onClick={handleToggleKeyboard}
+              aria-pressed={showVirtualKeyboard}
+              title={showVirtualKeyboard ? 'Hide virtual keyboard' : 'Show live virtual keyboard'}
+            >
+              <Keyboard size={14} />
+              <span>Keyboard</span>
+            </button>
 
-            {/* Ambient Soundscapes Popover Toggle */}
+            {/* Ambient Soundscapes Popover */}
             <div style={{ position: 'relative' }}>
               <button
                 type="button"
                 className={`btn btn-sm ${activeAmbientTrack ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setShowAmbientMenu((prev) => !prev)}
-                title="Ambient Soundscapes (Rain, Forest, Cafe, Vinyl)"
+                title="Ambient Soundscapes"
                 aria-pressed={!!activeAmbientTrack}
                 aria-haspopup="true"
                 aria-expanded={showAmbientMenu}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
               >
-                <CloudDrizzle size={15} />
-                <span>{activeAmbientTrack ? 'Soundscape On' : 'Ambient'}</span>
+                <CloudDrizzle size={14} />
               </button>
 
-              {/* Ambient Track Selection Dropdown Menu */}
               {showAmbientMenu && (
-                <div
-                  className="studio-audio-popover"
-                  role="dialog"
-                  aria-label="Ambient soundscapes selection"
-                >
+                <div className="studio-audio-popover" role="dialog" aria-label="Ambient soundscapes selection">
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
                     Soothing Soundscapes
                   </div>
-
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.75rem' }}>
                     {[
                       { id: 'rain', label: '🌧️ Gentle Rain' },
@@ -359,99 +385,6 @@ export function TypingEngine({
               )}
             </div>
 
-            {/* Virtual Keyboard Toggle */}
-            <button
-              type="button"
-              className={`btn btn-sm ${showVirtualKeyboard ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setShowVirtualKeyboard((prev) => !prev)}
-              aria-pressed={showVirtualKeyboard}
-              title={showVirtualKeyboard ? 'Hide virtual keyboard' : 'Show live virtual keyboard'}
-            >
-              <Keyboard size={15} />
-            </button>
-
-            {/* Pure Zen Mode Toggle */}
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() => setIsZenMode(true)}
-              title="Enter Pure Zen Mode (Shift + Esc)"
-            >
-              <Leaf size={15} />
-              <span>Zen</span>
-            </button>
-
-            {/* Ghost Mode Toggle (if a PB exists) */}
-            {ghostInfo && (
-              <button
-                type="button"
-                className={`btn btn-sm ${showGhost ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setShowGhost((g) => !g)}
-                aria-pressed={showGhost}
-                title={`Ghost Mode: Race your personal best of ${ghostInfo.wpm} WPM`}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                <span>👻 Ghost ({ghostInfo.wpm})</span>
-              </button>
-            )}
-
-            {/* Switch Preset Selector */}
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => setShowSwitchMenu((s) => !s)}
-                aria-haspopup="true"
-                aria-expanded={showSwitchMenu}
-                title="Mechanical Switch Sound Preset"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                <Sliders size={14} />
-                <span style={{ textTransform: 'capitalize' }}>{settings.sound_theme || 'mechanical'}</span>
-                <ChevronDown size={12} />
-              </button>
-              {showSwitchMenu && (
-                <div
-                  className="studio-audio-popover"
-                  style={{ width: '190px' }}
-                >
-                  {[
-                    { id: 'thock', label: '🖲️ Oil King (Thock)' },
-                    { id: 'holypanda', label: '🥊 Holy Panda' },
-                    { id: 'mechanical', label: '⌨️ Cherry MX Blue' },
-                    { id: 'buckling', label: '🏛️ Buckling Spring' },
-                    { id: 'typewriter', label: '📜 Typewriter' },
-                    { id: 'soft', label: '🫧 Soft Membrane' }
-                  ].map((sw) => (
-                    <button
-                      key={sw.id}
-                      type="button"
-                      onClick={() => {
-                        updateSetting('sound_theme', sw.id);
-                        setShowSwitchMenu(false);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.45rem 0.65rem',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: (settings.sound_theme || 'mechanical') === sw.id ? 'var(--color-primary-light)' : 'transparent',
-                        color: (settings.sound_theme || 'mechanical') === sw.id ? 'var(--color-primary-forest)' : 'var(--color-text-main)',
-                        fontWeight: (settings.sound_theme || 'mechanical') === sw.id ? 700 : 500,
-                        fontSize: '0.825rem',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <span>{sw.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Keypress Sound Effects Toggle */}
             <button
               type="button"
@@ -461,7 +394,17 @@ export function TypingEngine({
               aria-label="Toggle mechanical sound"
               aria-pressed={settings.sound_enabled}
             >
-              {settings.sound_enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              {settings.sound_enabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            </button>
+
+            {/* Pure Zen Mode Toggle */}
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setIsZenMode(true)}
+              title="Enter Pure Zen Mode (Shift + Esc)"
+            >
+              <Leaf size={14} />
             </button>
 
             {/* Restart Session */}
@@ -472,24 +415,10 @@ export function TypingEngine({
               title="Restart session (Ctrl + Enter)"
               aria-label="Restart typing session"
             >
-              <RotateCcw size={16} />
+              <RotateCcw size={14} />
               <span>Reset</span>
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Target Info Bar (Hidden in Zen Mode) */}
-      {!isZenMode && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-sage" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>{language}</span>
-            <span className="badge badge-forest" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', textTransform: 'capitalize' }}>{difficulty}</span>
-            <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{title}</span>
-          </div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-            {typedText.length} / {targetText.length} characters
-          </span>
         </div>
       )}
 

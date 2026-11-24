@@ -28,7 +28,11 @@ import {
   Trash2,
   ExternalLink,
   FileCode,
-  Target
+  Target,
+  SlidersHorizontal,
+  Minimize2,
+  Maximize2,
+  ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
@@ -106,6 +110,26 @@ export function PracticePage({
   // Roadmap drawer toggle and flow focus state
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [engineStatus, setEngineStatus] = useState('idle');
+
+  // Compact Focus Mode: minimizes bulky menus and options to maximize typing focus and screen room
+  const [isCompactMode, setIsCompactMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('codetyper_compact_mode');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleCompactMode = () => {
+    setIsCompactMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('codetyper_compact_mode', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Result state
   const [completedResult, setCompletedResult] = useState(null);
@@ -507,9 +531,219 @@ export function PracticePage({
   const targetText = currentSnippet?.content || '';
 
   return (
-    <div className={`typing-stage-wrapper ${engineStatus === 'typing' ? 'flow-focus-active' : ''}`}>
-      {/* Studio Command Deck: Mode Navigation & Pacing Controls */}
-      <div className="studio-command-deck">
+    <div className={`typing-stage-wrapper ${isCompactMode ? 'compact-stage' : ''} ${engineStatus === 'typing' ? 'flow-focus-active' : ''}`}>
+      {/* Space-Saving Minimalist Toolbar (Focus Mode) */}
+      {isCompactMode ? (
+        <div className="compact-command-deck" role="toolbar" aria-label="Practice Controls">
+          {/* Mode Segmented Switcher */}
+          <div className="compact-modes-pill" role="tablist" aria-label="Practice Modes">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'practice'}
+              className={`compact-mode-btn ${practiceType === 'practice' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('practice'); setCompletedResult(null); }}
+              title="Quick Practice"
+            >
+              <Keyboard size={13} />
+              <span>Quick</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'coding'}
+              className={`compact-mode-btn ${practiceType === 'coding' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('coding'); setCompletedResult(null); }}
+              title="Coding Practice"
+            >
+              <Code2 size={13} />
+              <span>Coding</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'english'}
+              className={`compact-mode-btn ${practiceType === 'english' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('english'); setCompletedResult(null); }}
+              title="English Practice"
+            >
+              <BookOpen size={13} />
+              <span>English</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={practiceType === 'test'}
+              className={`compact-mode-btn ${practiceType === 'test' ? 'active' : ''}`}
+              onClick={() => { setPracticeType('test'); setDuration(60); setMode('time'); setCompletedResult(null); }}
+              title="Typing Speed Test"
+            >
+              <Timer size={13} />
+              <span>Test</span>
+            </button>
+          </div>
+
+          {/* Center Pacing & Filter Controls */}
+          <div className="compact-center-group">
+            {/* Pacing Durations & Mode */}
+            <div className="compact-micro-group" title="Duration / Mode">
+              {[15, 30, 60].map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  className={`compact-micro-btn ${mode === 'time' && duration === sec ? 'active' : ''}`}
+                  onClick={() => { setMode('time'); setDuration(sec); setCompletedResult(null); setEngineKey(Date.now()); }}
+                >
+                  {sec}s
+                </button>
+              ))}
+              {!isTest && (
+                <button
+                  type="button"
+                  className={`compact-micro-btn ${mode === 'words' ? 'active' : ''}`}
+                  onClick={() => { setMode('words'); setWordCount(25); setCompletedResult(null); setEngineKey(Date.now()); }}
+                  title="25 Words"
+                >
+                  25w
+                </button>
+              )}
+            </div>
+
+            {/* Coding Language Select */}
+            {practiceType === 'coding' && (
+              <div className="compact-select-wrapper" title="Programming Language">
+                <Code2 size={12} color="var(--color-primary-forest)" />
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => {
+                    setSelectedLanguage(e.target.value);
+                    setIsCustomMode(false);
+                    setCompletedResult(null);
+                  }}
+                  aria-label="Language"
+                >
+                  {programmingLanguages.map((lang) => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* English Category Select */}
+            {practiceType === 'english' && (
+              <div className="compact-select-wrapper" title="English Category">
+                <BookOpen size={12} color="var(--color-primary-forest)" />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => {
+                    setSelectedCategory(e.target.value);
+                    setIsCustomMode(false);
+                    setCompletedResult(null);
+                  }}
+                  aria-label="Category"
+                >
+                  <option value="All">All Categories</option>
+                  {englishCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Difficulty Level */}
+            <div className="compact-micro-group" title="Difficulty Level">
+              {['all', 'beginner', 'intermediate', 'advanced'].map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  className={`compact-micro-btn ${selectedDifficulty === lvl ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedDifficulty(lvl);
+                    setIsCustomMode(false);
+                    setCompletedResult(null);
+                  }}
+                >
+                  {lvl === 'intermediate' ? 'med' : lvl === 'beginner' ? 'beg' : lvl === 'advanced' ? 'adv' : 'all'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Action Tools & Expand Toggle */}
+          <div className="compact-right-group">
+            {/* Quick Lesson Indicator & Prev/Next */}
+            {!isCustomMode && !isTest && totalLessons > 0 && (
+              <div className="compact-lesson-chip">
+                <button
+                  type="button"
+                  className="compact-arrow-btn"
+                  disabled={!prevLesson}
+                  onClick={handlePrevSnippet}
+                  title={prevLesson ? `Previous: Lesson ${currentLessonNumber - 1}` : 'First lesson'}
+                  aria-label="Previous lesson"
+                >
+                  <ArrowLeft size={11} />
+                </button>
+                <button
+                  type="button"
+                  className="compact-lesson-badge-btn"
+                  onClick={() => setShowCurriculumModal(true)}
+                  title={`Lesson ${currentLessonNumber} of ${totalLessons} (${completedCount} completed). Click to open full curriculum.`}
+                >
+                  <span>L{currentLessonNumber}/{totalLessons}</span>
+                  {isCurrentCompleted && <CheckCircle2 size={11} color="var(--color-primary-forest)" />}
+                </button>
+                <button
+                  type="button"
+                  className="compact-arrow-btn"
+                  disabled={!nextLesson || !isLessonUnlocked(currentLessonIndex + 1)}
+                  onClick={handleNextSnippet}
+                  title={nextLesson ? `Next: Lesson ${currentLessonNumber + 1}` : 'Last lesson'}
+                  aria-label="Next lesson"
+                >
+                  <ArrowRight size={11} />
+                </button>
+              </div>
+            )}
+
+            {/* Shuffle Next */}
+            <button
+              type="button"
+              className="compact-btn"
+              onClick={handleNextSnippet}
+              title="Next Snippet (Shuffle)"
+            >
+              <Shuffle size={12} />
+              <span>Next</span>
+            </button>
+
+            {/* Weakness Drill */}
+            <button
+              type="button"
+              className={`compact-btn ${currentSnippet?.isWeaknessDrill ? 'active' : ''}`}
+              onClick={handleStartWeaknessDrill}
+              title="Generate intelligent drill targeting error-prone keys"
+            >
+              <Target size={12} />
+              <span>Drill</span>
+            </button>
+
+            {/* Expand Full Options & Syllabus Toggle */}
+            <button
+              type="button"
+              className="compact-btn compact-expand-btn"
+              onClick={toggleCompactMode}
+              title="Expand full studio deck, lesson details & roadmap"
+            >
+              <SlidersHorizontal size={12} />
+              <span>Options ▾</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Full Expanded Studio Command Deck */}
+          <div className="studio-command-deck">
         <div className="deck-primary-row">
           <div className="deck-title-group">
             <div className="deck-title-icon">
@@ -643,6 +877,17 @@ export function PracticePage({
                 ))}
               </div>
             )}
+
+            {/* Collapse to Focus View Button */}
+            <button
+              type="button"
+              className="compact-btn compact-collapse-btn"
+              onClick={toggleCompactMode}
+              title="Minimize to space-saving focus mode"
+            >
+              <Minimize2 size={12} />
+              <span>Focus View ▲</span>
+            </button>
           </div>
         </div>
 
@@ -950,6 +1195,8 @@ export function PracticePage({
             })}
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Main Practice Surface */}

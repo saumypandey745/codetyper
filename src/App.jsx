@@ -220,7 +220,7 @@ export function App() {
 
   return (
     <>
-      <AnnouncementBanner />
+      {!['practice', 'coding', 'english', 'test'].includes(currentView) && <AnnouncementBanner />}
       {isPublicView ? (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <PublicHeader onNavigate={navigateTo} />
