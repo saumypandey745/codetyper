@@ -1034,25 +1034,7 @@
   color: var(--color-text-secondary);
 }
 
-.footer-tech-stack-row {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.725rem;
-  color: var(--color-text-muted);
-  flex-wrap: wrap;
-}
 
-.tech-badge {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-}
-
-.tech-sep {
-  color: var(--color-border-strong);
-  font-size: 0.65rem;
-}
 
 /* Creator Card (Saumy Pandey) */
 .footer-creator-card {

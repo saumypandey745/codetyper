@@ -319,15 +319,6 @@ export function PublicFooter({ onNavigate }) {
             <div className="footer-copyright-text">
               &copy; {new Date().getFullYear()} CodeTyper. Designed for clarity, speed, and endurance.
             </div>
-            <div className="footer-tech-stack-row">
-              <span className="tech-badge">React 19</span>
-              <span className="tech-sep">•</span>
-              <span className="tech-badge">Vite Engine</span>
-              <span className="tech-sep">•</span>
-              <span className="tech-badge">Web Audio API</span>
-              <span className="tech-sep">•</span>
-              <span className="tech-badge">100% Local-First</span>
-            </div>
           </div>
 
           {/* Center: Creator Showcase (Saumy Pandey) */}
