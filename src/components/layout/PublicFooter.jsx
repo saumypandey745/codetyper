@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Code2,
-  Heart,
   Zap,
   Terminal,
   ShieldCheck,
@@ -342,9 +341,7 @@ export function PublicFooter({ onNavigate }) {
 
             <div className="footer-creator-info">
               <div className="footer-creator-top">
-                <span>Crafted for developers with</span>
-                <Heart size={12} fill="#e11d48" color="#e11d48" className="heart-pulse" />
-                <span>by</span>
+                <span>Crafted for developers by</span>
                 <strong className="footer-creator-name">Saumy Pandey</strong>
               </div>
               <div className="footer-creator-role">
