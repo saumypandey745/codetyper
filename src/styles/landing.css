@@ -971,14 +971,14 @@
   left: 0;
   right: 0;
   height: 1.85em;
-  background: rgba(35, 107, 77, 0.04);
+  background: rgba(35, 107, 77, 0.05);
   pointer-events: none;
   transition: top 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  border-left: 2px solid var(--color-primary-forest);
+  border-left: 3px solid var(--color-primary-forest);
 }
 
 [data-theme="dark"] .editor-active-line-highlight {
-  background: rgba(16, 185, 129, 0.08);
+  background: rgba(16, 185, 129, 0.1);
   border-left-color: #34D399;
 }
 
@@ -1028,31 +1028,34 @@
 }
 
 /* Syntax Highlighting Tokens (Light Theme Palette) */
-.token-type-keyword { color: #7C3AED; }
+.token-type-keyword { color: #7C3AED; font-weight: 600; }
 .token-type-function { color: #1D4ED8; font-weight: 600; }
-.token-type-variable { color: #0F172A; }
-.token-type-param { color: #334155; font-style: italic; }
+.token-type-variable { color: #0F766E; font-weight: 600; }
+.token-type-param { color: #B45309; font-style: italic; font-weight: 600; }
 .token-type-string { color: #047857; }
-.token-type-number { color: #B45309; }
+.token-type-number { color: #C2410C; font-weight: 600; }
 .token-type-type { color: #0E7490; font-weight: 600; }
-.token-type-operator { color: #BE123C; }
-.token-type-punct { color: #64748B; }
+.token-type-operator { color: #BE123C; font-weight: 600; }
+.token-type-punct { color: #334155; font-weight: 500; }
+.token-type-plain { color: #15291F; }
 
 /* Syntax Highlighting Tokens (Dark Theme Palette) */
-[data-theme="dark"] .token-type-keyword { color: #C084FC; }
+[data-theme="dark"] .token-type-keyword { color: #C084FC; font-weight: 600; }
 [data-theme="dark"] .token-type-function { color: #60A5FA; font-weight: 600; }
-[data-theme="dark"] .token-type-variable { color: #F1F5F9; }
-[data-theme="dark"] .token-type-param { color: #CBD5E1; font-style: italic; }
-[data-theme="dark"] .token-type-string { color: #34D399; }
-[data-theme="dark"] .token-type-number { color: #FBBF24; }
+[data-theme="dark"] .token-type-variable { color: #34D399; font-weight: 600; }
+[data-theme="dark"] .token-type-param { color: #FBBF24; font-style: italic; font-weight: 600; }
+[data-theme="dark"] .token-type-string { color: #4ADE80; }
+[data-theme="dark"] .token-type-number { color: #F59E0B; font-weight: 600; }
 [data-theme="dark"] .token-type-type { color: #2DD4BF; font-weight: 600; }
-[data-theme="dark"] .token-type-operator { color: #F472B6; }
-[data-theme="dark"] .token-type-punct { color: #94A3B8; }
+[data-theme="dark"] .token-type-operator { color: #F472B6; font-weight: 600; }
+[data-theme="dark"] .token-type-punct { color: #E2E8F0; font-weight: 500; }
+[data-theme="dark"] .token-type-plain { color: #F8FAFC; }
 
 /* Dynamic Character Typing States */
 .syntax-char {
   position: relative;
-  transition: opacity 0.12s ease, color 0.12s ease, text-shadow 0.12s ease;
+  transition: opacity 0.12s ease, color 0.12s ease, text-shadow 0.12s ease, background-color 0.12s ease;
+  border-radius: 2px;
 }
 
 .syntax-char.token-pending {
@@ -1065,22 +1068,34 @@
 [data-theme="tokyo-night"] .syntax-char.token-pending,
 [data-theme="nord"] .syntax-char.token-pending,
 [data-theme="matrix-neon"] .syntax-char.token-pending {
-  opacity: 0.42;
+  opacity: 0.45;
 }
 
 .syntax-char.token-correct {
   opacity: 1;
   font-weight: 600;
-  text-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+  background-color: rgba(35, 107, 77, 0.08);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
 }
 
 [data-theme="dark"] .syntax-char.token-correct {
-  text-shadow: 0 0 14px rgba(52, 211, 153, 0.45);
+  background-color: rgba(52, 211, 153, 0.14);
+  text-shadow: 0 0 12px rgba(52, 211, 153, 0.5), 0 0 24px rgba(52, 211, 153, 0.2);
+}
+
+.syntax-char.char-current {
+  background-color: rgba(52, 211, 153, 0.25);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+[data-theme="light"] .syntax-char.char-current {
+  background-color: rgba(35, 107, 77, 0.18);
+  box-shadow: 0 0 6px rgba(35, 107, 77, 0.3);
 }
 
 .syntax-char.token-error {
   color: #EF4444 !important;
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.25) !important;
   border-radius: 2px;
   text-decoration: underline wavy #EF4444;
   opacity: 1;
@@ -1096,9 +1111,9 @@
 /* Glowing Neon Caret */
 .hero-neon-caret {
   position: absolute;
-  left: 0;
-  top: 10%;
-  bottom: 10%;
+  left: -1px;
+  top: 5%;
+  bottom: 5%;
   width: 2.5px;
   background: var(--color-primary-forest);
   border-radius: 2px;

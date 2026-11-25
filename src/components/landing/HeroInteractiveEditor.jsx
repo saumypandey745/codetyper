@@ -669,7 +669,7 @@ export function HeroInteractiveEditor({ onNavigate, onStartPractice }) {
           <div
             className="editor-active-line-highlight"
             style={{
-              top: `${(currentPosition.line - 1) * 1.85 + 0.3}em`
+              top: `calc(1.15rem + ${(currentPosition.line - 1) * 1.85}em)`
             }}
             aria-hidden="true"
           />
