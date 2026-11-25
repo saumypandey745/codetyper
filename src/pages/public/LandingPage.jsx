@@ -25,11 +25,15 @@ import {
   Layers,
   HelpCircle,
   TrendingUp,
-  Compass
+  Compass,
+  Copy,
+  RotateCcw,
+  Volume2
 } from 'lucide-react';
 import { HeroInteractiveEditor } from '../../components/landing/HeroInteractiveEditor.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
+import { soundEngine } from '../../utils/soundEngine.js';
 
 const ROTATING_PHRASES = [
   "Earn Accredited Certificates.",
@@ -259,6 +263,36 @@ export function LandingPage({ onNavigate, onStartPractice }) {
   // FAQ open accordion state
   const [openFaq, setOpenFaq] = useState(0);
 
+  // Practice Modes 3D Flip Card state
+  const [flippedCardId, setFlippedCardId] = useState(null);
+
+  // Stacks code snippet copy state
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
+
+  // Bento acoustic switch testing state
+  const [activeSwitchTest, setActiveSwitchTest] = useState(null);
+
+  const handleCopySnippet = () => {
+    if (selectedStack?.code) {
+      navigator.clipboard.writeText(selectedStack.code);
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 2000);
+    }
+  };
+
+  const handleTestSwitch = (switchType, themeKey) => {
+    setActiveSwitchTest(switchType);
+    try {
+      soundEngine.setPreferences(true, themeKey, 0.65);
+      soundEngine.playKeypress();
+    } catch (e) {
+      // AudioContext fallback
+    }
+    setTimeout(() => {
+      setActiveSwitchTest(null);
+    }, 600);
+  };
+
   // Smooth typewriter cycle for the hero accent title
   useEffect(() => {
     if (document.body.getAttribute('data-reduced-motion') === 'true') {
@@ -316,6 +350,9 @@ export function LandingPage({ onNavigate, onStartPractice }) {
       loading: true
     });
     setTimeout(() => {
+      try {
+        soundEngine.playComplete();
+      } catch (err) {}
       setVerifierStatus({
         loading: false,
         verified: true,
@@ -343,6 +380,14 @@ export function LandingPage({ onNavigate, onStartPractice }) {
 
         {/* Center Hero Content */}
         <div className="hero-content">
+          {/* Live Platform Telemetry Radar Pill */}
+          <div className="landing-hero-radar-badge" aria-label="System Status">
+            <span className="landing-radar-ping-dot" />
+            <span className="landing-radar-text">ENGINE RUNNER v2.6 • LIVE</span>
+            <span className="landing-radar-divider">•</span>
+            <span className="landing-radar-stats">50,000+ Active Typists • Real-Time WebSockets 0.8ms</span>
+          </div>
+
           {/* Shimmer Badge with Live Pulse Indicator */}
           <div
             className="hero-badge-shimmer"
@@ -444,6 +489,12 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           SECTION 1: LIVE DEVELOPER METRICS & SOCIAL PROOF STRIP
           ========================================================================= */}
       <section className="landing-section-wrap" style={{ paddingTop: '0', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+          <span className="sequence-badge">
+            <Activity size={13} />
+            <span>01 // LIVE TELEMETRY & NETWORK SPEED</span>
+          </span>
+        </div>
         <div className="landing-metrics-strip">
           <div className="metric-card">
             <div className="metric-icon-wrap">
@@ -491,159 +542,422 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           SECTION 2: FLAGSHIP PRACTICE MODES GRID ("Choose Your Flow")
           ========================================================================= */}
       <section className="landing-section-wrap">
-        <div className="landing-section-header">
-          <span className="landing-pill-tag">
-            <Sparkles size={14} />
-            <span>Versatile Practice Engine</span>
+        <div className="landing-section-header" style={{ marginBottom: '1.75rem' }}>
+          <span className="sequence-badge">
+            <Sparkles size={12} />
+            <span>02 // FLAGSHIP PRACTICE MODES</span>
           </span>
           <h2 className="landing-section-title">Engineered For Every Typing Workflow</h2>
           <p className="landing-section-desc">
-            Whether preparing for technical interviews, building typing endurance, or racing colleagues in real-time, CodeTyper provides dedicated focus environments.
+            Interviews, endurance, or live multiplayer battles. Click <strong>Specs ↻</strong> on any card to inspect full parameters.
           </p>
         </div>
 
         <div className="landing-modes-grid">
           {/* Card 1: Real-World Code */}
-          <div
-            className="landing-mode-card"
-            onClick={() => {
-              if (!user) {
-                window.dispatchEvent(new CustomEvent('codetyper-switch-hero-snippet', { detail: { tabId: 'js' } }));
-                const el = document.getElementById('home-editor');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              } else {
-                onNavigate('coding');
-              }
-            }}
-          >
-            <div>
-              <div className="mode-card-header">
-                <div className="mode-icon-box" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a' }}>
-                  <Code2 size={24} />
+          <div className={`landing-3d-card-wrap ${flippedCardId === 'mode-1' ? 'flipped' : ''}`}>
+            <div className="landing-3d-card-inner">
+              {/* FRONT */}
+              <div
+                className="landing-3d-card-face"
+                onClick={() => onNavigate('coding')}
+                style={{ cursor: 'pointer' }}
+              >
+                <div>
+                  <div className="mode-card-header">
+                    <div className="mode-icon-box" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a' }}>
+                      <Code2 size={18} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span className="mode-badge-pill" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a' }}>
+                        Most Popular
+                      </span>
+                      <button
+                        type="button"
+                        className="flip-trigger-btn"
+                        onClick={(e) => { e.stopPropagation(); setFlippedCardId('mode-1'); }}
+                        title="View Syllabus & Specs"
+                      >
+                        <RotateCcw size={11} />
+                        <span>Specs ↻</span>
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="mode-card-title">Real-World Code Engine</h3>
+                  <p className="mode-card-desc">
+                    Production code typing with syntax, indentation, and tricky symbols across 25+ language stacks.
+                  </p>
+                  <div className="mode-card-tags">
+                    <span className="mode-tag">JavaScript</span>
+                    <span className="mode-tag">Python</span>
+                    <span className="mode-tag">Rust</span>
+                    <span className="mode-tag">Go</span>
+                  </div>
                 </div>
-                <span className="mode-badge-pill" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a' }}>
-                  Most Popular
-                </span>
+                <div
+                  className="mode-action-link"
+                  onClick={(e) => { e.stopPropagation(); onNavigate('coding'); }}
+                >
+                  <span>Practice Code Now</span>
+                  <ArrowRight size={14} />
+                </div>
               </div>
-              <h3 className="mode-card-title">Real-World Code Engine</h3>
-              <p className="mode-card-desc">
-                Type actual production code with indentation, brackets, arrow functions, and language keywords. Build muscle memory for symbols that slow you down.
-              </p>
-              <div className="mode-card-tags">
-                <span className="mode-tag">JavaScript</span>
-                <span className="mode-tag">Python</span>
-                <span className="mode-tag">Rust</span>
-                <span className="mode-tag">Go</span>
+
+              {/* BACK */}
+              <div className="landing-3d-card-face landing-3d-card-back">
+                <div>
+                  <div className="flip-header-bar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 750, fontSize: '0.86rem', color: '#16a34a' }}>
+                      <Code2 size={15} />
+                      <span>Code Syllabus & Specs</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="flip-trigger-btn"
+                      onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+                    >
+                      <RotateCcw size={11} />
+                      <span>Back ↺</span>
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', margin: '0.35rem 0 0.75rem' }}>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Target Audience</span>
+                      <span className="flip-spec-val">Developers & Engineers</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Stack Coverage</span>
+                      <span className="flip-spec-val">25+ Real Production Stacks</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Symbol Drills</span>
+                      <span className="flip-spec-val">Brackets, Arrow ops, Semicolons</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Sprint Options</span>
+                      <span className="flip-spec-val">15s, 30s, 60s, Custom</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ width: '100%', justifyContent: 'center', padding: '0.48rem 0.85rem', fontSize: '0.80rem', marginTop: 'auto' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate('coding');
+                  }}
+                >
+                  <span>Launch Code Drill ⚡</span>
+                </button>
               </div>
-            </div>
-            <div className="mode-action-link">
-              <span>Practice Code Now</span>
-              <ArrowRight size={15} />
             </div>
           </div>
 
           {/* Card 2: English Literature & Prose */}
-          <div
-            className="landing-mode-card"
-            onClick={() => {
-              if (!user) {
-                window.dispatchEvent(new CustomEvent('codetyper-switch-hero-snippet', { detail: { tabId: 'english' } }));
-                const el = document.getElementById('home-editor');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              } else {
-                onNavigate('english');
-              }
-            }}
-          >
-            <div>
-              <div className="mode-card-header">
-                <div className="mode-icon-box" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7' }}>
-                  <BookOpen size={24} />
+          <div className={`landing-3d-card-wrap ${flippedCardId === 'mode-2' ? 'flipped' : ''}`}>
+            <div className="landing-3d-card-inner">
+              {/* FRONT */}
+              <div
+                className="landing-3d-card-face"
+                onClick={() => onNavigate('english')}
+                style={{ cursor: 'pointer' }}
+              >
+                <div>
+                  <div className="mode-card-header">
+                    <div className="mode-icon-box" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7' }}>
+                      <BookOpen size={18} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span className="mode-badge-pill" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7' }}>
+                        Zen Flow
+                      </span>
+                      <button
+                        type="button"
+                        className="flip-trigger-btn"
+                        onClick={(e) => { e.stopPropagation(); setFlippedCardId('mode-2'); }}
+                        title="View Syllabus & Specs"
+                      >
+                        <RotateCcw size={11} />
+                        <span>Specs ↻</span>
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="mode-card-title">English Literature & Prose</h3>
+                  <p className="mode-card-desc">
+                    Distraction-free classic literature and essays to calibrate typing rhythm and deep endurance.
+                  </p>
+                  <div className="mode-card-tags">
+                    <span className="mode-tag">Essays</span>
+                    <span className="mode-tag">Philosophy</span>
+                    <span className="mode-tag">Rhythm</span>
+                  </div>
                 </div>
-                <span className="mode-badge-pill" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#0284c7' }}>
-                  Zen Flow
-                </span>
+                <div
+                  className="mode-action-link"
+                  style={{ color: '#0284c7' }}
+                  onClick={(e) => { e.stopPropagation(); onNavigate('english'); }}
+                >
+                  <span>Read & Type Passages</span>
+                  <ArrowRight size={14} />
+                </div>
               </div>
-              <h3 className="mode-card-title">English Literature & Prose</h3>
-              <p className="mode-card-desc">
-                Distraction-free passages from classic literature and inspiring essays. Calibrate your typing rhythm and achieve deep flow without punctuation friction.
-              </p>
-              <div className="mode-card-tags">
-                <span className="mode-tag">Essays</span>
-                <span className="mode-tag">Philosophy</span>
-                <span className="mode-tag">Rhythm</span>
+
+              {/* BACK */}
+              <div className="landing-3d-card-face landing-3d-card-back">
+                <div>
+                  <div className="flip-header-bar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 750, fontSize: '0.86rem', color: '#0284c7' }}>
+                      <BookOpen size={15} />
+                      <span>Prose Syllabus & Specs</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="flip-trigger-btn"
+                      onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+                    >
+                      <RotateCcw size={11} />
+                      <span>Back ↺</span>
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', margin: '0.35rem 0 0.75rem' }}>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Target Audience</span>
+                      <span className="flip-spec-val">Writers & Speed Typists</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Passage Archive</span>
+                      <span className="flip-spec-val">1,200+ Curated Chapters</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Cadence Mode</span>
+                      <span className="flip-spec-val">Zero Punctuation Friction</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Endurance Target</span>
+                      <span className="flip-spec-val">100+ WPM Unbroken Stream</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ width: '100%', justifyContent: 'center', padding: '0.48rem 0.85rem', fontSize: '0.80rem', background: '#0284c7', borderColor: '#0284c7', marginTop: 'auto' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate('english');
+                  }}
+                >
+                  <span>Enter Zen Prose Chamber ⚡</span>
+                </button>
               </div>
-            </div>
-            <div className="mode-action-link" style={{ color: '#0284c7' }}>
-              <span>Read & Type Passages</span>
-              <ArrowRight size={15} />
             </div>
           </div>
 
           {/* Card 3: Multiplayer Live Arenas */}
-          <div
-            className="landing-mode-card"
-            onClick={() => onNavigate('multiplayer')}
-          >
-            <div>
-              <div className="mode-card-header">
-                <div className="mode-icon-box" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#9333ea' }}>
-                  <Flame size={24} />
+          <div className={`landing-3d-card-wrap ${flippedCardId === 'mode-3' ? 'flipped' : ''}`}>
+            <div className="landing-3d-card-inner">
+              {/* FRONT */}
+              <div
+                className="landing-3d-card-face"
+                onClick={() => onNavigate('multiplayer')}
+                style={{ cursor: 'pointer' }}
+              >
+                <div>
+                  <div className="mode-card-header">
+                    <div className="mode-icon-box" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#9333ea' }}>
+                      <Flame size={18} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span className="mode-badge-pill" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#9333ea' }}>
+                        Competitive
+                      </span>
+                      <button
+                        type="button"
+                        className="flip-trigger-btn"
+                        onClick={(e) => { e.stopPropagation(); setFlippedCardId('mode-3'); }}
+                        title="View Arena Specs"
+                      >
+                        <RotateCcw size={11} />
+                        <span>Specs ↻</span>
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="mode-card-title">Live Multiplayer Arenas</h3>
+                  <p className="mode-card-desc">
+                    Head-to-head real-time battles worldwide with live speedometers and MMR rank progression.
+                  </p>
+                  <div className="mode-card-tags">
+                    <span className="mode-tag">Real-Time</span>
+                    <span className="mode-tag">Leaderboards</span>
+                    <span className="mode-tag">Speedometer</span>
+                  </div>
                 </div>
-                <span className="mode-badge-pill" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#9333ea' }}>
-                  Competitive
-                </span>
+                <div
+                  className="mode-action-link"
+                  style={{ color: '#9333ea' }}
+                  onClick={(e) => { e.stopPropagation(); onNavigate('multiplayer'); }}
+                >
+                  <span>Enter Race Arena</span>
+                  <ArrowRight size={14} />
+                </div>
               </div>
-              <h3 className="mode-card-title">Live Multiplayer Arenas</h3>
-              <p className="mode-card-desc">
-                Compete head-to-head in real-time typing battles against engineers worldwide. Live speedometers, spectators, and MMR ranking progression.
-              </p>
-              <div className="mode-card-tags">
-                <span className="mode-tag">Real-Time</span>
-                <span className="mode-tag">Leaderboards</span>
-                <span className="mode-tag">Speedometer</span>
+
+              {/* BACK */}
+              <div className="landing-3d-card-face landing-3d-card-back">
+                <div>
+                  <div className="flip-header-bar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 750, fontSize: '0.86rem', color: '#9333ea' }}>
+                      <Flame size={15} />
+                      <span>Arena Architecture & Specs</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="flip-trigger-btn"
+                      onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+                    >
+                      <RotateCcw size={11} />
+                      <span>Back ↺</span>
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', margin: '0.35rem 0 0.75rem' }}>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Protocol</span>
+                      <span className="flip-spec-val">Ultra Low-Latency WebSockets</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Matchmaking</span>
+                      <span className="flip-spec-val">Global Elo Skill Rating</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Spectators</span>
+                      <span className="flip-spec-val">Live Opponent Ghost Cars</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Lobby Modes</span>
+                      <span className="flip-spec-val">Public QuickMatch & Private Rooms</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ width: '100%', justifyContent: 'center', padding: '0.48rem 0.85rem', fontSize: '0.80rem', background: '#9333ea', borderColor: '#9333ea', marginTop: 'auto' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate('multiplayer');
+                  }}
+                >
+                  <span>Launch 1v1 Race Arena ⚡</span>
+                </button>
               </div>
-            </div>
-            <div className="mode-action-link" style={{ color: '#9333ea' }}>
-              <span>Enter Race Arena</span>
-              <ArrowRight size={15} />
             </div>
           </div>
 
           {/* Card 4: Official Accredited Certificates */}
-          <div
-            className="landing-mode-card"
-            style={{
-              borderColor: 'rgba(234, 179, 8, 0.45)',
-              background: isDark
-                ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(17, 26, 21, 0.95) 100%)'
-                : 'linear-gradient(135deg, #fffdf2 0%, #ffffff 100%)'
-            }}
-            onClick={() => onNavigate('certificate')}
-          >
-            <div>
-              <div className="mode-card-header">
-                <div className="mode-icon-box" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#ca8a04' }}>
-                  <Award size={24} />
+          <div className={`landing-3d-card-wrap ${flippedCardId === 'mode-4' ? 'flipped' : ''}`}>
+            <div className="landing-3d-card-inner">
+              {/* FRONT */}
+              <div
+                className="landing-3d-card-face"
+                style={{
+                  borderColor: 'rgba(234, 179, 8, 0.45)',
+                  background: isDark
+                    ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(17, 26, 21, 0.95) 100%)'
+                    : 'linear-gradient(135deg, #fffdf2 0%, #ffffff 100%)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => onNavigate('certificate')}
+              >
+                <div>
+                  <div className="mode-card-header">
+                    <div className="mode-icon-box" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#ca8a04' }}>
+                      <Award size={18} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span className="mode-badge-pill" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#ca8a04' }}>
+                        Official
+                      </span>
+                      <button
+                        type="button"
+                        className="flip-trigger-btn"
+                        onClick={(e) => { e.stopPropagation(); setFlippedCardId('mode-4'); }}
+                        title="View Certificate Specs"
+                      >
+                        <RotateCcw size={11} />
+                        <span>Specs ↻</span>
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="mode-card-title">Accredited Diplomas 🎓</h3>
+                  <p className="mode-card-desc">
+                    4 collectible luxury tiers signed by founder Saumy Pandey. Cryptographically verifiable.
+                  </p>
+                  <div className="mode-card-tags">
+                    <span className="mode-tag" style={{ color: isDark ? '#facc15' : '#854d0e', background: 'rgba(234, 179, 8, 0.15)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>Bronze</span>
+                    <span className="mode-tag" style={{ color: isDark ? '#facc15' : '#854d0e', background: 'rgba(234, 179, 8, 0.15)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>Silver</span>
+                    <span className="mode-tag" style={{ color: isDark ? '#facc15' : '#854d0e', background: 'rgba(234, 179, 8, 0.15)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>Gold</span>
+                    <span className="mode-tag" style={{ color: isDark ? '#facc15' : '#854d0e', background: 'rgba(234, 179, 8, 0.15)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>Diamond</span>
+                  </div>
                 </div>
-                <span className="mode-badge-pill" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#ca8a04' }}>
-                  Official
-                </span>
+                <div
+                  className="mode-action-link"
+                  style={{ color: '#ca8a04' }}
+                  onClick={(e) => { e.stopPropagation(); onNavigate('certificate'); }}
+                >
+                  <span>Explore Certificate Registry</span>
+                  <ArrowRight size={14} />
+                </div>
               </div>
-              <h3 className="mode-card-title">Accredited Diplomas 🎓</h3>
-              <p className="mode-card-desc">
-                4 collectible luxury tiers signed by founder Saumy Pandey. Cryptographically verifiable on our global registry and perfect for your resume & LinkedIn.
-              </p>
-              <div className="mode-card-tags">
-                <span className="mode-tag" style={{ color: '#b45309', background: 'rgba(234, 179, 8, 0.15)' }}>Bronze</span>
-                <span className="mode-tag" style={{ color: '#b45309', background: 'rgba(234, 179, 8, 0.15)' }}>Silver</span>
-                <span className="mode-tag" style={{ color: '#b45309', background: 'rgba(234, 179, 8, 0.15)' }}>Gold</span>
-                <span className="mode-tag" style={{ color: '#b45309', background: 'rgba(234, 179, 8, 0.15)' }}>Diamond</span>
+
+              {/* BACK */}
+              <div className="landing-3d-card-face landing-3d-card-back" style={{ borderColor: 'rgba(234, 179, 8, 0.45)' }}>
+                <div>
+                  <div className="flip-header-bar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 750, fontSize: '0.86rem', color: isDark ? '#facc15' : '#ca8a04' }}>
+                      <Award size={15} />
+                      <span>Accreditation Framework</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="flip-trigger-btn"
+                      onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+                    >
+                      <RotateCcw size={11} />
+                      <span>Back ↺</span>
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', margin: '0.35rem 0 0.75rem' }}>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Issuing Authority</span>
+                      <span className="flip-spec-val">CodeTyper Global Registry</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Authorized Signatory</span>
+                      <span className="flip-spec-val">Founder Saumy Pandey</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Verification Hash</span>
+                      <span className="flip-spec-val">SHA-256 Ledger Record</span>
+                    </div>
+                    <div className="flip-spec-row">
+                      <span className="flip-spec-label">Accredited Tiers</span>
+                      <span className="flip-spec-val">Bronze, Silver, Gold, Diamond</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ width: '100%', justifyContent: 'center', padding: '0.48rem 0.85rem', fontSize: '0.80rem', background: '#ca8a04', borderColor: '#ca8a04', marginTop: 'auto' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate('certificate');
+                  }}
+                >
+                  <span>Claim Official Certificate 🎓</span>
+                </button>
               </div>
-            </div>
-            <div className="mode-action-link" style={{ color: '#ca8a04' }}>
-              <span>Explore Certificate Registry</span>
-              <ArrowRight size={15} />
             </div>
           </div>
         </div>
@@ -654,6 +968,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ========================================================================= */}
       <section className="landing-section-wrap">
         <div className="landing-section-header">
+          <span className="sequence-badge">
+            <Terminal size={13} />
+            <span>03 // 25+ PRODUCTION TECH STACKS</span>
+          </span>
+          <br />
           <span className="landing-pill-tag">
             <Terminal size={14} />
             <span>Interactive Code Explorer</span>
@@ -737,23 +1056,42 @@ export function LandingPage({ onNavigate, onStartPractice }) {
               <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
                 snippet_{selectedStack.id}.{selectedStack.id === 'python' ? 'py' : selectedStack.id === 'rust' ? 'rs' : selectedStack.id === 'go' ? 'go' : 'js'}
               </span>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: `${selectedStack.iconColor}22`,
-                  color: selectedStack.iconColor
-                }}
-              >
-                {selectedStack.name}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '4px',
+                    backgroundColor: `${selectedStack.iconColor}22`,
+                    color: selectedStack.iconColor
+                  }}
+                >
+                  {selectedStack.name}
+                </span>
+                <button
+                  type="button"
+                  className={`copy-code-btn ${copiedSnippet ? 'copied' : ''}`}
+                  onClick={handleCopySnippet}
+                  title="Copy Code Snippet"
+                >
+                  {copiedSnippet ? <Check size={13} color="#22c55e" /> : <Copy size={13} />}
+                  <span>{copiedSnippet ? 'Copied!' : 'Copy'}</span>
+                </button>
+              </div>
             </div>
 
-            <pre className="stacks-preview-code">
-              <code>{selectedStack.code}</code>
-            </pre>
+            {/* Code Lines with Line Numbers */}
+            <div className="stacks-code-row">
+              <div className="stacks-line-nums" style={{ paddingLeft: '1.25rem', paddingTop: '1.25rem' }}>
+                {selectedStack.code.split('\n').map((_, i) => (
+                  <div key={i}>{i + 1}</div>
+                ))}
+              </div>
+              <pre className="stacks-preview-code" style={{ paddingLeft: '0.75rem', flex: 1 }}>
+                <code>{selectedStack.code}</code>
+              </pre>
+            </div>
 
             <div className="stacks-preview-footer">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
@@ -786,13 +1124,18 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ========================================================================= */}
       <section className="landing-section-wrap">
         <div className="landing-section-header">
+          <span className="sequence-badge">
+            <Cpu size={13} />
+            <span>04 // HARDWARE ACOUSTICS & ARCHITECTURE</span>
+          </span>
+          <br />
           <span className="landing-pill-tag">
             <Cpu size={14} />
             <span>Architecture & Precision</span>
           </span>
           <h2 className="landing-section-title">Engineered For Serious Developers</h2>
           <p className="landing-section-desc">
-            We obsessed over every microsecond of input latency, sound synthesis accuracy, and visual distraction to give you the most responsive typing feel ever built.
+            We obsessed over every microsecond of input latency, sound synthesis accuracy, and visual distraction to give you the most responsive typing feel ever built. Click any switch below to test live acoustic waveforms!
           </p>
         </div>
 
@@ -805,27 +1148,86 @@ export function LandingPage({ onNavigate, onStartPractice }) {
               </div>
               <h3 className="bento-title">Sub-Millisecond Keystroke Loop & Mechanical Synthesizer</h3>
               <p className="bento-desc">
-                Zero audio lag modeled via the Web Audio API with multi-oscillator frequency acoustics. Switch between authentic Cherry MX Blue, Brown, Red, and Topre capacitive switch simulations.
+                Zero audio lag modeled via the Web Audio API with multi-oscillator frequency acoustics. Click any switch model to audition acoustic response in real-time:
               </p>
             </div>
             <div className="bento-visual-preview">
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+                <button
+                  type="button"
+                  className="switch-test-btn"
+                  onClick={() => handleTestSwitch('blue', 'typewriter')}
+                  title="Test Clicky Switch Acoustics"
+                  style={{
+                    borderColor: activeSwitchTest === 'blue' ? '#3b82f6' : undefined,
+                    background: activeSwitchTest === 'blue' ? 'rgba(59, 130, 246, 0.15)' : undefined
+                  }}
+                >
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#3b82f6' }} />
                   <span>Cherry MX Blue (Clicky)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <div className="sound-bars-anim" aria-hidden="true">
+                    <span className={`sound-bar ${activeSwitchTest === 'blue' ? 'active' : ''}`} style={{ background: '#3b82f6' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'blue' ? 'active' : ''}`} style={{ background: '#3b82f6', animationDelay: '0.1s' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'blue' ? 'active' : ''}`} style={{ background: '#3b82f6', animationDelay: '0.2s' }} />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="switch-test-btn"
+                  onClick={() => handleTestSwitch('brown', 'mechanical')}
+                  title="Test Tactile Switch Acoustics"
+                  style={{
+                    borderColor: activeSwitchTest === 'brown' ? '#d97706' : undefined,
+                    background: activeSwitchTest === 'brown' ? 'rgba(217, 119, 6, 0.15)' : undefined
+                  }}
+                >
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#d97706' }} />
                   <span>Cherry MX Brown (Tactile)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
-                  <span>Cherry MX Red (Linear)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <div className="sound-bars-anim" aria-hidden="true">
+                    <span className={`sound-bar ${activeSwitchTest === 'brown' ? 'active' : ''}`} style={{ background: '#d97706' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'brown' ? 'active' : ''}`} style={{ background: '#d97706', animationDelay: '0.1s' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'brown' ? 'active' : ''}`} style={{ background: '#d97706', animationDelay: '0.2s' }} />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="switch-test-btn"
+                  onClick={() => handleTestSwitch('thock', 'thock')}
+                  title="Test Deep Thock Switch Acoustics"
+                  style={{
+                    borderColor: activeSwitchTest === 'thock' ? '#10b981' : undefined,
+                    background: activeSwitchTest === 'thock' ? 'rgba(16, 185, 129, 0.15)' : undefined
+                  }}
+                >
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
-                  <span>Topre Capacitive</span>
-                </div>
+                  <span>Gateron Oil King (Thock)</span>
+                  <div className="sound-bars-anim" aria-hidden="true">
+                    <span className={`sound-bar ${activeSwitchTest === 'thock' ? 'active' : ''}`} style={{ background: '#10b981' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'thock' ? 'active' : ''}`} style={{ background: '#10b981', animationDelay: '0.1s' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'thock' ? 'active' : ''}`} style={{ background: '#10b981', animationDelay: '0.2s' }} />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="switch-test-btn"
+                  onClick={() => handleTestSwitch('topre', 'bubble')}
+                  title="Test Soft Bubble Switch Acoustics"
+                  style={{
+                    borderColor: activeSwitchTest === 'topre' ? '#a855f7' : undefined,
+                    background: activeSwitchTest === 'topre' ? 'rgba(168, 85, 247, 0.15)' : undefined
+                  }}
+                >
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#a855f7' }} />
+                  <span>Topre Capacitive (Soft)</span>
+                  <div className="sound-bars-anim" aria-hidden="true">
+                    <span className={`sound-bar ${activeSwitchTest === 'topre' ? 'active' : ''}`} style={{ background: '#a855f7' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'topre' ? 'active' : ''}`} style={{ background: '#a855f7', animationDelay: '0.1s' }} />
+                    <span className={`sound-bar ${activeSwitchTest === 'topre' ? 'active' : ''}`} style={{ background: '#a855f7', animationDelay: '0.2s' }} />
+                  </div>
+                </button>
               </div>
             </div>
           </div>
@@ -900,6 +1302,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ========================================================================= */}
       <section id="certificates" className="landing-section-wrap">
         <div className="landing-section-header">
+          <span className="sequence-badge gold">
+            <Award size={13} />
+            <span>05 // GLOBAL ACCREDITATION REGISTRY</span>
+          </span>
+          <br />
           <span className="landing-pill-tag gold">
             <Award size={14} />
             <span>Global Accreditation Registry</span>
@@ -1007,6 +1414,9 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           onClick={() => onNavigate(user ? 'certificate' : 'signup')}
           title="Click to claim your official certificate"
         >
+          {/* Holographic Gold Foil Sweep */}
+          <div className="cert-holo-sheen" aria-hidden="true" />
+
           {/* Inner Guilloche Border */}
           <div
             style={{
@@ -1211,6 +1621,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ========================================================================= */}
       <section className="landing-section-wrap">
         <div className="landing-section-header">
+          <span className="sequence-badge">
+            <Trophy size={13} />
+            <span>06 // UNMATCHED COMPETITIVE VALUE</span>
+          </span>
+          <br />
           <span className="landing-pill-tag">
             <Trophy size={14} />
             <span>Unmatched Value</span>
@@ -1337,6 +1752,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ========================================================================= */}
       <section className="landing-section-wrap">
         <div className="landing-section-header">
+          <span className="sequence-badge">
+            <Star size={13} />
+            <span>07 // COMMUNITY FEEDBACK & WALL OF LOVE</span>
+          </span>
+          <br />
           <span className="landing-pill-tag">
             <Star size={14} />
             <span>Community Feedback</span>
@@ -1418,6 +1838,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           ========================================================================= */}
       <section className="landing-section-wrap">
         <div className="landing-section-header">
+          <span className="sequence-badge">
+            <HelpCircle size={13} />
+            <span>08 // FREQUENTLY ASKED QUESTIONS</span>
+          </span>
+          <br />
           <span className="landing-pill-tag">
             <HelpCircle size={14} />
             <span>Got Questions?</span>
@@ -1459,6 +1884,11 @@ export function LandingPage({ onNavigate, onStartPractice }) {
       <section className="landing-section-wrap" style={{ paddingBottom: '1rem' }}>
         <div className="grand-cta-banner-wrap">
           <div className="grand-cta-glow-orb" aria-hidden="true" />
+          <span className="sequence-badge">
+            <Zap size={13} />
+            <span>09 // ACCREDITED VELOCITY CTA</span>
+          </span>
+          <br />
           <span className="landing-pill-tag">
             <Zap size={14} />
             <span>Join 50,000+ Developers</span>

@@ -217,7 +217,19 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload)
       }),
-    getEmailLogs: () => this.request('/admin/email-logs')
+    getEmailLogs: () => this.request('/admin/email-logs'),
+    getWebhooksConfig: () => this.request('/admin/webhooks/config'),
+    updateWebhooksConfig: (payload) =>
+      this.request('/admin/webhooks/config', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+    testWebhook: (payload) =>
+      this.request('/admin/webhooks/test', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+    getWebhookLogs: () => this.request('/admin/webhooks/logs')
   };
 
   // Feedback & Developer Reports

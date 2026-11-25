@@ -225,6 +225,19 @@ export function initDatabase() {
     );
     CREATE INDEX IF NOT EXISTS idx_email_logs_type ON email_logs(email_type);
     CREATE INDEX IF NOT EXISTS idx_email_logs_time ON email_logs(created_at);
+
+    CREATE TABLE IF NOT EXISTS webhook_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      service TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      status TEXT DEFAULT 'success',
+      status_code INTEGER,
+      payload_summary TEXT,
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_webhook_logs_service ON webhook_logs(service);
+    CREATE INDEX IF NOT EXISTS idx_webhook_logs_time ON webhook_logs(created_at);
   `);
 
 
@@ -251,6 +264,12 @@ export function initDatabase() {
   initSetting('announcement_type', 'info');
   initSetting('announcement_enabled', '0');
   initSetting('maintenance_mode', '0');
+  initSetting('webhook_discord_url', '');
+  initSetting('webhook_slack_url', '');
+  initSetting('webhook_event_cert', '1');
+  initSetting('webhook_event_feedback', '1');
+  initSetting('webhook_event_subscriber', '1');
+  initSetting('webhook_event_security', '1');
 
   seedInitialData();
 }

@@ -1,6 +1,8 @@
 :root,
 [data-theme="peaceful"],
 [data-theme="light"] {
+  color-scheme: light;
+
   /* Peaceful Green + Cream Palette Tokens */
   --color-primary-deep: #1A543D;
   --color-primary-forest: #236B4D;
@@ -11,12 +13,14 @@
   --color-bg-cream: #FAF9F5;
   --color-bg-surface: #FFFFFF;
   --color-bg-soft: #F2F6F3;
+  --color-bg-subtle: #EEF4F0;
   --color-bg-elevated: #FFFFFF;
   --color-bg-overlay: rgba(22, 38, 30, 0.45);
 
   --color-text-primary: #15291F;
+  --color-text-main: var(--color-text-primary);
   --color-text-secondary: #50665A;
-  --color-text-muted: #7E9185;
+  --color-text-muted: #546C5F;
   --color-text-on-primary: #FFFFFF;
 
   --color-border: #D7E3DC;
@@ -96,6 +100,8 @@
 
 /* Dark Mode Theme - Luxury Obsidian & Radiant Emerald */
 [data-theme="dark"] {
+  color-scheme: dark;
+
   --color-primary-deep: #059669;
   --color-primary-forest: #10B981;
   --color-primary-sage: #34D399;
@@ -105,12 +111,13 @@
   --color-bg-cream: #0B120E;
   --color-bg-surface: #111A15;
   --color-bg-soft: #0E1612;
+  --color-bg-subtle: #142018;
   --color-bg-elevated: #16241D;
   --color-bg-overlay: rgba(6, 10, 8, 0.8);
 
   --color-text-primary: #F2F7F4;
   --color-text-secondary: #A3B9AD;
-  --color-text-muted: #6B8375;
+  --color-text-muted: #829D8E;
   --color-text-on-primary: #0B120E;
 
   --color-border: #1D2E24;
@@ -166,6 +173,7 @@
 
 /* Catppuccin Mocha Theme (Beloved by developers) */
 [data-theme="catppuccin"] {
+  color-scheme: dark;
   --color-primary-deep: #a6e3a1;
   --color-primary-forest: #89b4fa;
   --color-primary-sage: #94e2d5;
@@ -175,6 +183,7 @@
   --color-bg-cream: #181825;
   --color-bg-surface: #1e1e2e;
   --color-bg-soft: #11111b;
+  --color-bg-subtle: #242436;
   --color-bg-elevated: #313244;
   --color-bg-overlay: rgba(17, 17, 27, 0.85);
 
@@ -222,6 +231,7 @@
 
 /* Dracula Theme */
 [data-theme="dracula"] {
+  color-scheme: dark;
   --color-primary-deep: #50fa7b;
   --color-primary-forest: #bd93f9;
   --color-primary-sage: #8be9fd;
@@ -231,6 +241,7 @@
   --color-bg-cream: #1e1f29;
   --color-bg-surface: #282a36;
   --color-bg-soft: #191a21;
+  --color-bg-subtle: #21222c;
   --color-bg-elevated: #383a59;
   --color-bg-overlay: rgba(25, 26, 33, 0.85);
 
@@ -278,6 +289,7 @@
 
 /* Tokyo Night Theme */
 [data-theme="tokyo-night"] {
+  color-scheme: dark;
   --color-primary-deep: #7aa2f7;
   --color-primary-forest: #7dcfff;
   --color-primary-sage: #9ece6a;
@@ -287,6 +299,7 @@
   --color-bg-cream: #16161e;
   --color-bg-surface: #1a1b26;
   --color-bg-soft: #13141c;
+  --color-bg-subtle: #1f2335;
   --color-bg-elevated: #24283b;
   --color-bg-overlay: rgba(19, 20, 28, 0.85);
 
@@ -334,6 +347,7 @@
 
 /* Nord Theme (Arctic Ice) */
 [data-theme="nord"] {
+  color-scheme: dark;
   --color-primary-deep: #88c0d0;
   --color-primary-forest: #81a1c1;
   --color-primary-sage: #8fbcbb;
@@ -343,6 +357,7 @@
   --color-bg-cream: #242933;
   --color-bg-surface: #2e3440;
   --color-bg-soft: #1d212a;
+  --color-bg-subtle: #2b303c;
   --color-bg-elevated: #3b4252;
   --color-bg-overlay: rgba(29, 33, 42, 0.85);
 
@@ -390,6 +405,7 @@
 
 /* Matrix Neon Theme */
 [data-theme="matrix-neon"] {
+  color-scheme: dark;
   --color-primary-deep: #00ff66;
   --color-primary-forest: #39ff14;
   --color-primary-sage: #00dd55;
@@ -399,6 +415,7 @@
   --color-bg-cream: #030a05;
   --color-bg-surface: #061108;
   --color-bg-soft: #020703;
+  --color-bg-subtle: #08240d;
   --color-bg-elevated: #0a1f0f;
   --color-bg-overlay: rgba(2, 7, 3, 0.9);
 

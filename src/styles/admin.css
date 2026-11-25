@@ -1,0 +1,623 @@
+/* ==========================================================================
+   CodeTyper Executive Administration & Mission Control Styling
+   Theme: Calming Forest Slate & Royal Obsidian Glassmorphism
+   ========================================================================== */
+
+.admin-mission-control {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  width: 100%;
+  animation: adminFadeIn 0.3s ease-out;
+}
+
+@keyframes adminFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 1. HERO COMMAND DECK BANNER */
+.admin-hero-deck {
+  position: relative;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(35, 107, 77, 0.08) 0%, var(--color-bg-surface) 100%);
+  border: 1px solid var(--color-border);
+  padding: 1.75rem 2rem;
+  box-shadow: 0 4px 20px rgba(35, 107, 77, 0.08);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .admin-hero-deck,
+[data-theme="catppuccin"] .admin-hero-deck,
+[data-theme="dracula"] .admin-hero-deck,
+[data-theme="tokyo-night"] .admin-hero-deck,
+[data-theme="nord"] .admin-hero-deck,
+[data-theme="matrix-neon"] .admin-hero-deck {
+  background: linear-gradient(135deg, rgba(35, 107, 77, 0.15) 0%, rgba(18, 24, 21, 0.95) 100%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.admin-hero-deck::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(47, 107, 82, 0.18) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.admin-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-badge-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary-forest) 0%, #17382A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FAF8F1;
+  box-shadow: 0 4px 16px rgba(47, 107, 82, 0.35);
+  flex-shrink: 0;
+}
+
+.admin-title-wrap h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-role-pill {
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  background: rgba(47, 107, 82, 0.2);
+  color: var(--color-primary-forest);
+  border: 1px solid rgba(47, 107, 82, 0.35);
+}
+
+.admin-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Live Telemetry Pill */
+.admin-telemetry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .admin-telemetry-pill,
+[data-theme="catppuccin"] .admin-telemetry-pill,
+[data-theme="dracula"] .admin-telemetry-pill,
+[data-theme="tokyo-night"] .admin-telemetry-pill,
+[data-theme="nord"] .admin-telemetry-pill,
+[data-theme="matrix-neon"] .admin-telemetry-pill {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: adminPulse 2s infinite ease-in-out;
+}
+
+@keyframes adminPulse {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+    box-shadow: 0 0 12px #10B981;
+  }
+}
+
+/* Quick Actions Launchpad */
+.admin-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* 2. INTERACTIVE 3D KPI CARDS (THE LUXURY COMMAND GRID) */
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.admin-kpi-card {
+  position: relative;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease;
+  overflow: hidden;
+}
+
+.admin-kpi-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.admin-kpi-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+  border-color: rgba(47, 107, 82, 0.45);
+}
+
+.admin-kpi-card.active-kpi {
+  border-color: var(--color-primary-forest);
+  box-shadow: 0 6px 20px rgba(47, 107, 82, 0.2);
+}
+
+.admin-kpi-card.active-kpi::after {
+  background: var(--color-primary-forest);
+}
+
+.admin-kpi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-kpi-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+
+.admin-kpi-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border-subtle);
+  transition: transform 0.2s ease;
+}
+
+.admin-kpi-card:hover .admin-kpi-icon-box {
+  transform: scale(1.1) rotate(2deg);
+}
+
+.admin-kpi-value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.admin-kpi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 0.5rem;
+}
+
+.admin-kpi-arrow {
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.2s ease;
+  color: var(--color-primary-forest);
+}
+
+.admin-kpi-card:hover .admin-kpi-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 3. EXECUTIVE SEGMENTED NAVIGATION */
+.admin-navigation-shelf {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(250, 249, 245, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.5rem 0;
+  margin: -0.5rem 0 0.5rem;
+}
+
+[data-theme="dark"] .admin-navigation-shelf,
+[data-theme="catppuccin"] .admin-navigation-shelf,
+[data-theme="dracula"] .admin-navigation-shelf,
+[data-theme="tokyo-night"] .admin-navigation-shelf,
+[data-theme="nord"] .admin-navigation-shelf,
+[data-theme="matrix-neon"] .admin-navigation-shelf {
+  background: rgba(14, 20, 16, 0.88);
+}
+
+.admin-nav-pills {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.admin-nav-pills::-webkit-scrollbar {
+  height: 4px;
+}
+
+.admin-nav-pills::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+.admin-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.admin-nav-tab:hover {
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+}
+
+[data-theme="dark"] .admin-nav-tab:hover,
+[data-theme="catppuccin"] .admin-nav-tab:hover,
+[data-theme="dracula"] .admin-nav-tab:hover,
+[data-theme="tokyo-night"] .admin-nav-tab:hover,
+[data-theme="nord"] .admin-nav-tab:hover,
+[data-theme="matrix-neon"] .admin-nav-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-nav-tab.active {
+  background: var(--color-primary-forest);
+  color: #FAF8F1;
+  box-shadow: 0 4px 14px rgba(47, 107, 82, 0.35);
+}
+
+.admin-nav-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: inherit;
+}
+
+.admin-nav-badge-alert {
+  background: #D97706;
+  color: #FFFFFF;
+  animation: adminBadgePulse 2s infinite;
+}
+
+@keyframes adminBadgePulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* 4. OVERVIEW DASHBOARD SPECIFIC COMPONENTS */
+.admin-overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-overview-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .admin-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-health-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-subtle);
+  font-size: 0.85rem;
+}
+
+.admin-lang-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-lang-bar-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.825rem;
+  font-weight: 600;
+}
+
+.admin-lang-progress-track {
+  height: 6px;
+  background: var(--color-bg-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.admin-lang-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   WEBHOOK INTEGRATIONS (DISCORD & SLACK)
+   ========================================================================== */
+.admin-webhook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-webhook-channel-card {
+  position: relative;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .admin-webhook-channel-card,
+[data-theme="catppuccin"] .admin-webhook-channel-card,
+[data-theme="dracula"] .admin-webhook-channel-card,
+[data-theme="tokyo-night"] .admin-webhook-channel-card,
+[data-theme="nord"] .admin-webhook-channel-card,
+[data-theme="matrix-neon"] .admin-webhook-channel-card {
+  background: rgba(18, 24, 21, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+.admin-webhook-channel-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary-sage);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] .admin-webhook-channel-card:hover,
+[data-theme="catppuccin"] .admin-webhook-channel-card:hover,
+[data-theme="dracula"] .admin-webhook-channel-card:hover,
+[data-theme="tokyo-night"] .admin-webhook-channel-card:hover,
+[data-theme="nord"] .admin-webhook-channel-card:hover,
+[data-theme="matrix-neon"] .admin-webhook-channel-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.admin-webhook-channel-card.discord {
+  border-top: 3px solid #5865f2;
+}
+
+.admin-webhook-channel-card.slack {
+  border-top: 3px solid #e01e5a;
+}
+
+.admin-webhook-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-webhook-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-webhook-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.admin-webhook-icon-wrap.discord {
+  background: rgba(88, 101, 242, 0.15);
+  color: #5865f2;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+}
+
+.admin-webhook-icon-wrap.slack {
+  background: rgba(224, 30, 90, 0.15);
+  color: #e01e5a;
+  border: 1px solid rgba(224, 30, 90, 0.3);
+}
+
+.admin-webhook-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+}
+
+.admin-webhook-status-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.admin-webhook-status-badge.inactive {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+.admin-webhook-event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.admin-webhook-event-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-webhook-event-toggle:hover {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary-sage);
+}
+
+[data-theme="dark"] .admin-webhook-event-toggle,
+[data-theme="catppuccin"] .admin-webhook-event-toggle,
+[data-theme="dracula"] .admin-webhook-event-toggle,
+[data-theme="tokyo-night"] .admin-webhook-event-toggle,
+[data-theme="nord"] .admin-webhook-event-toggle,
+[data-theme="matrix-neon"] .admin-webhook-event-toggle {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .admin-webhook-event-toggle:hover,
+[data-theme="catppuccin"] .admin-webhook-event-toggle:hover,
+[data-theme="dracula"] .admin-webhook-event-toggle:hover,
+[data-theme="tokyo-night"] .admin-webhook-event-toggle:hover,
+[data-theme="nord"] .admin-webhook-event-toggle:hover,
+[data-theme="matrix-neon"] .admin-webhook-event-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.admin-webhook-event-toggle.selected {
+  background: rgba(35, 107, 77, 0.1);
+  border-color: rgba(35, 107, 77, 0.35);
+}
+
+.admin-webhook-logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-webhook-logs-table th,
+.admin-webhook-logs-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.admin-webhook-logs-table th {
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .admin-webhook-logs-table th,
+[data-theme="catppuccin"] .admin-webhook-logs-table th,
+[data-theme="dracula"] .admin-webhook-logs-table th,
+[data-theme="tokyo-night"] .admin-webhook-logs-table th,
+[data-theme="nord"] .admin-webhook-logs-table th,
+[data-theme="matrix-neon"] .admin-webhook-logs-table th {
+  background: rgba(0, 0, 0, 0.25);
+}

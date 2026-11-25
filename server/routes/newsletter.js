@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { sendNewsletterWelcomeEmail } from '../mailer.js';
+import { dispatchWebhookEvent } from '../webhookDispatcher.js';
 
 const router = Router();
 
@@ -42,6 +43,14 @@ router.post('/subscribe', async (req, res) => {
       origin: req.headers.origin
     }).catch((err) => {
       console.warn('[Newsletter] Failed to dispatch welcome email:', err.message);
+    });
+
+    // Trigger asynchronous webhook notifications to Discord/Slack
+    dispatchWebhookEvent('NEW_SUBSCRIBER', {
+      email: cleanEmail,
+      source
+    }).catch((err) => {
+      console.warn('[Webhook] Failed to dispatch subscriber event:', err.message);
     });
 
     return res.status(201).json({

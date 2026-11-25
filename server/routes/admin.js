@@ -7,6 +7,7 @@ import { db, logAdminAudit } from '../db.js';
 import { authenticate, requireAdmin } from '../authMiddleware.js';
 import { announcementBroadcaster } from '../announcements.js';
 import { sendFeedbackResolutionEmail, sendBroadcastUpdateEmail } from '../mailer.js';
+import { getWebhookConfig, testWebhookConnection, getRecentWebhookLogs, dispatchWebhookEvent } from '../webhookDispatcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -340,6 +341,15 @@ router.put('/users/:id/ban', (req, res) => {
 
   db.prepare('UPDATE users SET is_banned = ?, ban_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(banVal, banReason, id);
   logAdminAudit(req.user, banVal ? 'BAN_USER' : 'UNBAN_USER', 'users', id, { username: target.username, reason: banReason });
+
+  if (banVal) {
+    dispatchWebhookEvent('SECURITY_ALERT', {
+      action: 'USER_SUSPENDED',
+      targetId: `@${target.username} (#${id})`,
+      reason: banReason,
+      adminUsername: req.user.username
+    }).catch(() => {});
+  }
 
   return res.json({
     message: banVal ? `User @${target.username} has been suspended.` : `User @${target.username} suspension lifted.`,
@@ -911,6 +921,94 @@ router.get('/email-logs', (req, res) => {
     return res.json({ logs, stats });
   } catch (err) {
     return res.status(500).json({ error: 'Could not fetch email logs.' });
+  }
+});
+
+// ==========================================
+// 8. Discord & Slack Webhook Integrations
+// ==========================================
+router.get('/webhooks/config', (req, res) => {
+  try {
+    const config = getWebhookConfig();
+    return res.json(config);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to load webhook configuration.' });
+  }
+});
+
+router.put('/webhooks/config', (req, res) => {
+  try {
+    const { discordUrl, slackUrl, events } = req.body;
+
+    const updateSetting = (key, val) => {
+      if (val !== undefined) {
+        db.prepare(`
+          INSERT INTO system_settings (key, value, updated_at)
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+        `).run(key, String(val));
+      }
+    };
+
+    if (discordUrl !== undefined) updateSetting('webhook_discord_url', (discordUrl || '').trim());
+    if (slackUrl !== undefined) updateSetting('webhook_slack_url', (slackUrl || '').trim());
+    if (events) {
+      if (events.certIssued !== undefined) updateSetting('webhook_event_cert', events.certIssued ? '1' : '0');
+      if (events.feedbackSubmitted !== undefined) updateSetting('webhook_event_feedback', events.feedbackSubmitted ? '1' : '0');
+      if (events.subscriberJoined !== undefined) updateSetting('webhook_event_subscriber', events.subscriberJoined ? '1' : '0');
+      if (events.securityAlert !== undefined) updateSetting('webhook_event_security', events.securityAlert ? '1' : '0');
+    }
+
+    logAdminAudit(req.user, 'UPDATE_WEBHOOK_CONFIG', 'system_settings', null, {
+      discordConfigured: !!discordUrl,
+      slackConfigured: !!slackUrl
+    });
+
+    return res.json({
+      success: true,
+      message: 'Discord & Slack webhook configuration updated successfully.',
+      config: getWebhookConfig()
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update webhook configuration.' });
+  }
+});
+
+router.post('/webhooks/test', async (req, res) => {
+  try {
+    const { service, targetUrl } = req.body;
+    if (!service || !['discord', 'slack'].includes(service)) {
+      return res.status(400).json({ error: "Service must be 'discord' or 'slack'." });
+    }
+
+    const currentConfig = getWebhookConfig();
+    const url = (targetUrl || (service === 'discord' ? currentConfig.discordUrl : currentConfig.slackUrl) || '').trim();
+
+    if (!url) {
+      return res.status(400).json({ error: `Please provide a valid ${service === 'discord' ? 'Discord' : 'Slack'} webhook URL to test.` });
+    }
+
+    const result = await testWebhookConnection(service, url);
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+
+    return res.json({
+      success: true,
+      message: result.message,
+      statusCode: result.statusCode
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Webhook test failed.' });
+  }
+});
+
+router.get('/webhooks/logs', (req, res) => {
+  try {
+    const logs = getRecentWebhookLogs(50);
+    return res.json({ logs });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to retrieve webhook logs.' });
   }
 });
 

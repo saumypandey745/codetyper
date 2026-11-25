@@ -93,10 +93,10 @@ export function PublicHeader({ onNavigate, currentView = 'landing' }) {
           <button
             className="theme-toggle-btn"
             onClick={toggleTheme}
-            title="Toggle Theme"
+            title={settings?.theme === 'peaceful' || settings?.theme === 'light' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
             aria-label="Toggle Theme"
           >
-            {settings?.theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            {settings?.theme === 'peaceful' || settings?.theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
           </button>
 
           {/* User Auth Buttons */}

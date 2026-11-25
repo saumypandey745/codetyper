@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import { db } from '../db.js';
 import { authenticate, optionalAuthenticate } from '../authMiddleware.js';
+import { dispatchWebhookEvent } from '../webhookDispatcher.js';
 
 const router = Router();
 
@@ -231,6 +232,22 @@ router.post('/issue', optionalAuthenticate, (req, res) => {
         theme || 'royal-obsidian'
       );
     }
+
+    // Trigger asynchronous webhook notifications to Discord/Slack
+    dispatchWebhookEvent('CERT_ISSUED', {
+      certId: sanitizedId,
+      recipientName: recipientName.trim(),
+      discipline: discipline || 'Standardized Touch-Typing Protocol',
+      netWpm: Number(netWpm),
+      accuracy: Number(accuracy),
+      durationSeconds: Math.round(Number(durationSeconds || 60)),
+      tierTitle: tierTitle || 'Certified Typist',
+      tierBadge: tierBadge || 'Gold',
+      theme: theme || 'royal-obsidian',
+      origin: req.headers.origin || 'http://localhost:5000'
+    }).catch((err) => {
+      console.warn('[Webhook] Failed to dispatch certificate event:', err.message);
+    });
 
     return res.json({
       success: true,

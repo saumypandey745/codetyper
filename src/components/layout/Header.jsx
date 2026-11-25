@@ -126,7 +126,7 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch, currentView 
             title={`Current theme: ${settings.theme}. Click to switch theme.`}
             aria-label="Change Theme"
           >
-            {settings.theme === 'peaceful' ? <Sun size={18} /> : <Moon size={18} />}
+            {settings.theme === 'peaceful' || settings.theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           {showThemeMenu && (
             <div

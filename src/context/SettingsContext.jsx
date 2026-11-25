@@ -76,7 +76,8 @@ export function SettingsProvider({ children }) {
   };
 
   const toggleTheme = () => {
-    const nextTheme = settings.theme === 'dark' ? 'peaceful' : 'dark';
+    const isLight = settings.theme === 'peaceful' || settings.theme === 'light';
+    const nextTheme = isLight ? 'dark' : 'peaceful';
     updateSetting('theme', nextTheme);
   };
 

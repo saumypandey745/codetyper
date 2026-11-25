@@ -194,7 +194,7 @@ export function AnnouncementBanner() {
       aria-label="Platform Announcement"
       className={`announcement-banner-root ${isFreshUpdate ? 'announcement-flash' : ''}`}
       style={{
-        backgroundColor: style.bg,
+        background: style.bg,
         borderBottom: `1px solid ${style.border}`,
         color: style.color,
         padding: '0.6rem 1.25rem',

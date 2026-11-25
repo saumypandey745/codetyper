@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { optionalAuthenticate } from '../authMiddleware.js';
+import { dispatchWebhookEvent } from '../webhookDispatcher.js';
 
 const router = Router();
 
@@ -50,6 +51,18 @@ router.post('/', optionalAuthenticate, (req, res) => {
     );
 
     const feedbackId = Number(result.lastInsertRowid);
+
+    // Trigger asynchronous webhook notifications to Discord/Slack
+    dispatchWebhookEvent('FEEDBACK_SUBMITTED', {
+      feedbackId,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      category: sanitizedCategory,
+      subject: subject.trim(),
+      message: message.trim()
+    }).catch((err) => {
+      console.warn('[Webhook] Failed to dispatch feedback event:', err.message);
+    });
 
     return res.status(201).json({
       success: true,
