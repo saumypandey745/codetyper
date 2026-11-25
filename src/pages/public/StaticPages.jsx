@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Shield, Heart, Terminal, Sparkles, Loader2 } from 'lucide-react';
+import { Send, CheckCircle2, Shield, Heart, Terminal, Sparkles, Loader2, Star } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../utils/api.js';
@@ -80,6 +80,9 @@ export function ContactPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState('feedback');
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [displayRole, setDisplayRole] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -91,6 +94,14 @@ export function ContactPage() {
       if (user.email && !email) setEmail(user.email);
     }
   }, [user]);
+
+  const ratingDescriptions = {
+    1: '1 Star — Needs Critical Work',
+    2: '2 Stars — Fair / Room for Improvement',
+    3: '3 Stars — Good Typing Platform',
+    4: '4 Stars — Very Good Experience & Audio',
+    5: '5 Stars — Exceptional Flow & Practice!'
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -105,6 +116,8 @@ export function ContactPage() {
         name: name.trim(),
         email: email.trim(),
         category,
+        rating,
+        display_role: displayRole.trim(),
         subject: subject.trim() || `${category.toUpperCase()}: Note from ${name.trim()}`,
         message: message.trim()
       });
@@ -123,8 +136,8 @@ export function ContactPage() {
       <div className="card" style={{ padding: '2.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <span className="badge badge-sage" style={{ marginBottom: '0.5rem' }}>We Value Your Thoughts</span>
-          <h2>Get in Touch &amp; Report</h2>
-          <p style={{ fontSize: '0.95rem' }}>Have an issue, typo report, language suggestion, or general feedback?</p>
+          <h2>Get in Touch &amp; Review</h2>
+          <p style={{ fontSize: '0.95rem' }}>Have feedback, a testimonial, typo report, or feature suggestion?</p>
         </div>
 
         {submitted ? (
@@ -132,8 +145,8 @@ export function ContactPage() {
             <CheckCircle2 size={46} color="var(--color-primary-forest)" style={{ margin: '0 auto 1rem' }} />
             <h3 style={{ marginBottom: '0.5rem' }}>Message Dispatched to Maintainers</h3>
             <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-              Thank you for reaching out, <strong>{name}</strong>. Your message is now in the administrative review inbox.
-              Our maintainers review every report and will follow up promptly via email if needed.
+              Thank you for reaching out, <strong>{name}</strong>! Your note and rating ({rating} ★) have been logged.
+              Inspiring community reviews may be verified by our administrative team and featured on our global wall of love.
             </p>
             <button
               className="btn btn-outline"
@@ -141,6 +154,8 @@ export function ContactPage() {
                 setSubmitted(false);
                 setMessage('');
                 setSubject('');
+                setDisplayRole('');
+                setRating(5);
               }}
             >
               Send Another Note
@@ -184,12 +199,84 @@ export function ContactPage() {
               </select>
             </div>
 
+            {/* Interactive Experience Rating */}
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Your Experience Rating *</span>
+                <span style={{ fontSize: '0.8rem', color: '#eab308', fontWeight: 600 }}>
+                  {ratingDescriptions[hoverRating || rating]}
+                </span>
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.65rem 0.85rem',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-border)'
+                }}
+              >
+                {[1, 2, 3, 4, 5].map((starVal) => {
+                  const active = starVal <= (hoverRating || rating);
+                  return (
+                    <button
+                      key={starVal}
+                      type="button"
+                      onClick={() => setRating(starVal)}
+                      onMouseEnter={() => setHoverRating(starVal)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0.2rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'transform 0.15s ease'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.85)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1.15)'}
+                      title={`Rate ${starVal} Star${starVal > 1 ? 's' : ''}`}
+                    >
+                      <Star
+                        size={24}
+                        fill={active ? '#eab308' : 'none'}
+                        color={active ? '#eab308' : 'var(--color-border)'}
+                      />
+                    </button>
+                  );
+                })}
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  {rating}.0 / 5.0
+                </span>
+              </div>
+            </div>
+
+            {/* Optional Professional Title / Headline */}
+            <div className="form-group">
+              <label className="form-label">
+                Your Role or Discipline (Optional)
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Senior Frontend Engineer @ FinTech, CS Student, or Systems Dev"
+                value={displayRole}
+                onChange={(e) => setDisplayRole(e.target.value)}
+              />
+              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                If your feedback is selected for our community wall of love, this title will appear alongside your name.
+              </span>
+            </div>
+
             <div className="form-group">
               <label className="form-label">Subject Line *</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. Typo in JavaScript snippet #42 or Feature idea"
+                placeholder="e.g. How CodeTyper improved my typing speed or Feature idea"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 required
@@ -197,11 +284,11 @@ export function ContactPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Detailed Message *</label>
+              <label className="form-label">Detailed Message or Review *</label>
               <textarea
                 className="form-textarea"
                 rows={5}
-                placeholder="Describe your suggestion, typo location, or experience in detail..."
+                placeholder="Share your experience, typing speed milestones, suggestions, or bug details..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 required
@@ -212,12 +299,12 @@ export function ContactPage() {
               {submitting ? (
                 <>
                   <Loader2 size={16} className="spin" />
-                  <span>Submitting Note...</span>
+                  <span>Submitting Review...</span>
                 </>
               ) : (
                 <>
                   <Send size={16} />
-                  <span>Send Message to Admin</span>
+                  <span>Submit Note &amp; Rating</span>
                 </>
               )}
             </button>

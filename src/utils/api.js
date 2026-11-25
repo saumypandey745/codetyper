@@ -195,6 +195,20 @@ class ApiClient {
       const query = new URLSearchParams(params).toString();
       return this.request(`/admin/feedback?${query}`);
     },
+    toggleFeedbackFeatured: (id) =>
+      this.request(`/admin/feedback/${id}/toggle-featured`, {
+        method: 'PUT'
+      }),
+    updateFeedback: (id, payload) =>
+      this.request(`/admin/feedback/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+    createFeedback: (payload) =>
+      this.request('/admin/feedback', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
     updateFeedbackStatus: (id, payload) =>
       this.request(`/admin/feedback/${id}/status`, {
         method: 'PUT',
@@ -234,7 +248,8 @@ class ApiClient {
 
   // Feedback & Developer Reports
   feedback = {
-    submit: (payload) => this.request('/feedback', { method: 'POST', body: JSON.stringify(payload) })
+    submit: (payload) => this.request('/feedback', { method: 'POST', body: JSON.stringify(payload) }),
+    getFeatured: () => this.request('/feedback/featured')
   };
 
   // Newsletter & Developer Digest

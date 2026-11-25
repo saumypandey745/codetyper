@@ -52,7 +52,8 @@ import {
   Terminal,
   Globe,
   Sliders,
-  ChevronRight
+  ChevronRight,
+  Star
 } from 'lucide-react';
 import { api } from '../../utils/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -119,13 +120,40 @@ export function AdminPage({ onNavigate }) {
 
   // Feedback & Reports Tab State
   const [feedbackList, setFeedbackList] = useState([]);
-  const [feedbackCounts, setFeedbackCounts] = useState({ total: 0, pending: 0, inReview: 0, resolved: 0, archived: 0 });
-  const [feedbackFilter, setFeedbackFilter] = useState('all'); // 'all' | 'pending' | 'in_review' | 'resolved' | 'archived'
+  const [feedbackCounts, setFeedbackCounts] = useState({ total: 0, pending: 0, inReview: 0, resolved: 0, archived: 0, featured: 0 });
+  const [feedbackFilter, setFeedbackFilter] = useState('all'); // 'all' | 'pending' | 'in_review' | 'resolved' | 'archived' | 'featured'
   const [feedbackCategory, setFeedbackCategory] = useState('all');
   const [feedbackSearch, setFeedbackSearch] = useState('');
   const [expandedFeedbackId, setExpandedFeedbackId] = useState(null);
   const [editingNotesId, setEditingNotesId] = useState(null);
   const [adminNotesText, setAdminNotesText] = useState('');
+
+  // Feedback detail editing modal state
+  const [editingFeedbackItem, setEditingFeedbackItem] = useState(null);
+  const [editFeedbackForm, setEditFeedbackForm] = useState({
+    name: '',
+    email: '',
+    display_role: '',
+    rating: 5,
+    message: '',
+    subject: '',
+    is_featured: false,
+    status: 'resolved',
+    admin_notes: ''
+  });
+
+  // Manual new testimonial creation modal state
+  const [showAddTestimonialModal, setShowAddTestimonialModal] = useState(false);
+  const [newTestimonialForm, setNewTestimonialForm] = useState({
+    name: '',
+    email: '',
+    display_role: '',
+    rating: 5,
+    message: '',
+    subject: '',
+    is_featured: true,
+    category: 'feedback'
+  });
 
   // Newsletter & Subscribers Tab State
   const [subscribersList, setSubscribersList] = useState([]);
@@ -262,7 +290,13 @@ export function AdminPage({ onNavigate }) {
 
   const loadFeedback = async (status = feedbackFilter, category = feedbackCategory, search = feedbackSearch) => {
     try {
-      const res = await api.admin.getFeedback({ status, category, search: search.trim(), limit: 100 });
+      const params = { category, search: search.trim(), limit: 100 };
+      if (status === 'featured') {
+        params.featured = 1;
+      } else {
+        params.status = status;
+      }
+      const res = await api.admin.getFeedback(params);
       setFeedbackList(res.feedback || []);
       if (res.counts) setFeedbackCounts(res.counts);
     } catch (err) {
@@ -597,6 +631,89 @@ export function AdminPage({ onNavigate }) {
       loadAdminData();
     } catch (err) {
       toast.error(err.message || 'Failed to delete feedback note.');
+    }
+  };
+
+  const handleToggleFeedbackFeatured = async (item) => {
+    try {
+      const res = await api.admin.toggleFeedbackFeatured(item.id);
+      setFeedbackList((prev) =>
+        prev.map((f) => (f.id === item.id ? { ...f, is_featured: res.is_featured } : f))
+      );
+      toast.success(res.message);
+      loadFeedback();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to toggle featured status.');
+    }
+  };
+
+  const handleQuickRateFeedback = async (item, newRating) => {
+    try {
+      await api.admin.updateFeedback(item.id, { rating: newRating });
+      setFeedbackList((prev) =>
+        prev.map((f) => (f.id === item.id ? { ...f, rating: newRating } : f))
+      );
+      toast.success(`Rating set to ${newRating} ★ for ${item.name}.`);
+      loadFeedback();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update rating.');
+    }
+  };
+
+  const openEditFeedbackModal = (item) => {
+    setEditingFeedbackItem(item);
+    setEditFeedbackForm({
+      name: item.name || '',
+      email: item.email || '',
+      display_role: item.display_role || '',
+      rating: item.rating || 5,
+      message: item.message || '',
+      subject: item.subject || '',
+      is_featured: !!item.is_featured,
+      status: item.status || 'resolved',
+      admin_notes: item.admin_notes || ''
+    });
+  };
+
+  const handleSaveEditedFeedback = async (e) => {
+    e.preventDefault();
+    if (!editingFeedbackItem) return;
+    try {
+      const res = await api.admin.updateFeedback(editingFeedbackItem.id, editFeedbackForm);
+      toast.success(res.message || 'Feedback details updated.');
+      setEditingFeedbackItem(null);
+      loadFeedback();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update feedback details.');
+    }
+  };
+
+  const handleCreateTestimonial = async (e) => {
+    e.preventDefault();
+    if (!newTestimonialForm.name.trim() || !newTestimonialForm.message.trim()) {
+      toast.error('Please provide an author name and testimonial quote.');
+      return;
+    }
+    try {
+      const res = await api.admin.createFeedback(newTestimonialForm);
+      toast.success(res.message || 'Testimonial created and featured on website!');
+      setShowAddTestimonialModal(false);
+      setNewTestimonialForm({
+        name: '',
+        email: '',
+        display_role: '',
+        rating: 5,
+        message: '',
+        subject: '',
+        is_featured: true,
+        category: 'feedback'
+      });
+      loadFeedback();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to create testimonial.');
     }
   };
 
@@ -2618,7 +2735,7 @@ export function AdminPage({ onNavigate }) {
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
               {/* Status Filter Tabs */}
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 <button
                   className={`btn btn-sm ${feedbackFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
                   onClick={() => {
@@ -2637,6 +2754,20 @@ export function AdminPage({ onNavigate }) {
                   }}
                 >
                   Pending Review ({feedbackCounts.pending})
+                </button>
+                <button
+                  className={`btn btn-sm ${feedbackFilter === 'featured' ? 'btn-primary' : 'btn-ghost'}`}
+                  style={feedbackFilter === 'featured'
+                    ? { backgroundColor: '#eab308', color: '#000', borderColor: '#eab308' }
+                    : { borderColor: 'rgba(234, 179, 8, 0.4)', color: '#ca8a04' }}
+                  onClick={() => {
+                    setFeedbackFilter('featured');
+                    loadFeedback('featured', feedbackCategory, feedbackSearch);
+                  }}
+                  title="Filter to testimonials currently visible on the public website"
+                >
+                  <Star size={13} fill={feedbackFilter === 'featured' ? '#000' : '#ca8a04'} />
+                  <span>Featured on Website ({feedbackCounts.featured || 0})</span>
                 </button>
                 <button
                   className={`btn btn-sm ${feedbackFilter === 'in_review' ? 'btn-primary' : 'btn-ghost'}`}
@@ -2667,7 +2798,7 @@ export function AdminPage({ onNavigate }) {
                 </button>
               </div>
 
-              {/* Category Filter */}
+              {/* Category Filter & Actions */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Filter size={15} color="var(--color-text-muted)" />
@@ -2691,13 +2822,13 @@ export function AdminPage({ onNavigate }) {
                 </div>
 
                 {/* Search */}
-                <div style={{ position: 'relative', width: '220px' }}>
+                <div style={{ position: 'relative', width: '200px' }}>
                   <Search size={14} color="var(--color-text-muted)" style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
                     type="text"
                     className="input"
                     style={{ paddingLeft: '2rem', fontSize: '0.85rem', padding: '0.35rem 0.5rem 0.35rem 2rem', height: 'auto' }}
-                    placeholder="Search messages..."
+                    placeholder="Search feedback..."
                     value={feedbackSearch}
                     onChange={(e) => {
                       setFeedbackSearch(e.target.value);
@@ -2705,6 +2836,17 @@ export function AdminPage({ onNavigate }) {
                     }}
                   />
                 </div>
+
+                {/* Add Testimonial Button */}
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
+                  onClick={() => setShowAddTestimonialModal(true)}
+                  title="Manually create a new review or testimonial to feature"
+                >
+                  <Plus size={15} />
+                  <span>Add Testimonial</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2723,6 +2865,8 @@ export function AdminPage({ onNavigate }) {
               {feedbackList.map((item) => {
                 const isResolved = item.status === 'resolved';
                 const isPending = item.status === 'pending';
+                const isFeatured = Boolean(item.is_featured);
+                const ratingCount = Math.max(1, Math.min(5, Number(item.rating) || 5));
 
                 // Category styling
                 let catBadge = { label: 'Feedback', color: 'var(--color-primary-forest)', bg: 'rgba(35, 107, 77, 0.12)' };
@@ -2737,10 +2881,26 @@ export function AdminPage({ onNavigate }) {
                 }
 
                 return (
-                  <div key={item.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: isPending ? '3px solid #D97706' : isResolved ? '3px solid var(--color-primary-forest)' : '1px solid var(--color-border)' }}>
+                  <div
+                    key={item.id}
+                    className="card"
+                    style={{
+                      padding: '1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem',
+                      borderLeft: isFeatured
+                        ? '3px solid #eab308'
+                        : isPending
+                        ? '3px solid #D97706'
+                        : isResolved
+                        ? '3px solid var(--color-primary-forest)'
+                        : '1px solid var(--color-border)'
+                    }}
+                  >
                     {/* Header Row */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                         <span style={{
                           backgroundColor: catBadge.bg,
                           color: catBadge.color,
@@ -2751,6 +2911,73 @@ export function AdminPage({ onNavigate }) {
                         }}>
                           {catBadge.label}
                         </span>
+
+                        {/* Featured on Website Badge */}
+                        {isFeatured ? (
+                          <span style={{
+                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                            color: '#ca8a04',
+                            border: '1px solid rgba(234, 179, 8, 0.4)',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <Star size={12} fill="#ca8a04" /> Featured on Website
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--color-text-muted)',
+                            padding: '0.2rem 0.5rem',
+                            backgroundColor: 'var(--color-bg-subtle)',
+                            borderRadius: 'var(--radius-sm)'
+                          }}>
+                            Not on Website
+                          </span>
+                        )}
+
+                        {/* Interactive Quick Star Rating */}
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            backgroundColor: 'var(--color-bg-subtle)',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: 'var(--radius-sm)'
+                          }}
+                          title="Click any star to adjust this rating"
+                        >
+                          {[1, 2, 3, 4, 5].map((starVal) => (
+                            <button
+                              key={starVal}
+                              type="button"
+                              onClick={() => handleQuickRateFeedback(item, starVal)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: '0 1px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center'
+                              }}
+                              title={`Set rating to ${starVal} Star${starVal > 1 ? 's' : ''}`}
+                            >
+                              <Star
+                                size={14}
+                                fill={starVal <= ratingCount ? '#eab308' : 'none'}
+                                color={starVal <= ratingCount ? '#eab308' : 'var(--color-border)'}
+                              />
+                            </button>
+                          ))}
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#eab308', marginLeft: '0.25rem' }}>
+                            {ratingCount}.0
+                          </span>
+                        </div>
 
                         <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
                           #{item.id} • {new Date(item.created_at).toLocaleString()}
@@ -2780,19 +3007,24 @@ export function AdminPage({ onNavigate }) {
                       </div>
                     </div>
 
-                    {/* Sender Identity */}
+                    {/* Sender Identity & Role */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div>
-                        <span style={{ fontWeight: 700, fontSize: '1rem', marginRight: '0.5rem' }}>{item.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '1rem' }}>{item.name}</span>
+                        {item.display_role && (
+                          <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                            • {item.display_role}
+                          </span>
+                        )}
                         <a
                           href={`mailto:${item.email}?subject=Re: [CodeTyper] ${encodeURIComponent(item.subject)}`}
-                          style={{ fontSize: '0.875rem', color: 'var(--color-primary-forest)', textDecoration: 'none' }}
+                          style={{ fontSize: '0.85rem', color: 'var(--color-primary-forest)', textDecoration: 'none', marginLeft: '0.25rem' }}
                           title="Click to write email"
                         >
                           &lt;{item.email}&gt;
                         </a>
                         {item.user_username && (
-                          <span className="badge badge-sage" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                          <span className="badge badge-sage" style={{ fontSize: '0.7rem' }}>
                             @{item.user_username}
                           </span>
                         )}
@@ -2809,9 +3041,10 @@ export function AdminPage({ onNavigate }) {
                         fontSize: '0.9rem',
                         lineHeight: 1.6,
                         whiteSpace: 'pre-wrap',
-                        color: 'var(--color-text-primary)'
+                        color: 'var(--color-text-primary)',
+                        fontStyle: isFeatured ? 'italic' : 'normal'
                       }}>
-                        {item.message}
+                        &quot;{item.message}&quot;
                       </div>
                     </div>
 
@@ -2842,7 +3075,7 @@ export function AdminPage({ onNavigate }) {
                             type="text"
                             className="input"
                             style={{ fontSize: '0.85rem', flex: 1 }}
-                            placeholder="Add internal resolution note (e.g. Fixed typo in commit 4b2)"
+                            placeholder="Add internal resolution note (e.g. Verified and approved for landing page)"
                             value={adminNotesText}
                             onChange={(e) => setAdminNotesText(e.target.value)}
                           />
@@ -2867,14 +3100,40 @@ export function AdminPage({ onNavigate }) {
 
                     {/* Footer Actions */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.75rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {/* 1-Click Feature on Website Toggle */}
+                        <button
+                          className={`btn btn-sm ${isFeatured ? 'btn-outline' : 'btn-primary'}`}
+                          style={isFeatured
+                            ? { borderColor: '#ca8a04', color: '#ca8a04', fontWeight: 600 }
+                            : { backgroundColor: '#eab308', color: '#000', borderColor: '#eab308', fontWeight: 600 }}
+                          onClick={() => handleToggleFeedbackFeatured(item)}
+                          title={isFeatured
+                            ? 'Remove this review from the public website landing page'
+                            : 'Promote this comment as a verified public testimonial on the website landing page'}
+                        >
+                          <Star size={13} fill={isFeatured ? 'none' : '#000'} />
+                          <span>{isFeatured ? 'Remove from Website' : '⭐ Show on Website'}</span>
+                        </button>
+
+                        {/* Edit Feedback Details Modal Button */}
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                          onClick={() => openEditFeedbackModal(item)}
+                          title="Edit author name, role headline, rating, or review text"
+                        >
+                          <Edit size={13} />
+                          <span>Edit Details &amp; Rating</span>
+                        </button>
+
                         <a
                           href={`mailto:${item.email}?subject=Re: [CodeTyper] ${encodeURIComponent(item.subject)}`}
                           className="btn btn-outline btn-sm"
                           title="Open mail client"
                         >
-                          <Mail size={14} />
-                          <span>Reply to Typist</span>
+                          <Mail size={13} />
+                          <span>Reply</span>
                         </a>
 
                         {item.status !== 'resolved' ? (
@@ -2884,19 +3143,19 @@ export function AdminPage({ onNavigate }) {
                             title="Resolves issue and automatically emails the user"
                           >
                             <Send size={13} />
-                            <span>Resolve &amp; Email Typist</span>
+                            <span>Resolve &amp; Email</span>
                           </button>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <span className="badge badge-sage" style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <CheckCircle2 size={12} /> Auto-Resolution Email Sent
+                              <CheckCircle2 size={12} /> Resolved
                             </span>
                             <button
                               className="btn btn-ghost btn-sm"
                               onClick={() => handleUpdateFeedbackStatus(item, 'pending')}
+                              title="Re-open report"
                             >
-                              <RotateCcw size={13} />
-                              <span>Re-open</span>
+                              <RotateCcw size={12} />
                             </button>
                           </div>
                         )}
@@ -3688,6 +3947,334 @@ export function AdminPage({ onNavigate }) {
                 >
                   <Send size={15} />
                   <span>{broadcasting ? 'Broadcasting to Typists...' : `Send Broadcast (${subscriberCounts.active} Typists)`}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 9: EDIT FEEDBACK, RATING & TESTIMONIAL DETAILS */}
+      {/* ========================================================================= */}
+      {editingFeedbackItem && (
+        <div className="modal-backdrop" onClick={() => setEditingFeedbackItem(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px', width: '92%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Star size={20} fill="#eab308" color="#eab308" />
+                <h3 style={{ margin: 0 }}>Edit Testimonial &amp; Rating</h3>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingFeedbackItem(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="input-label">Author Name *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    required
+                    value={editFeedbackForm.name}
+                    onChange={(e) => setEditFeedbackForm({ ...editFeedbackForm, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Role / Company Headline</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. Senior Frontend Engineer @ FinTech"
+                    value={editFeedbackForm.display_role}
+                    onChange={(e) => setEditFeedbackForm({ ...editFeedbackForm, display_role: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Star Rating Selector */}
+              <div>
+                <label className="input-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Experience Rating</span>
+                  <span style={{ color: '#eab308', fontWeight: 700 }}>
+                    {editFeedbackForm.rating} of 5 Stars
+                  </span>
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.85rem',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)'
+                }}>
+                  {[1, 2, 3, 4, 5].map((starVal) => (
+                    <button
+                      key={starVal}
+                      type="button"
+                      onClick={() => setEditFeedbackForm({ ...editFeedbackForm, rating: starVal })}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}
+                      title={`Select ${starVal} Star${starVal > 1 ? 's' : ''}`}
+                    >
+                      <Star
+                        size={22}
+                        fill={starVal <= editFeedbackForm.rating ? '#eab308' : 'none'}
+                        color={starVal <= editFeedbackForm.rating ? '#eab308' : 'var(--color-border)'}
+                      />
+                    </button>
+                  ))}
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>
+                    ({editFeedbackForm.rating} ★)
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="input-label">Review / Testimonial Quote *</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  required
+                  placeholder="The user's feedback or quote text..."
+                  value={editFeedbackForm.message}
+                  onChange={(e) => setEditFeedbackForm({ ...editFeedbackForm, message: e.target.value })}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="input-label">Workflow Status</label>
+                  <select
+                    className="input"
+                    value={editFeedbackForm.status}
+                    onChange={(e) => setEditFeedbackForm({ ...editFeedbackForm, status: e.target.value })}
+                  >
+                    <option value="pending">⏳ Pending Review</option>
+                    <option value="in_review">🔍 In Review</option>
+                    <option value="resolved">✔ Resolved</option>
+                    <option value="archived">📁 Archived</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Internal Maintainer Notes</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. Verified quote from Slack"
+                    value={editFeedbackForm.admin_notes}
+                    onChange={(e) => setEditFeedbackForm({ ...editFeedbackForm, admin_notes: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Website Landing Page Feature Toggle Checkbox */}
+              <div style={{
+                padding: '0.75rem 1rem',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: editFeedbackForm.is_featured ? 'rgba(234, 179, 8, 0.12)' : 'var(--color-bg-subtle)',
+                border: editFeedbackForm.is_featured ? '1px solid rgba(234, 179, 8, 0.35)' : '1px solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                cursor: 'pointer'
+              }}
+              onClick={() => setEditFeedbackForm({ ...editFeedbackForm, is_featured: !editFeedbackForm.is_featured })}
+              >
+                <input
+                  type="checkbox"
+                  id="modal-feedback-featured-checkbox"
+                  checked={editFeedbackForm.is_featured}
+                  onChange={(e) => setEditFeedbackForm({ ...editFeedbackForm, is_featured: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#eab308' }}
+                />
+                <label htmlFor="modal-feedback-featured-checkbox" style={{ cursor: 'pointer', margin: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: editFeedbackForm.is_featured ? '#ca8a04' : 'var(--color-text-primary)' }}>
+                    ⭐ Feature on Public Website Landing Page
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                    When enabled, this quote and rating will display in the &quot;Loved By Engineers Worldwide&quot; community grid.
+                  </div>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setEditingFeedbackItem(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Check size={15} />
+                  <span>Save Testimonial Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 10: MANUALLY ADD NEW FEATURED TESTIMONIAL */}
+      {/* ========================================================================= */}
+      {showAddTestimonialModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddTestimonialModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px', width: '92%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Star size={20} fill="#eab308" color="#eab308" />
+                <h3 style={{ margin: 0 }}>Add Verified Community Testimonial</h3>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowAddTestimonialModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.875rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+              Create a curated developer review or testimonial from LinkedIn, Twitter, Discord, or direct feedback to showcase on your landing page.
+            </p>
+
+            <form onSubmit={handleCreateTestimonial} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="input-label">Author Full Name *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    required
+                    placeholder="e.g. Priya Sharma"
+                    value={newTestimonialForm.name}
+                    onChange={(e) => setNewTestimonialForm({ ...newTestimonialForm, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Role / Company Headline</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. Staff Systems Engineer (Rust / Go)"
+                    value={newTestimonialForm.display_role}
+                    onChange={(e) => setNewTestimonialForm({ ...newTestimonialForm, display_role: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="input-label">Contact Email (Optional)</label>
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="e.g. developer@company.com"
+                  value={newTestimonialForm.email}
+                  onChange={(e) => setNewTestimonialForm({ ...newTestimonialForm, email: e.target.value })}
+                />
+              </div>
+
+              {/* Star Rating Selector */}
+              <div>
+                <label className="input-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Experience Rating *</span>
+                  <span style={{ color: '#eab308', fontWeight: 700 }}>
+                    {newTestimonialForm.rating} of 5 Stars
+                  </span>
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.85rem',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)'
+                }}>
+                  {[1, 2, 3, 4, 5].map((starVal) => (
+                    <button
+                      key={starVal}
+                      type="button"
+                      onClick={() => setNewTestimonialForm({ ...newTestimonialForm, rating: starVal })}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}
+                      title={`Select ${starVal} Star${starVal > 1 ? 's' : ''}`}
+                    >
+                      <Star
+                        size={22}
+                        fill={starVal <= newTestimonialForm.rating ? '#eab308' : 'none'}
+                        color={starVal <= newTestimonialForm.rating ? '#eab308' : 'var(--color-border)'}
+                      />
+                    </button>
+                  ))}
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>
+                    ({newTestimonialForm.rating} ★)
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="input-label">Testimonial Quote / Review Text *</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  required
+                  placeholder="e.g. Practicing curly braces and arrow functions on CodeTyper jumped my technical interview confidence..."
+                  value={newTestimonialForm.message}
+                  onChange={(e) => setNewTestimonialForm({ ...newTestimonialForm, message: e.target.value })}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Feature Immediately Toggle */}
+              <div style={{
+                padding: '0.75rem 1rem',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: newTestimonialForm.is_featured ? 'rgba(234, 179, 8, 0.12)' : 'var(--color-bg-subtle)',
+                border: newTestimonialForm.is_featured ? '1px solid rgba(234, 179, 8, 0.35)' : '1px solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                cursor: 'pointer'
+              }}
+              onClick={() => setNewTestimonialForm({ ...newTestimonialForm, is_featured: !newTestimonialForm.is_featured })}
+              >
+                <input
+                  type="checkbox"
+                  id="modal-add-featured-checkbox"
+                  checked={newTestimonialForm.is_featured}
+                  onChange={(e) => setNewTestimonialForm({ ...newTestimonialForm, is_featured: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#eab308' }}
+                />
+                <label htmlFor="modal-add-featured-checkbox" style={{ cursor: 'pointer', margin: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: newTestimonialForm.is_featured ? '#ca8a04' : 'var(--color-text-primary)' }}>
+                    ⭐ Feature Immediately on Landing Page
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                    This review will immediately become visible to all visitors in the community feedback section.
+                  </div>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setShowAddTestimonialModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#eab308', color: '#000', borderColor: '#eab308' }}
+                >
+                  <Plus size={15} />
+                  <span>Create &amp; Publish Testimonial</span>
                 </button>
               </div>
             </form>

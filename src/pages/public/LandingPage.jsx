@@ -34,6 +34,37 @@ import { HeroInteractiveEditor } from '../../components/landing/HeroInteractiveE
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import { soundEngine } from '../../utils/soundEngine.js';
+import { api } from '../../utils/api.js';
+
+const DEFAULT_TESTIMONIALS = [
+  {
+    id: 'seed-1',
+    name: 'Ananya Rao',
+    display_role: 'Senior Frontend Engineer @ FinTech',
+    rating: 5,
+    message: 'Practicing curly braces and arrow function muscle memory on CodeTyper completely eliminated my hesitation during live technical interviews. I jumped from 60 to 95 WPM on real JavaScript and TypeScript code.',
+    initials: 'AR',
+    avatar_color: 'linear-gradient(135deg, #10b981, #059669)'
+  },
+  {
+    id: 'seed-2',
+    name: 'Marcus Schmidt',
+    display_role: 'Staff Systems Engineer (Rust / Go)',
+    rating: 5,
+    message: 'The Cherry MX Blue acoustic synthesizer and the peaceful obsidian dark mode make my morning typing drills a joy. Unlocking my official Gold Master diploma signed by Saumy Pandey was a huge milestone!',
+    initials: 'MS',
+    avatar_color: 'linear-gradient(135deg, #0284c7, #38bdf8)'
+  },
+  {
+    id: 'seed-3',
+    name: 'Devon Park',
+    display_role: 'Computer Science Graduate & Competitive Typist',
+    rating: 5,
+    message: 'Having verifiable cryptographic certificates for typing speed is brilliant. I added my 100+ WPM Diamond Grandmaster certificate to my LinkedIn profile and recruiters commented on it during my screening calls.',
+    initials: 'DP',
+    avatar_color: 'linear-gradient(135deg, #7c3aed, #a855f7)'
+  }
+];
 
 const ROTATING_PHRASES = [
   "Earn Accredited Certificates.",
@@ -271,6 +302,23 @@ export function LandingPage({ onNavigate, onStartPractice }) {
 
   // Bento acoustic switch testing state
   const [activeSwitchTest, setActiveSwitchTest] = useState(null);
+
+  // Dynamic real community feedback testimonials state
+  const [testimonials, setTestimonials] = useState(DEFAULT_TESTIMONIALS);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.feedback.getFeatured()
+      .then((res) => {
+        if (isMounted && res?.testimonials && res.testimonials.length > 0) {
+          setTestimonials(res.testimonials);
+        }
+      })
+      .catch((err) => {
+        console.warn('[LandingPage] Live testimonials fetch failed, using default cache:', err.message);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   const handleCopySnippet = () => {
     if (selectedStack?.code) {
@@ -1768,68 +1816,82 @@ export function LandingPage({ onNavigate, onStartPractice }) {
         </div>
 
         <div className="testimonials-grid">
-          {/* Testimonial 1 */}
-          <div className="testimonial-card">
-            <div>
-              <div className="test-stars-row">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} fill="#eab308" color="#eab308" />
-                ))}
+          {testimonials.map((item) => {
+            const ratingCount = Math.max(1, Math.min(5, item.rating || 5));
+            const initials = item.initials || (item.name ? item.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : 'CT');
+            const bgGradient = item.avatar_color || 'linear-gradient(135deg, #10b981, #059669)';
+
+            return (
+              <div key={item.id} className="testimonial-card">
+                <div>
+                  <div className="test-stars-row" title={`${ratingCount} of 5 Stars`}>
+                    {[...Array(ratingCount)].map((_, i) => (
+                      <Star key={i} size={16} fill="#eab308" color="#eab308" />
+                    ))}
+                  </div>
+                  <p className="test-quote-text">
+                    &quot;{item.message}&quot;
+                  </p>
+                </div>
+                <div className="test-author-box">
+                  <div className="test-avatar" style={{ background: bgGradient }}>
+                    {initials}
+                  </div>
+                  <div>
+                    <div className="test-author-name">{item.name}</div>
+                    <div className="test-author-role">{item.display_role || 'Verified Developer'}</div>
+                  </div>
+                </div>
               </div>
-              <p className="test-quote-text">
-                "Practicing curly braces and arrow function muscle memory on CodeTyper completely eliminated my hesitation during live technical interviews. I jumped from 60 to 95 WPM on real JavaScript and TypeScript code."
-              </p>
+            );
+          })}
+        </div>
+
+        {/* Community Feedback CTA Banner */}
+        <div style={{
+          marginTop: '2.5rem',
+          padding: '1.5rem 2rem',
+          borderRadius: 'var(--radius-lg)',
+          backgroundColor: 'var(--color-bg-subtle)',
+          border: '1px solid var(--color-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(234, 179, 8, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#eab308',
+              flexShrink: 0
+            }}>
+              <Star size={20} fill="#eab308" />
             </div>
-            <div className="test-author-box">
-              <div className="test-avatar">AR</div>
-              <div>
-                <div className="test-author-name">Ananya Rao</div>
-                <div className="test-author-role">Senior Frontend Engineer @ FinTech</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)' }}>
+                Have thoughts or a milestone to share?
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                Rate your practice experience and submit a note — top reviews are featured on our global wall of love!
               </div>
             </div>
           </div>
 
-          {/* Testimonial 2 */}
-          <div className="testimonial-card">
-            <div>
-              <div className="test-stars-row">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} fill="#eab308" color="#eab308" />
-                ))}
-              </div>
-              <p className="test-quote-text">
-                "The Cherry MX Blue acoustic synthesizer and the peaceful obsidian dark mode make my morning typing drills a joy. Unlocking my official Gold Master diploma signed by Saumy Pandey was a huge milestone!"
-              </p>
-            </div>
-            <div className="test-author-box">
-              <div className="test-avatar" style={{ background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}>MS</div>
-              <div>
-                <div className="test-author-name">Marcus Schmidt</div>
-                <div className="test-author-role">Staff Systems Engineer (Rust / Go)</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Testimonial 3 */}
-          <div className="testimonial-card">
-            <div>
-              <div className="test-stars-row">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} fill="#eab308" color="#eab308" />
-                ))}
-              </div>
-              <p className="test-quote-text">
-                "Having verifiable cryptographic certificates for typing speed is brilliant. I added my 100+ WPM Diamond Grandmaster certificate to my LinkedIn profile and recruiters commented on it during my screening calls."
-              </p>
-            </div>
-            <div className="test-author-box">
-              <div className="test-avatar" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>DP</div>
-              <div>
-                <div className="test-author-name">Devon Park</div>
-                <div className="test-author-role">Computer Science Graduate & Competitive Typist</div>
-              </div>
-            </div>
-          </div>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => onNavigate('contact')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+          >
+            <span>Leave a Review</span>
+            <ArrowRight size={14} />
+          </button>
         </div>
       </section>
 

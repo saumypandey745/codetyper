@@ -692,7 +692,7 @@ router.delete('/certificates/:certId', (req, res) => {
 // 8. User Feedback & Support Reports Governance
 // ==========================================
 router.get('/feedback', (req, res) => {
-  const { status = 'all', category, search, limit = 100, offset = 0 } = req.query;
+  const { status = 'all', category, search, featured, limit = 100, offset = 0 } = req.query;
   let sql = `
     SELECT f.*, u.username as user_username
     FROM feedback_reports f
@@ -711,13 +711,19 @@ router.get('/feedback', (req, res) => {
     params.push(category);
   }
 
-  if (search) {
-    const q = `%${search.trim()}%`;
-    sql += ' AND (f.name LIKE ? OR f.email LIKE ? OR f.subject LIKE ? OR f.message LIKE ?)';
-    params.push(q, q, q, q);
+  if (featured === '1' || featured === 'true') {
+    sql += ' AND f.is_featured = 1';
+  } else if (featured === '0' || featured === 'false') {
+    sql += ' AND f.is_featured = 0';
   }
 
-  sql += ' ORDER BY f.id DESC LIMIT ? OFFSET ?';
+  if (search) {
+    const q = `%${search.trim()}%`;
+    sql += ' AND (f.name LIKE ? OR f.email LIKE ? OR f.subject LIKE ? OR f.message LIKE ? OR f.display_role LIKE ?)';
+    params.push(q, q, q, q, q);
+  }
+
+  sql += ' ORDER BY f.is_featured DESC, f.id DESC LIMIT ? OFFSET ?';
   params.push(Number(limit), Number(offset));
 
   const items = db.prepare(sql).all(...params);
@@ -728,6 +734,7 @@ router.get('/feedback', (req, res) => {
   const inReviewCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'in_review'").get().count;
   const resolvedCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'resolved'").get().count;
   const archivedCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'archived'").get().count;
+  const featuredCount = db.prepare('SELECT COUNT(*) as count FROM feedback_reports WHERE is_featured = 1').get().count;
 
   return res.json({
     feedback: items,
@@ -736,33 +743,215 @@ router.get('/feedback', (req, res) => {
       pending: pendingCount,
       inReview: inReviewCount,
       resolved: resolvedCount,
-      archived: archivedCount
+      archived: archivedCount,
+      featured: featuredCount
     }
   });
 });
 
+/**
+ * Toggle whether a feedback review is featured on the public website
+ * PUT /api/admin/feedback/:id/toggle-featured
+ */
+router.put('/feedback/:id/toggle-featured', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT id, name, is_featured, rating, message FROM feedback_reports WHERE id = ?').get(id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Feedback report not found.' });
+  }
+
+  const nextFeatured = existing.is_featured ? 0 : 1;
+  db.prepare(`
+    UPDATE feedback_reports
+    SET is_featured = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(nextFeatured, id);
+
+  logAdminAudit(req.user, 'TOGGLE_FEEDBACK_FEATURED', 'feedback_reports', id, {
+    author_name: existing.name,
+    is_featured: nextFeatured
+  });
+
+  return res.json({
+    success: true,
+    message: nextFeatured
+      ? `Review by ${existing.name} is now featured on the website landing page!`
+      : `Review removed from public website landing page.`,
+    is_featured: nextFeatured
+  });
+});
+
+/**
+ * Edit full details of feedback/testimonial (rating, display_role, quote, author, notes, featured)
+ * PUT /api/admin/feedback/:id
+ */
+router.put('/feedback/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM feedback_reports WHERE id = ?').get(id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Feedback record not found.' });
+  }
+
+  const {
+    name,
+    email,
+    display_role,
+    rating,
+    message,
+    subject,
+    status,
+    admin_notes,
+    is_featured
+  } = req.body;
+
+  const newName = name !== undefined ? String(name).trim() : existing.name;
+  const newEmail = email !== undefined ? String(email).trim() : existing.email;
+  const newRole = display_role !== undefined ? String(display_role).trim() : (existing.display_role || '');
+  const newRating = rating !== undefined ? Math.max(1, Math.min(5, Number(rating) || 5)) : (existing.rating || 5);
+  const newMessage = message !== undefined ? String(message).trim() : existing.message;
+  const newSubject = subject !== undefined ? String(subject).trim() : existing.subject;
+  const newStatus = status !== undefined ? status : existing.status;
+  const newNotes = admin_notes !== undefined ? admin_notes : existing.admin_notes;
+  const newFeatured = is_featured !== undefined ? (is_featured ? 1 : 0) : existing.is_featured;
+
+  db.prepare(`
+    UPDATE feedback_reports
+    SET name = ?, email = ?, display_role = ?, rating = ?, message = ?, subject = ?, status = ?, admin_notes = ?, is_featured = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(newName, newEmail, newRole, newRating, newMessage, newSubject, newStatus, newNotes, newFeatured, id);
+
+  logAdminAudit(req.user, 'UPDATE_FEEDBACK_DETAILS', 'feedback_reports', id, {
+    name: newName,
+    display_role: newRole,
+    rating: newRating,
+    is_featured: newFeatured,
+    status: newStatus
+  });
+
+  return res.json({
+    success: true,
+    message: 'Feedback details and rating updated successfully.',
+    feedback: {
+      ...existing,
+      name: newName,
+      email: newEmail,
+      display_role: newRole,
+      rating: newRating,
+      message: newMessage,
+      subject: newSubject,
+      status: newStatus,
+      admin_notes: newNotes,
+      is_featured: newFeatured
+    }
+  });
+});
+
+/**
+ * Manually create a testimonial / feedback report from Admin panel
+ * POST /api/admin/feedback
+ */
+router.post('/feedback', (req, res) => {
+  const {
+    name,
+    email = '',
+    display_role = '',
+    rating = 5,
+    message,
+    subject = '',
+    is_featured = 1,
+    category = 'feedback'
+  } = req.body;
+
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Author name is required.' });
+  }
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'Review / feedback message is required.' });
+  }
+
+  const AVATAR_PALETTES = [
+    'linear-gradient(135deg, #10b981, #059669)',
+    'linear-gradient(135deg, #0284c7, #38bdf8)',
+    'linear-gradient(135deg, #7c3aed, #a855f7)',
+    'linear-gradient(135deg, #f59e0b, #d97706)',
+    'linear-gradient(135deg, #ec4899, #be185d)',
+    'linear-gradient(135deg, #06b6d4, #0891b2)',
+    'linear-gradient(135deg, #6366f1, #4f46e5)'
+  ];
+  const avatarColor = AVATAR_PALETTES[Math.floor(Math.random() * AVATAR_PALETTES.length)];
+  const sanitizedRating = Math.max(1, Math.min(5, Number(rating) || 5));
+  const sanitizedFeatured = is_featured ? 1 : 0;
+  const authorName = name.trim();
+  const sub = subject.trim() || `Verified Review from ${authorName}`;
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO feedback_reports (
+        user_id, name, email, category, subject, message, status, rating, display_role, is_featured, avatar_color, admin_notes
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, 'resolved', ?, ?, ?, ?, 'Manually added by Administrator'
+      )
+    `).run(
+      req.user?.id || null,
+      authorName,
+      email ? email.trim().toLowerCase() : 'verified-typist@codetyper.dev',
+      category,
+      sub,
+      message.trim(),
+      sanitizedRating,
+      display_role.trim(),
+      sanitizedFeatured,
+      avatarColor
+    );
+
+    const newId = Number(result.lastInsertRowid);
+
+    logAdminAudit(req.user, 'CREATE_TESTIMONIAL', 'feedback_reports', newId, {
+      name: authorName,
+      display_role: display_role.trim(),
+      rating: sanitizedRating,
+      is_featured: sanitizedFeatured
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: sanitizedFeatured
+        ? 'Testimonial created and featured on website landing page!'
+        : 'Testimonial created successfully.',
+      id: newId
+    });
+  } catch (err) {
+    console.error('[Admin Create Feedback Error]', err);
+    return res.status(500).json({ error: 'Failed to create testimonial.' });
+  }
+});
+
 router.put('/feedback/:id/status', async (req, res) => {
   const id = Number(req.params.id);
-  const { status, admin_notes, notify_user = true } = req.body;
+  const { status, admin_notes, is_featured, rating, display_role, notify_user = true } = req.body;
 
   const validStatuses = ['pending', 'in_review', 'resolved', 'archived'];
   if (status && !validStatuses.includes(status)) {
     return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
   }
 
-  const existing = db.prepare('SELECT id, subject, name, email, category, message, status, admin_notes FROM feedback_reports WHERE id = ?').get(id);
+  const existing = db.prepare('SELECT id, subject, name, email, category, message, status, admin_notes, is_featured, rating, display_role FROM feedback_reports WHERE id = ?').get(id);
   if (!existing) {
     return res.status(404).json({ error: 'Feedback report not found.' });
   }
 
   const newStatus = status || existing.status;
   const newNotes = admin_notes !== undefined ? admin_notes : existing.admin_notes;
+  const newFeatured = is_featured !== undefined ? (is_featured ? 1 : 0) : existing.is_featured;
+  const newRating = rating !== undefined ? Math.max(1, Math.min(5, Number(rating) || 5)) : existing.rating;
+  const newRole = display_role !== undefined ? String(display_role).trim() : existing.display_role;
 
   db.prepare(`
     UPDATE feedback_reports
-    SET status = ?, admin_notes = ?, updated_at = CURRENT_TIMESTAMP
+    SET status = ?, admin_notes = ?, is_featured = ?, rating = ?, display_role = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(newStatus, newNotes, id);
+  `).run(newStatus, newNotes, newFeatured, newRating, newRole, id);
 
   let emailOutcome = { delivered: false, simulated: false };
 
@@ -788,6 +977,8 @@ router.put('/feedback/:id/status', async (req, res) => {
     subject: existing.subject,
     oldStatus: existing.status,
     newStatus,
+    is_featured: newFeatured,
+    rating: newRating,
     autoEmailDispatched: emailOutcome.delivered || emailOutcome.simulated
   });
 
@@ -795,6 +986,8 @@ router.put('/feedback/:id/status', async (req, res) => {
     message: `Report #${id} status updated to ${newStatus}.${emailOutcome.delivered || emailOutcome.simulated ? ' Automatic resolution email sent to user.' : ''}`,
     status: newStatus,
     admin_notes: newNotes,
+    is_featured: newFeatured,
+    rating: newRating,
     emailOutcome
   });
 });
