@@ -38,6 +38,18 @@ export function App() {
     const raw = window.location.hash.replace('#', '');
     if (raw.startsWith('verify')) return 'verify';
     const view = raw.split('?')[0];
+    const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('codetyper_token');
+    const guestRestrictedViews = [
+      'dashboard',
+      'history',
+      'statistics',
+      'profile',
+      'settings',
+      'admin'
+    ];
+    if (guestRestrictedViews.includes(view) && !hasToken) {
+      return 'landing';
+    }
     return view || 'landing';
   });
 
@@ -85,12 +97,12 @@ export function App() {
       let view = raw.split('?')[0];
       if (raw.startsWith('verify')) view = 'verify';
       if (view && view !== currentView) {
-        setCurrentView(view);
+        navigateTo(view);
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [currentView]);
+  }, [currentView, user, loading]);
 
   // If user is authenticated, automatically transition away from login/signup/forgot-password pages
   useEffect(() => {
@@ -113,12 +125,20 @@ export function App() {
 
   const navigateTo = (view, options = {}) => {
     // Protected views requiring authentication
-    const authRequiredViews = ['dashboard', 'history', 'statistics', 'profile', 'admin'];
+    const authRequiredViews = [
+      'dashboard',
+      'history',
+      'statistics',
+      'profile',
+      'admin',
+      'settings'
+    ];
     const hasToken = !!localStorage.getItem('codetyper_token');
 
     // Check both user and token to avoid race condition right after login/register
     if (authRequiredViews.includes(view) && !user && !hasToken && !loading) {
       toast.info('Please sign in or create an account to access this page.');
+      window.location.hash = 'login';
       setCurrentView('login');
       return;
     }
@@ -131,11 +151,25 @@ export function App() {
     setSidebarOpen(false);
   };
 
-  const handleStartPractice = (options = {}) => {
-    const targetType = options.type || 'practice';
+  const handleStartPractice = (options = {}, maybeLang = null, maybeDuration = null) => {
+    let targetType = 'practice';
+    let targetLang = null;
+    let targetDuration = null;
+
+    if (typeof options === 'string') {
+      targetType = options;
+      targetLang = maybeLang;
+      targetDuration = maybeDuration;
+    } else {
+      targetType = options.type || 'practice';
+      targetLang = options.language || null;
+      targetDuration = options.duration || null;
+    }
+
     setPracticeConfig({
       type: targetType,
-      language: options.language || null
+      language: targetLang,
+      duration: targetDuration
     });
     setCurrentView(targetType);
   };
@@ -182,36 +216,44 @@ export function App() {
       case 'practice':
         return (
           <PracticePage
+            key="practice"
             initialType="practice"
+            initialDuration={practiceConfig.duration}
             onNavigate={navigateTo}
           />
         );
       case 'coding':
         return (
           <PracticePage
+            key={`coding-${practiceConfig.language || 'all'}`}
             initialType="coding"
             initialLanguage={practiceConfig.language}
+            initialDuration={practiceConfig.duration}
             onNavigate={navigateTo}
           />
         );
       case 'english':
         return (
           <PracticePage
+            key="english"
             initialType="english"
+            initialDuration={practiceConfig.duration}
             onNavigate={navigateTo}
           />
         );
       case 'test':
         return (
           <PracticePage
+            key="test"
             initialType="test"
+            initialDuration={practiceConfig.duration}
             onNavigate={navigateTo}
           />
         );
       case 'multiplayer':
         return <MultiplayerArena onNavigate={navigateTo} />;
       case 'certificate':
-        return <CertificatePage onNavigate={navigateTo} />;
+        return <CertificatePage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
       case 'heatmap':
         return (
           <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -252,7 +294,7 @@ export function App() {
       {!['practice', 'coding', 'english', 'test'].includes(currentView) && <AnnouncementBanner />}
       {isPublicView ? (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <PublicHeader onNavigate={navigateTo} />
+          <PublicHeader onNavigate={navigateTo} currentView={currentView} />
           <main style={{ flex: 1, padding: currentView === 'landing' ? '0.5rem 1.5rem 2rem' : '2rem 1.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
             {renderCurrentView()}
           </main>
@@ -269,6 +311,7 @@ export function App() {
 
           <div className="app-main">
             <Header
+              currentView={currentView}
               onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
               onNavigate={navigateTo}
               onOpenSearch={() => setIsSearchOpen(true)}

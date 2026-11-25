@@ -12,6 +12,7 @@ import './styles/layout.css';
 import './styles/components.css';
 import './styles/typing.css';
 import './styles/landing.css';
+import './styles/certificate.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

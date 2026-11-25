@@ -181,4 +181,82 @@ describe('Certificate Eligibility & Accreditation Standards Suite', () => {
     assert.ok(res4.tiers['midnight-platinum'].isUnlocked);
     assert.equal(res4.highestUnlockedThemeId, 'midnight-platinum');
   });
+
+  it('strictly enforces the 20-level unlock progression and scaled exam durations across tiers', () => {
+    // Assert tier configurations
+    assert.equal(CERTIFICATE_THEME_TIERS['imperial-ivory'].unlockLevel, 20);
+    assert.equal(CERTIFICATE_THEME_TIERS['imperial-ivory'].examDurationSeconds, 60);
+
+    assert.equal(CERTIFICATE_THEME_TIERS['royal-obsidian'].unlockLevel, 40);
+    assert.equal(CERTIFICATE_THEME_TIERS['royal-obsidian'].examDurationSeconds, 120);
+
+    assert.equal(CERTIFICATE_THEME_TIERS['emerald-sovereign'].unlockLevel, 60);
+    assert.equal(CERTIFICATE_THEME_TIERS['emerald-sovereign'].examDurationSeconds, 180);
+
+    assert.equal(CERTIFICATE_THEME_TIERS['midnight-platinum'].unlockLevel, 80);
+    assert.equal(CERTIFICATE_THEME_TIERS['midnight-platinum'].examDurationSeconds, 300);
+
+    // If user has high WPM but level < 20, Tier 1 is NOT unlocked
+    const underLevelUser = {
+      level: 15,
+      wpm: 100,
+      accuracy: 99,
+      totalTests: 10,
+      duration: 60
+    };
+    const resUnder = evaluateThemeTiers(underLevelUser);
+    assert.equal(resUnder.tiers['imperial-ivory'].isUnlocked, false);
+    const levelTask = resUnder.tiers['imperial-ivory'].tasks.find(t => t.id === 'level_20');
+    assert.equal(levelTask.passed, false);
+
+    // At level 20, Tier 1 unlocks
+    const lv20User = { ...underLevelUser, level: 20 };
+    const res20 = evaluateThemeTiers(lv20User);
+    assert.equal(res20.tiers['imperial-ivory'].isUnlocked, true);
+    assert.equal(res20.tiers['royal-obsidian'].isUnlocked, false); // Requires Lv 40
+
+    // At level 40 with 120s exam stats, Tier 2 unlocks
+    const lv40User = {
+      level: 40,
+      wpm: 65,
+      accuracy: 96,
+      totalTests: 18,
+      streak: 3,
+      duration: 120
+    };
+    const res40 = evaluateThemeTiers(lv40User);
+    assert.equal(res40.tiers['royal-obsidian'].isUnlocked, true);
+    assert.equal(res40.tiers['emerald-sovereign'].isUnlocked, false); // Requires Lv 60
+
+    // At level 60 with 180s syntax stats, Tier 3 unlocks
+    const lv60User = {
+      level: 60,
+      wpm: 80,
+      accuracy: 98,
+      totalTests: 25,
+      streak: 5,
+      languagesCount: 3,
+      duration: 180,
+      totalChars: 3000
+    };
+    const res60 = evaluateThemeTiers(lv60User);
+    assert.equal(res60.tiers['emerald-sovereign'].isUnlocked, true);
+    assert.equal(res60.tiers['midnight-platinum'].isUnlocked, false); // Requires Lv 80
+
+    // At level 80 with 300s marathon stats, Tier 4 unlocks
+    const lv80User = {
+      level: 80,
+      wpm: 95,
+      accuracy: 99,
+      totalTests: 45,
+      streak: 7,
+      arenaWins: 3,
+      languagesCount: 4,
+      duration: 300,
+      totalChars: 8000
+    };
+    const res80 = evaluateThemeTiers(lv80User);
+    assert.equal(res80.tiers['midnight-platinum'].isUnlocked, true);
+    assert.equal(res80.highestUnlockedThemeId, 'midnight-platinum');
+  });
 });

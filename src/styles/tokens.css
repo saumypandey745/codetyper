@@ -1,4 +1,6 @@
-:root {
+:root,
+[data-theme="peaceful"],
+[data-theme="light"] {
   /* Peaceful Green + Cream Palette Tokens */
   --color-primary-deep: #1A543D;
   --color-primary-forest: #236B4D;

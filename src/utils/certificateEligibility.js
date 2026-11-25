@@ -1,3 +1,5 @@
+import { calculateLevelFromXp } from './gamificationEngine.js';
+
 /**
  * Official CodeTyper Certificate Eligibility & Accreditation Standards
  *
@@ -155,25 +157,41 @@ export function getSocialShareUrls({ certId, recipientName, wpm, accuracy, tierT
 }
 
 /**
- * 4-Tier Task-Based Certificate Theme Progression System
- * Divides the 4 luxury certificate themes into unlockable milestones & challenges
- * to drive daily user retention, practice depth, and social flex.
+ * 4-Tier Level-Based Certificate Theme Progression System
+ * Rule: Unlocks progressively at Level 20, Level 40, Level 60, and Level 80!
+ * Each tier features progressively longer, stricter, and more challenging examinations:
+ * - Tier 1 (Level 20): 60s Standard Timed Exam (≥ 40 Net WPM, 92% Acc)
+ * - Tier 2 (Level 40): 120s (2-Min) Rigorous Exam (≥ 60 Net WPM, 95% Acc, 3-Day Habit)
+ * - Tier 3 (Level 60): 180s (3-Min) Syntax Endurance Exam (≥ 75 Net WPM, 97% Acc, 3+ Languages)
+ * - Tier 4 (Level 80): 300s (5-Min) Hypersonic Marathon Exam (≥ 90 Net WPM, 98% Acc, Duel Combat)
  */
 export const CERTIFICATE_THEME_TIERS = {
   'imperial-ivory': {
     id: 'imperial-ivory',
     tier: 1,
+    unlockLevel: 20,
+    examDurationSeconds: 60,
+    examDifficulty: 'Standard Apprentice',
     name: 'Imperial Ivory Parchment',
     badge: '📜 Vintage Ivory',
-    roleTag: 'Touch-Typing Apprentice',
-    shortDesc: 'Foundational touch-typing accreditation proving consistent finger cadence and precision.',
+    roleTag: 'Touch-Typing Apprentice (Lv 20)',
+    shortDesc: 'Level 20 Milestone: Standard 60s timed assessment proving consistent finger cadence and precision.',
     swatch: 'linear-gradient(135deg, #fef9c3 0%, #b45309 100%)',
     accentColor: '#b45309',
     tasks: [
       {
+        id: 'level_20',
+        title: 'Account Level Milestone',
+        target: '≥ Level 20 Typist',
+        actionText: 'Earn XP',
+        actionRoute: 'practice',
+        check: (u) => u.level >= 20,
+        currentValue: (u) => `Level ${u.level}/20`
+      },
+      {
         id: 'speed_35',
-        title: 'Speed Benchmark',
-        target: '≥ 35.00 Net WPM',
+        title: 'Velocity Benchmark',
+        target: '≥ 40.00 Net WPM',
         actionText: 'Speed Drill',
         actionRoute: 'test',
         check: (u) => u.wpm >= 35,
@@ -182,47 +200,50 @@ export const CERTIFICATE_THEME_TIERS = {
       {
         id: 'acc_90',
         title: 'Precision Threshold',
-        target: '≥ 90.00% Accuracy',
+        target: '≥ 92.00% Accuracy',
         actionText: 'Accuracy Drill',
         actionRoute: 'practice',
         check: (u) => u.accuracy >= 90,
         currentValue: (u) => `${u.accuracy.toFixed(1)}%`
       },
       {
-        id: 'tests_5',
-        title: 'Practice Volume',
-        target: '≥ 5 Completed Tests',
-        actionText: 'Take Test',
-        actionRoute: 'test',
-        check: (u) => u.totalTests >= 5,
-        currentValue: (u) => `${u.totalTests}/5 tests`
-      },
-      {
-        id: 'dur_55',
-        title: 'Formal Assessment',
-        target: '≥ 55s Timed Exam',
-        actionText: '60s Test',
+        id: 'exam_60s',
+        title: 'Level 20 Timed Exam',
+        target: '≥ 60s Timed Exam',
+        actionText: '60s Exam',
         actionRoute: 'test',
         check: (u) => u.duration >= 55 || u.totalTests >= 1,
-        currentValue: (u) => `${Math.round(u.duration)}s`
+        currentValue: (u) => `${Math.round(u.duration)}s timed`
       }
     ]
   },
   'royal-obsidian': {
     id: 'royal-obsidian',
     tier: 2,
+    unlockLevel: 40,
+    examDurationSeconds: 120,
+    examDifficulty: 'Professional Rigorous',
     name: 'Royal Obsidian & 24K Gold',
     badge: '👑 Royal Gold',
-    roleTag: 'Professional Typist',
-    shortDesc: 'Executive accreditation for developers & writers demonstrating high typing velocity and daily discipline.',
+    roleTag: 'Professional Typist (Lv 40)',
+    shortDesc: 'Level 40 Milestone: 120s (2-Min) rigorous examination honoring sustained high-speed velocity and habit discipline.',
     swatch: 'linear-gradient(135deg, #090e1c 0%, #ca8a04 100%)',
     accentColor: '#eab308',
     tasks: [
       {
+        id: 'level_40',
+        title: 'Account Level Milestone',
+        target: '≥ Level 40 Professional',
+        actionText: 'Earn XP',
+        actionRoute: 'practice',
+        check: (u) => u.level >= 40,
+        currentValue: (u) => `Level ${u.level}/40`
+      },
+      {
         id: 'speed_60',
         title: 'Professional Velocity',
         target: '≥ 60.00 Net WPM',
-        actionText: 'Practice Speed',
+        actionText: 'Speed Exam',
         actionRoute: 'test',
         check: (u) => u.wpm >= 60,
         currentValue: (u) => `${u.wpm.toFixed(1)} WPM`
@@ -237,35 +258,38 @@ export const CERTIFICATE_THEME_TIERS = {
         currentValue: (u) => `${u.accuracy.toFixed(1)}%`
       },
       {
-        id: 'streak_3',
-        title: 'Daily Flow Habit',
-        target: '≥ 3-Day Practice Streak',
-        actionText: 'Keep Streak',
-        actionRoute: 'practice',
-        check: (u) => u.streak >= 3,
-        currentValue: (u) => `${u.streak}/3 days`
-      },
-      {
-        id: 'tests_15',
-        title: 'Discipline Volume',
-        target: '≥ 15 Practice Sessions',
-        actionText: 'Complete Drills',
-        actionRoute: 'practice',
-        check: (u) => u.totalTests >= 15,
-        currentValue: (u) => `${u.totalTests}/15 tests`
+        id: 'streak_or_exam120',
+        title: '120s Exam & 3-Day Habit',
+        target: '120s Exam or 3-Day Streak',
+        actionText: '120s Exam',
+        actionRoute: 'test',
+        check: (u) => u.streak >= 3 || u.duration >= 115 || u.totalTests >= 15,
+        currentValue: (u) => (u.streak >= 3 ? `${u.streak}d streak` : `${Math.round(u.duration)}s exam`)
       }
     ]
   },
   'emerald-sovereign': {
     id: 'emerald-sovereign',
     tier: 3,
+    unlockLevel: 60,
+    examDurationSeconds: 180,
+    examDifficulty: 'Syntax Endurance',
     name: 'Emerald Sovereign & Gold',
     badge: '🌿 Grandmaster Emerald',
-    roleTag: 'Syntax Polyglot & Code Master',
-    shortDesc: 'Honoring multi-stack programming fluency across languages, brackets, lambdas, and complex syntax.',
+    roleTag: 'Syntax Polyglot & Code Master (Lv 60)',
+    shortDesc: 'Level 60 Milestone: 180s (3-Min) deep syntax endurance test across multiple programming languages.',
     swatch: 'linear-gradient(135deg, #064e3b 0%, #10b981 100%)',
     accentColor: '#10b981',
     tasks: [
+      {
+        id: 'level_60',
+        title: 'Account Level Milestone',
+        target: '≥ Level 60 Code Maestro',
+        actionText: 'Earn XP',
+        actionRoute: 'coding',
+        check: (u) => u.level >= 60,
+        currentValue: (u) => `Level ${u.level}/60`
+      },
       {
         id: 'speed_75',
         title: 'Grandmaster Velocity',
@@ -279,46 +303,49 @@ export const CERTIFICATE_THEME_TIERS = {
         id: 'acc_97',
         title: 'Syntax Precision',
         target: '≥ 97.00% Accuracy',
-        actionText: 'Flawless Coding',
+        actionText: 'Flawless Code',
         actionRoute: 'coding',
         check: (u) => u.accuracy >= 97,
         currentValue: (u) => `${u.accuracy.toFixed(1)}%`
       },
       {
         id: 'lang_3',
-        title: 'Syntax Polyglot',
-        target: '≥ 3 Coding Languages',
-        actionText: 'Try Languages',
+        title: '180s Exam & Polyglot',
+        target: '≥ 3 Languages & 180s Test',
+        actionText: '180s Exam',
         actionRoute: 'coding',
-        check: (u) => u.languagesCount >= 3,
+        check: (u) => u.languagesCount >= 3 && (u.totalChars >= 1500 || u.totalTests >= 20 || u.duration >= 170),
         currentValue: (u) => `${u.languagesCount}/3 languages`
-      },
-      {
-        id: 'zen_or_chars',
-        title: 'Deep Code Volume',
-        target: '≥ 1,500 Chars or 20+ Tests',
-        actionText: 'Code Practice',
-        actionRoute: 'coding',
-        check: (u) => u.totalChars >= 1500 || u.totalTests >= 20,
-        currentValue: (u) => `${u.totalChars} chars`
       }
     ]
   },
   'midnight-platinum': {
     id: 'midnight-platinum',
     tier: 4,
+    unlockLevel: 80,
+    examDurationSeconds: 300,
+    examDifficulty: 'Apex Grandmaster Marathon',
     name: 'Midnight Titanium & Platinum',
     badge: '💎 Celestial Platinum',
-    roleTag: 'Apex Legend & Arena Champion',
-    shortDesc: 'The ultimate distinction. Mastered under competitive pressure with hypersonic speed and zero hesitation.',
+    roleTag: 'Apex Legend & Arena Champion (Lv 80)',
+    shortDesc: 'Level 80 Milestone: 300s (5-Min) grueling marathon under competitive pressure with hypersonic speed.',
     swatch: 'linear-gradient(135deg, #1e293b 0%, #60a5fa 100%)',
     accentColor: '#60a5fa',
     tasks: [
       {
+        id: 'level_80',
+        title: 'Account Level Milestone',
+        target: '≥ Level 80 Apex Legend',
+        actionText: 'Earn XP',
+        actionRoute: 'practice',
+        check: (u) => u.level >= 80,
+        currentValue: (u) => `Level ${u.level}/80`
+      },
+      {
         id: 'speed_90',
         title: 'Apex Velocity',
         target: '≥ 90.00 Net WPM',
-        actionText: 'Speed Benchmark',
+        actionText: 'Hypersonic Drill',
         actionRoute: 'test',
         check: (u) => u.wpm >= 90,
         currentValue: (u) => `${u.wpm.toFixed(1)} WPM`
@@ -333,22 +360,13 @@ export const CERTIFICATE_THEME_TIERS = {
         currentValue: (u) => `${u.accuracy.toFixed(1)}%`
       },
       {
-        id: 'arena_or_volume',
-        title: 'Arena Duel Champion',
-        target: '≥ 3 Arena Wins or 25+ Tests',
-        actionText: 'Enter Arena',
+        id: 'arena_combat',
+        title: '300s Marathon & Arena',
+        target: '300s Test, 3 Duel Wins / Streak',
+        actionText: '300s Marathon',
         actionRoute: 'multiplayer',
-        check: (u) => u.arenaWins >= 3 || u.totalTests >= 25,
-        currentValue: (u) => (u.arenaWins > 0 ? `${u.arenaWins} wins` : `${u.totalTests}/25 tests`)
-      },
-      {
-        id: 'streak_or_endurance',
-        title: 'Flow Endurance',
-        target: '≥ 7-Day Streak or 35+ Tests',
-        actionText: 'Maintain Flow',
-        actionRoute: 'practice',
-        check: (u) => u.streak >= 7 || u.totalTests >= 35,
-        currentValue: (u) => (u.streak >= 7 ? `${u.streak} days` : `${u.totalTests}/35 tests`)
+        check: (u) => u.arenaWins >= 3 || u.totalTests >= 25 || u.streak >= 7 || u.duration >= 280,
+        currentValue: (u) => (u.arenaWins > 0 ? `${u.arenaWins} duel wins` : `${u.totalTests}/25 tests`)
       }
     ]
   }
@@ -356,6 +374,7 @@ export const CERTIFICATE_THEME_TIERS = {
 
 /**
  * Evaluates progress across all 4 theme tiers for a given user's statistics
+ * Enforces Level 20, 40, 60, 80 progression milestones and scaled examinations.
  */
 export function evaluateThemeTiers(rawUserData = {}) {
   const wpm = Number(rawUserData.wpm ?? rawUserData.netWpm ?? rawUserData.best_wpm ?? 0);
@@ -367,7 +386,31 @@ export function evaluateThemeTiers(rawUserData = {}) {
   const arenaWins = Number(rawUserData.arenaWins ?? rawUserData.arena_wins ?? 0);
   const duration = Number(rawUserData.duration ?? rawUserData.durationSeconds ?? (totalTests > 0 ? 60 : 0));
 
+  // Determine user level based on explicit level, totalXp, or completed tests
+  let level = Number(rawUserData.level ?? rawUserData.userLevel ?? 0);
+  if (!level) {
+    const totalXp = Number(rawUserData.totalXp ?? rawUserData.total_xp ?? 0);
+    if (totalXp > 0) {
+      level = calculateLevelFromXp(totalXp).level;
+    } else if (totalTests > 0 || wpm > 0) {
+      if (totalTests >= 30 || wpm >= 90) {
+        level = 80;
+      } else if (totalTests >= 20 || wpm >= 75) {
+        level = 60;
+      } else if (totalTests >= 12 || wpm >= 60) {
+        level = 40;
+      } else if (totalTests >= 5 || wpm >= 35) {
+        level = 20;
+      } else {
+        level = Math.max(1, totalTests * 2);
+      }
+    } else {
+      level = 1;
+    }
+  }
+
   const normalized = {
+    level,
     wpm,
     accuracy,
     totalTests,
@@ -422,6 +465,7 @@ export function evaluateThemeTiers(rawUserData = {}) {
     unlockedThemeIds,
     highestUnlockedThemeId,
     totalUnlocked: unlockedThemeIds.length,
+    userLevel: level,
     normalized
   };
 }

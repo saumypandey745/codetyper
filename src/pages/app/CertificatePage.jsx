@@ -23,7 +23,9 @@ import {
 import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import { api } from '../../utils/api.js';
+import { calculateLevelFromXp } from '../../utils/gamificationEngine.js';
 import {
   checkCertificateEligibility,
   evaluateThemeTiers,
@@ -142,15 +144,17 @@ const CERT_THEMES = {
   }
 };
 
-export function CertificatePage({ onNavigate }) {
+export function CertificatePage({ onNavigate, onStartPractice }) {
   const canvasRef = useRef(null);
   const { user, userStats } = useAuth();
   const toast = useToast();
+  const { settings } = useSettings();
+  const isDark = settings?.theme === 'dark';
 
   const defaultName = user?.display_name || user?.username || 'Saumy Pandey';
   const [recipientName, setRecipientName] = useState(defaultName);
   const [titleRole, setTitleRole] = useState('Touch-Typing Specialist');
-  const [activeTheme, setActiveTheme] = useState('royal-obsidian');
+  const [activeTheme, setActiveTheme] = useState('imperial-ivory');
   const [signatureVariant, setSignatureVariant] = useState('calligraphy');
   const [tilt, setTilt] = useState({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
 
@@ -181,11 +185,29 @@ export function CertificatePage({ onNavigate }) {
   const duration = 60;
   const language = 'All Disciplines (English & Programming)';
 
+  const userLevel = useMemo(() => {
+    let lvl = Number(userStats?.level || user?.level || 0);
+    if (!lvl && typeof window !== 'undefined') {
+      try {
+        const storedXp = parseInt(localStorage.getItem('codetyper_total_xp') || '0', 10);
+        if (storedXp > 0) {
+          lvl = calculateLevelFromXp(storedXp).level;
+        }
+      } catch {}
+    }
+    if (!lvl) {
+      const tests = Number(userStats?.total_tests || 0);
+      lvl = tests >= 30 ? 80 : tests >= 20 ? 60 : tests >= 12 ? 40 : tests >= 5 ? 20 : Math.max(1, tests * 2);
+    }
+    return lvl;
+  }, [userStats, user]);
+
   const themeTiers = useMemo(() => {
     const arenaWins = typeof window !== 'undefined'
       ? parseInt(localStorage.getItem('codetyper_arena_wins') || '0', 10)
       : 0;
     return evaluateThemeTiers({
+      level: userLevel,
       wpm,
       accuracy,
       totalTests: userStats?.total_tests || 0,
@@ -195,14 +217,41 @@ export function CertificatePage({ onNavigate }) {
       arenaWins,
       duration
     });
-  }, [wpm, accuracy, userStats, duration]);
+  }, [userLevel, wpm, accuracy, userStats, duration]);
+
+  const currentTier = themeTiers.tiers[activeTheme];
+  const isCurrentThemeUnlocked = Boolean(currentTier?.isUnlocked);
+  const isBlurredLockedTheme = Boolean(activeTheme !== 'imperial-ivory' && !isCurrentThemeUnlocked);
+
+  const handleLaunchTierExam = (tier = currentTier) => {
+    if (!user) {
+      toast.info('⚡ Please Sign Up or Log In first so your exam score, level, and accredited certificate are permanently registered!');
+      onNavigate('signup');
+      return;
+    }
+    const isCoding = tier?.tier === 3;
+    const targetDuration = tier?.examDurationSeconds || 60;
+    if (onStartPractice) {
+      onStartPractice({
+        type: isCoding ? 'coding' : 'test',
+        duration: targetDuration,
+        language: isCoding ? 'Python' : 'English'
+      });
+    } else {
+      onNavigate(isCoding ? 'coding' : 'test');
+    }
+  };
 
   const handleThemeChange = (themeId) => {
     setActiveTheme(themeId);
     soundEngine.playWaxSealStamp();
     const tierMeta = themeTiers.tiers[themeId];
     if (tierMeta && !tierMeta.isUnlocked) {
-      toast.info(`Previewing locked theme: ${tierMeta.name} (${tierMeta.passedCount}/4 Tasks Cleared). Complete its tasks to unlock official downloading.`);
+      if (themeId !== 'imperial-ivory') {
+        toast.info(`Theme is locked and blurred (${tierMeta.badge}). Complete all 4 tasks to unlock and reveal it.`);
+      } else {
+        toast.info(`Viewing open specimen theme (Imperial Ivory). Name customization is locked until examination is passed.`);
+      }
     }
   };
 
@@ -464,7 +513,10 @@ export function CertificatePage({ onNavigate }) {
     ctx.fillText('THIS IS TO OFFICIALLY ACCREDIT AND CERTIFY THAT', width / 2, 460);
 
     // 9. Candidate Name
-    const displayName = (recipientName || 'CodeTyper Typist').trim();
+    const isUnlocked = isCurrentThemeUnlocked;
+    const displayName = isUnlocked
+      ? (recipientName || 'CodeTyper Typist').trim()
+      : 'DEMO CANDIDATE (SPECIMEN PREVIEW)';
     ctx.fillStyle = theme.textColor;
     ctx.font = 'bold 78px "Cinzel", "Playfair Display", "Times New Roman", Georgia, serif';
     ctx.shadowColor = theme.accentColor;
@@ -490,9 +542,12 @@ export function CertificatePage({ onNavigate }) {
     ctx.fill();
 
     // Candidate Subtitle / Role Selection
+    const roleText = isUnlocked
+      ? (titleRole || 'Touch-Typing Specialist').toUpperCase()
+      : 'SPECIMEN CANDIDATE • VERIFICATION PENDING';
     ctx.fillStyle = theme.accentColor;
     ctx.font = '700 22px "Outfit", system-ui, sans-serif';
-    ctx.fillText(`❖   ${(titleRole || 'Touch-Typing Specialist').toUpperCase()}   ❖`, width / 2, 634);
+    ctx.fillText(`❖   ${roleText}   ❖`, width / 2, 634);
 
     // 10. Citation
     ctx.fillStyle = theme.citationColor;
@@ -756,7 +811,62 @@ export function CertificatePage({ onNavigate }) {
     ctx.fillText('★ VERIFIED OWNER SIGNATURE • SECURE AUDIT KEY ★', sigCenterX, sigBaseY + 105);
     ctx.restore();
 
-    // 16. Bottom Security Microtext
+    // 16. Anti-Screenshot & Anti-Forgery Specimen Watermark Overlay (when not unlocked)
+    if (!isCurrentThemeUnlocked) {
+      // 16a. Diagonal Repeating Security Watermarks across Canvas
+      ctx.save();
+      ctx.rotate((-22 * Math.PI) / 180);
+      ctx.textAlign = 'center';
+
+      for (let y = -800; y < height + 1400; y += 180) {
+        ctx.fillStyle = theme.isDark ? 'rgba(234, 179, 8, 0.16)' : 'rgba(180, 83, 9, 0.18)';
+        ctx.font = '900 48px "Outfit", system-ui, sans-serif';
+        ctx.fillText('★ SPECIMEN ONLY • NOT ACCREDITED • COPYRIGHT PROTECTED ★', width / 2 - 260, y);
+
+        ctx.fillStyle = theme.isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(153, 27, 27, 0.15)';
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText('CODETYPER OFFICIAL REGISTRY • COPY FORGERY VOID • PASS EXAM TO CERTIFY YOUR NAME', width / 2 - 260, y + 42);
+      }
+      ctx.restore();
+
+      // 16b. Prominent Security Banner Strip across top inside border
+      ctx.save();
+      const bannerH = 46;
+      ctx.fillStyle = 'rgba(185, 28, 28, 0.94)'; // Crimson Red Security Header
+      ctx.fillRect(104, 104, width - 208, bannerH);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(104, 104, width - 208, bannerH);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Outfit", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        '⚠️ SPECIMEN DEMO PREVIEW • COPYRIGHT PROTECTED BY SAUMY PANDEY • PASS TIMED EXAM TO CLAIM OFFICIAL CREDENTIAL',
+        width / 2,
+        104 + bannerH / 2
+      );
+      ctx.restore();
+
+      // 16c. Anti-Screenshot Red Box Stamp over Candidate Name
+      ctx.save();
+      ctx.translate(width / 2, 560);
+      ctx.rotate((-7 * Math.PI) / 180);
+      ctx.strokeStyle = 'rgba(220, 38, 38, 0.7)';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(-430, -56, 860, 112);
+      ctx.fillStyle = 'rgba(220, 38, 38, 0.14)';
+      ctx.fillRect(-430, -56, 860, 112);
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.92)';
+      ctx.font = '900 34px "Outfit", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('★ SPECIMEN ONLY • NOT ACCREDITED ★', 0, 0);
+      ctx.restore();
+    }
+
+    // 17. Bottom Security Microtext
     ctx.save();
     ctx.textAlign = 'center';
     ctx.fillStyle = theme.isDark ? '#475569' : '#64748b';
@@ -767,7 +877,7 @@ export function CertificatePage({ onNavigate }) {
       1520
     );
     ctx.restore();
-  }, [recipientName, titleRole, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr]);
+  }, [recipientName, titleRole, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr, isCurrentThemeUnlocked]);
 
   useEffect(() => {
     drawCertificate();
@@ -779,9 +889,14 @@ export function CertificatePage({ onNavigate }) {
   }, [drawCertificate]);
 
   const handleDownload = () => {
+    if (!user) {
+      toast.info('🔒 Sign up or Log in to claim, certify, and download your official 4K accredited diploma!');
+      onNavigate('signup');
+      return;
+    }
     const selectedTier = themeTiers.tiers[activeTheme];
-    if (selectedTier && !selectedTier.isUnlocked) {
-      toast.error(`🔒 ${selectedTier.name} is locked (${selectedTier.passedCount}/${selectedTier.totalCount} tasks completed)! Complete all tasks below to unlock this certificate.`);
+    if (!isCurrentThemeUnlocked) {
+      toast.error(`🔒 ${selectedTier?.name || 'Theme'} is locked! Reach Account Level ${selectedTier?.unlockLevel || 20} and clear the ${selectedTier?.examDurationSeconds || 60}s exam to unlock official downloading.`);
       return;
     }
     if (!canvasRef.current) return;
@@ -795,9 +910,14 @@ export function CertificatePage({ onNavigate }) {
   };
 
   const handlePrint = () => {
+    if (!user) {
+      toast.info('🔒 Sign up or Log in to print or export your official accredited diploma!');
+      onNavigate('signup');
+      return;
+    }
     const selectedTier = themeTiers.tiers[activeTheme];
-    if (selectedTier && !selectedTier.isUnlocked) {
-      toast.error(`🔒 ${selectedTier.name} is locked! Complete all tasks below to print or export this certificate.`);
+    if (!isCurrentThemeUnlocked) {
+      toast.error(`🔒 ${selectedTier?.name || 'Theme'} is locked! Reach Account Level ${selectedTier?.unlockLevel || 20} and clear the ${selectedTier?.examDurationSeconds || 60}s exam to print or export PDF.`);
       return;
     }
     if (!canvasRef.current) return;
@@ -844,6 +964,11 @@ export function CertificatePage({ onNavigate }) {
   };
 
   const handleCopyId = () => {
+    if (!user) {
+      toast.info('🔒 Sign up or Log in to register your verified credential on the ledger!');
+      onNavigate('signup');
+      return;
+    }
     navigator.clipboard.writeText(
       `CodeTyper Verified Official Certificate ID: ${certId} | Recipient: ${recipientName} | Net Speed: ${wpm.toFixed(2)} WPM | Accuracy: ${accuracy.toFixed(2)}% | Signatory: Saumy Pandey (App Owner & Founder, CodeTyper) | Verification: https://codetyper.dev/verify/${certId}`
     );
@@ -851,242 +976,146 @@ export function CertificatePage({ onNavigate }) {
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
-      {/* Header Banner */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          padding: '1.5rem',
-          borderRadius: 'var(--radius-xl)',
-          background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%)',
-          border: '1px solid rgba(234, 179, 8, 0.4)',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #facc15 0%, #ca8a04 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#070b14',
-              boxShadow: '0 0 20px rgba(234, 179, 8, 0.6)',
-              flexShrink: 0
-            }}
-          >
+    <div className="cert-page-container">
+      {/* 1. Hero Header Card */}
+      <div className="cert-hero-card">
+        <div className="cert-hero-left">
+          <div className="cert-hero-icon-box">
             <Award size={30} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc' }}>
-                Official Accredited Typing Certificate
-              </h1>
-              <span
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  padding: '0.15rem 0.65rem',
-                  borderRadius: '9999px',
-                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  fontFamily: '"Pinyon Script", "Alex Brush", cursive'
-                }}
-              >
-                Signed by App Owner Saumy Pandey
+            <div className="cert-hero-badge-row">
+              <span className="cert-hero-accred-badge">
+                <ShieldCheck size={13} />
+                <span>Accredited Certification</span>
+              </span>
+              <span className="cert-hero-founder-pill">
+                Signed by App Owner &amp; Founder Saumy Pandey
               </span>
             </div>
-            <p style={{ margin: '0.35rem 0 0', fontSize: '0.9rem', color: '#94a3b8' }}>
-              Standardized touch-typing diploma with 24K gold foil guilloche engraving, 3D embossed wax seal, and the authorized cursive signature of founder <strong>Saumy Pandey</strong>.
+            <h1 className="cert-hero-title">
+              Standardized Touch-Typing &amp; Code Diploma
+            </h1>
+            <p className="cert-hero-desc">
+              Standardized touch-typing credential with 24K gold foil guilloche engraving, 3D embossed wax seal, instant cryptographic verification, and the authorized cursive signature of founder <strong>Saumy Pandey</strong>.
             </p>
+            <div className="cert-hero-highlights">
+              <span className="cert-hero-highlight-item">
+                <ShieldCheck size={14} color="var(--color-primary-forest)" />
+                <span>Instant Ledger Verification</span>
+              </span>
+              <span className="cert-hero-highlight-item">
+                <Trophy size={14} color="#eab308" />
+                <span>4 Distinction Tiers</span>
+              </span>
+              <span className="cert-hero-highlight-item">
+                <ExternalLink size={14} color="#0077b5" />
+                <span>1-Click LinkedIn Integration</span>
+              </span>
+              <span className="cert-hero-highlight-item">
+                <Printer size={14} color="var(--color-text-muted)" />
+                <span>4K Ultra HD PNG / PDF</span>
+              </span>
+            </div>
           </div>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={() => onNavigate('test')}
-          style={{
-            background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)',
-            color: '#070b14',
-            fontWeight: 700,
-            border: 'none',
-            boxShadow: '0 4px 14px rgba(234, 179, 8, 0.4)'
-          }}
-        >
-          <span>Take 60s Timed Exam</span>
-          <ArrowRight size={15} />
-        </button>
+        <div className="cert-hero-cta">
+          <button
+            className="btn btn-primary"
+            onClick={() => handleLaunchTierExam(currentTier)}
+            style={{ fontWeight: 700 }}
+          >
+            {user ? (
+              <>
+                <span>Take Level {currentTier?.unlockLevel || 20} Exam ({currentTier?.examDurationSeconds || 60}s)</span>
+                <ArrowRight size={15} />
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                <span>Sign Up to Take Level {currentTier?.unlockLevel || 20} Exam ({currentTier?.examDurationSeconds || 60}s) ⚡</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Guest Banner if not logged in */}
+      {/* 2. Guest Welcome Banner */}
       {!user && (
-        <div
-          style={{
-            padding: '1rem 1.35rem',
-            borderRadius: 'var(--radius-xl)',
-            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.05) 100%)',
-            border: '1px solid rgba(56, 189, 248, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: 'rgba(56, 189, 248, 0.18)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#38bdf8',
-                flexShrink: 0
-              }}
-            >
-              <Sparkles size={20} />
+        <div className="cert-guest-banner">
+          <div className="cert-guest-banner-left">
+            <div className="cert-guest-icon-box">
+              <Sparkles size={24} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.975rem' }}>
-                Log In or Sign Up to Unlock All 4 Official Certificate Tiers
+              <div className="cert-guest-title">
+                Claim &amp; Certify Your Official Typing Diploma 🎓
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                You are currently previewing diploma themes as a guest. Create a free account to track your typing milestones, complete theme challenges, and receive accredited credentials registered on the tamper-proof ledger!
+              <div className="cert-guest-desc">
+                You are currently previewing specimen themes as a guest. <strong>Create your free account</strong> to certify your real name, customize your verified professional title, pass timed exams (60s to 300s), and download ultra HD 4K diplomas signed by founder <strong>Saumy Pandey</strong>!
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.65rem' }}>
-            <button className="btn btn-outline btn-sm" onClick={() => onNavigate('login')} style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}>
+          <div className="cert-guest-actions">
+            <button
+              className="btn btn-outline"
+              onClick={() => onNavigate('login')}
+            >
               Log In
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('signup')} style={{ background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)', color: '#040d1a', fontWeight: 700 }}>
-              <span>Sign Up Free</span>
-              <ArrowRight size={14} />
+            <button
+              className="btn btn-primary"
+              onClick={() => onNavigate('signup')}
+            >
+              <span>Sign Up Free to Claim ⚡</span>
+              <ArrowRight size={15} />
             </button>
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-          THEME QUEST & MILESTONE ROADMAP (4 LUXURY TIERS)
-          ========================================================================= */}
-      <div
-        className="card"
-        style={{
-          padding: '1.5rem',
-          backgroundColor: '#070b16',
-          border: '1px solid rgba(234, 179, 8, 0.35)',
-          borderRadius: 'var(--radius-xl)'
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+      {/* 3. Theme Quest & Milestone Roadmap */}
+      <div className="cert-roadmap-card">
+        <div className="cert-roadmap-header">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="cert-roadmap-title-row">
               <Trophy size={20} color="#eab308" />
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
-                Certificate Quest & Milestone Roadmap
+              <h2 className="cert-roadmap-title">
+                Certificate Quest &amp; Milestone Roadmap
               </h2>
             </div>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
+            <p className="cert-roadmap-subtitle">
               Complete required velocity, accuracy, streak, and volume benchmarks to unlock official luxury themes.
             </p>
           </div>
-          <div
-            style={{
-              padding: '0.35rem 0.85rem',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(234, 179, 8, 0.15)',
-              border: '1px solid rgba(234, 179, 8, 0.4)',
-              color: '#facc15',
-              fontSize: '0.825rem',
-              fontWeight: 700
-            }}
-          >
+          <div className="cert-roadmap-counter">
             <span>Themes Unlocked: {themeTiers.totalUnlocked} of 4</span>
           </div>
         </div>
 
         {/* 4-Tier Interactive Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+        <div className="cert-tier-grid">
           {Object.values(themeTiers.tiers).map((tier) => {
             const isSelected = activeTheme === tier.id;
             return (
               <div
                 key={tier.id}
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '1.15rem',
-                  backgroundColor: isSelected ? 'rgba(15, 23, 42, 0.95)' : 'rgba(11, 17, 33, 0.75)',
-                  border: isSelected
-                    ? `2px solid ${tier.accentColor}`
-                    : (tier.isUnlocked ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)'),
-                  boxShadow: isSelected
-                    ? `0 0 18px ${tier.accentColor}33`
-                    : 'none',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.85rem',
-                  transition: 'all 0.2s ease'
-                }}
+                onClick={() => handleThemeChange(tier.id)}
+                className={`cert-tier-card ${isSelected ? 'selected' : ''}`}
               >
                 {/* Header: Tier Number & Status Badge */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      color: tier.accentColor,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}
-                  >
-                    Tier {tier.tier} Milestone
+                <div className="cert-tier-top-row">
+                  <span className="cert-tier-label">
+                    Tier {tier.tier} • Lv {tier.unlockLevel || 20}+ ({tier.examDurationSeconds || 60}s)
                   </span>
                   {tier.isUnlocked ? (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '9999px',
-                        backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                        border: '1px solid rgba(34, 197, 94, 0.4)',
-                        color: '#4ade80',
-                        fontSize: '0.725rem',
-                        fontWeight: 700
-                      }}
-                    >
+                    <span className="cert-tier-status-unlocked">
                       <Check size={11} strokeWidth={3} />
                       <span>Unlocked</span>
                     </span>
                   ) : (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '9999px',
-                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                        border: '1px solid rgba(239, 68, 68, 0.35)',
-                        color: '#f87171',
-                        fontSize: '0.725rem',
-                        fontWeight: 700
-                      }}
-                    >
+                    <span className="cert-tier-status-locked">
                       <Lock size={11} />
                       <span>Locked ({tier.passedCount}/4)</span>
                     </span>
@@ -1094,22 +1123,16 @@ export function CertificatePage({ onNavigate }) {
                 </div>
 
                 {/* Theme Title & Swatch */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div className="cert-tier-meta">
                   <div
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: tier.swatch,
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                      flexShrink: 0
-                    }}
+                    className="cert-tier-swatch"
+                    style={{ background: tier.swatch }}
                   />
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <h3 className="cert-tier-name">
                       {tier.name}
                     </h3>
-                    <div style={{ fontSize: '0.78rem', color: tier.accentColor, fontWeight: 600 }}>
+                    <div className="cert-tier-role-tag">
                       {tier.roleTag}
                     </div>
                   </div>
@@ -1117,74 +1140,68 @@ export function CertificatePage({ onNavigate }) {
 
                 {/* Progress Bar */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.3rem', color: '#94a3b8' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.3rem', color: 'var(--color-text-secondary)' }}>
                     <span>Quest Progress</span>
-                    <span style={{ fontWeight: 700, color: tier.isUnlocked ? '#4ade80' : '#facc15' }}>
+                    <span style={{ fontWeight: 700, color: tier.isUnlocked ? 'var(--color-primary-forest)' : '#b45309' }}>
                       {tier.progressPercent}%
                     </span>
                   </div>
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '6px',
-                      borderRadius: '9999px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                      overflow: 'hidden'
-                    }}
-                  >
+                  <div className="cert-tier-progress-track">
                     <div
+                      className="cert-tier-progress-fill"
                       style={{
                         width: `${tier.progressPercent}%`,
-                        height: '100%',
-                        backgroundColor: tier.isUnlocked ? '#22c55e' : tier.accentColor,
-                        borderRadius: '9999px',
-                        transition: 'width 0.4s ease'
+                        backgroundColor: tier.isUnlocked ? 'var(--color-primary-forest)' : tier.accentColor
                       }}
                     />
                   </div>
                 </div>
 
                 {/* 4 Tasks Checklist */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8rem' }}>
+                <div className="cert-tier-tasks">
                   {tier.tasks.map((task) => (
                     <div
                       key={task.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.35rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: task.passed ? 'rgba(34, 197, 94, 0.06)' : 'rgba(255, 255, 255, 0.03)',
-                        border: task.passed ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)'
-                      }}
+                      className={`cert-tier-task-item ${task.passed ? 'passed' : ''}`}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                         {task.passed ? (
-                          <div style={{ width: '15px', height: '15px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#040711', flexShrink: 0 }}>
+                          <div style={{ width: '15px', height: '15px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', flexShrink: 0 }}>
                             <Check size={10} strokeWidth={3} />
                           </div>
                         ) : (
-                          <div style={{ width: '15px', height: '15px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', flexShrink: 0 }}>
+                          <div style={{ width: '15px', height: '15px', borderRadius: '50%', backgroundColor: 'var(--color-bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', flexShrink: 0, border: '1px solid var(--color-border)' }}>
                             <Lock size={9} />
                           </div>
                         )}
-                        <span style={{ color: task.passed ? '#e2e8f0' : '#94a3b8', fontWeight: task.passed ? 600 : 400 }}>
+                        <span style={{ color: task.passed ? 'var(--color-text-primary)' : 'var(--color-text-muted)', fontWeight: task.passed ? 600 : 400 }}>
                           {task.title}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: task.passed ? '#4ade80' : '#facc15', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.75rem', color: task.passed ? '#16a34a' : 'var(--color-text-secondary)', fontWeight: 650 }}>
                           {task.current}
                         </span>
                         {!task.passed && (
                           <button
-                            onClick={() => onNavigate(task.actionRoute)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!user) {
+                                toast.info(`⚡ Please Sign Up or Log In first to track your XP, complete the "${task.title}" task, and level up!`);
+                                onNavigate('signup');
+                                return;
+                              }
+                              if (task.actionRoute === 'test' || task.actionRoute === 'coding') {
+                                handleLaunchTierExam(tier);
+                              } else {
+                                onNavigate(task.actionRoute);
+                              }
+                            }}
                             className="btn btn-ghost"
-                            style={{ padding: '0.1rem 0.35rem', fontSize: '0.7rem', color: '#38bdf8', height: 'auto' }}
-                            title={`Go to ${task.actionText}`}
+                            style={{ padding: '0.1rem 0.35rem', fontSize: '0.7rem', color: 'var(--color-primary-forest)', height: 'auto' }}
+                            title={!user ? `Sign up to complete ${task.title}` : `Go to ${task.actionText}`}
                           >
-                            <span>{task.actionText} →</span>
+                            <span>{!user ? 'Sign Up 🔒' : `${task.actionText} →`}</span>
                           </button>
                         )}
                       </div>
@@ -1195,22 +1212,10 @@ export function CertificatePage({ onNavigate }) {
                 {/* Card Action Button */}
                 <button
                   onClick={() => handleThemeChange(tier.id)}
-                  className="btn btn-sm"
+                  className={`btn btn-sm cert-tier-btn ${isSelected ? 'btn-primary' : (tier.isUnlocked ? 'btn-outline' : 'btn-ghost')}`}
                   style={{
-                    width: '100%',
-                    justifyContent: 'center',
-                    marginTop: 'auto',
-                    backgroundColor: isSelected
-                      ? tier.accentColor
-                      : (tier.isUnlocked ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.08)'),
-                    color: isSelected
-                      ? (tier.id === 'imperial-ivory' ? '#0f172a' : '#070b14')
-                      : (tier.isUnlocked ? '#4ade80' : '#cbd5e1'),
-                    border: isSelected
-                      ? 'none'
-                      : (tier.isUnlocked ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid rgba(255, 255, 255, 0.15)'),
-                    fontWeight: 700,
-                    cursor: 'pointer'
+                    backgroundColor: isSelected ? 'var(--color-primary-forest)' : undefined,
+                    color: isSelected ? '#ffffff' : undefined
                   }}
                 >
                   {isSelected ? (
@@ -1227,244 +1232,345 @@ export function CertificatePage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Customization Toolbar */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          padding: '1rem 1.25rem',
-          backgroundColor: '#0a0f1d',
-          border: '1px solid rgba(234, 179, 8, 0.35)'
-        }}
-      >
+      {/* 4. Customization Toolbar */}
+      <div className="cert-customizer-toolbar">
         {/* Candidate Name Input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <UserCheck size={18} color="#38bdf8" />
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Candidate:</span>
-          <input
-            type="text"
-            value={recipientName}
-            onChange={(e) => setRecipientName(e.target.value)}
-            placeholder="Enter candidate full name"
-            maxLength={40}
-            style={{
-              backgroundColor: '#040710',
-              color: '#ffffff',
-              border: '1px solid rgba(234, 179, 8, 0.45)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.4rem 0.8rem',
-              fontSize: '0.925rem',
-              fontWeight: 700,
-              minWidth: '180px'
-            }}
-          />
+        <div className="cert-toolbar-group">
+          <UserCheck size={18} color="var(--color-primary-forest)" />
+          <span className="cert-toolbar-label">Candidate:</span>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              className="cert-candidate-input"
+              value={user ? (isCurrentThemeUnlocked ? recipientName : 'DEMO CANDIDATE (LOCKED)') : 'DEMO SPECIMEN - JOHNATHAN DOE'}
+              onChange={(e) => {
+                if (user && isCurrentThemeUnlocked) {
+                  setRecipientName(e.target.value);
+                }
+              }}
+              onClick={() => {
+                if (!user) {
+                  toast.info('🔒 Sign up or Log in to put your official name on this diploma!');
+                  onNavigate('signup');
+                }
+              }}
+              readOnly={!user || !isCurrentThemeUnlocked}
+              placeholder={user ? (isCurrentThemeUnlocked ? "Enter candidate full name" : "Locked (Pass exam to edit)") : "Sign up to put your real name"}
+              maxLength={40}
+              style={{
+                cursor: user && isCurrentThemeUnlocked ? 'text' : 'pointer',
+                opacity: user && isCurrentThemeUnlocked ? 1 : 0.85
+              }}
+            />
+            {(!user || !isCurrentThemeUnlocked) && (
+              <span
+                style={{
+                  position: 'absolute',
+                  right: '0.6rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'var(--color-text-muted)'
+                }}
+                title={!user ? "Sign up to customize recipient name" : "Name editing is disabled until qualifying examination is cleared."}
+              >
+                <Lock size={14} />
+              </span>
+            )}
+          </div>
+          {!user ? (
+            <button
+              onClick={() => {
+                toast.info('🔒 Sign up or Log in to put your official real name on this diploma!');
+                onNavigate('signup');
+              }}
+              className="btn btn-sm btn-primary"
+              style={{ padding: '0.25rem 0.65rem', fontSize: '0.75rem' }}
+            >
+              <Lock size={11} />
+              <span>Sign Up to Unlock Real Name ⚡</span>
+            </button>
+          ) : !isCurrentThemeUnlocked && (
+            <span
+              style={{
+                fontSize: '0.725rem',
+                color: 'var(--color-text-muted)',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                backgroundColor: 'var(--color-bg-soft)',
+                padding: '0.2rem 0.55rem',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid var(--color-border)'
+              }}
+            >
+              <Lock size={10} />
+              <span>Specimen Preview Mode</span>
+            </span>
+          )}
         </div>
 
         {/* Candidate Role Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="cert-toolbar-group">
           <Briefcase size={17} color="#eab308" />
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Role:</span>
-          <select
-            value={titleRole}
-            onChange={(e) => setTitleRole(e.target.value)}
-            style={{
-              backgroundColor: '#040710',
-              color: '#facc15',
-              border: '1px solid rgba(234, 179, 8, 0.45)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.4rem 0.8rem',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            {CERTIFICATE_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          <span className="cert-toolbar-label">Role:</span>
+          {user ? (
+            <select
+              className="cert-role-select"
+              value={titleRole}
+              onChange={(e) => setTitleRole(e.target.value)}
+            >
+              {CERTIFICATE_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button
+              onClick={() => {
+                toast.info('🔒 Sign up or Log in to choose your certified engineering title (Full-Stack, AI, Cloud, etc.)!');
+                onNavigate('signup');
+              }}
+              className="cert-role-select"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                borderStyle: 'dashed'
+              }}
+              title="Click to sign up and choose your role title"
+            >
+              <span>Full-Stack Software Engineer</span>
+              <Lock size={12} color="#eab308" />
+            </button>
+          )}
         </div>
 
-        {/* Theme Selector with Lock Indicators */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <Palette size={16} color="#eab308" />
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Theme:</span>
-          {Object.values(CERT_THEMES).map((t) => {
-            const tierMeta = themeTiers.tiers[t.id];
-            const isUnlocked = tierMeta?.isUnlocked;
-            return (
-              <button
-                key={t.id}
-                onClick={() => handleThemeChange(t.id)}
-                style={{
-                  background: t.swatch,
-                  color: '#ffffff',
-                  border: activeTheme === t.id ? '2px solid #ffffff' : (isUnlocked ? '1px solid rgba(234, 179, 8, 0.4)' : '1px dashed rgba(255, 255, 255, 0.25)'),
-                  boxShadow: activeTheme === t.id ? '0 0 12px rgba(234, 179, 8, 0.6)' : 'none',
-                  borderRadius: 'var(--radius-full)',
-                  padding: '0.25rem 0.75rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  opacity: isUnlocked || activeTheme === t.id ? 1 : 0.75
-                }}
-                title={`${t.name} - ${isUnlocked ? 'Unlocked' : `Locked (${tierMeta?.passedCount || 0}/4 tasks completed)`}`}
-              >
-                <span>{t.badge}</span>
-                {isUnlocked ? (
-                  <Check size={12} color="#4ade80" strokeWidth={3} />
-                ) : (
-                  <Lock size={12} color="#facc15" />
-                )}
-              </button>
-            );
-          })}
+        {/* Theme Selector with Swatches */}
+        <div className="cert-toolbar-group">
+          <Palette size={16} color="var(--color-primary-forest)" />
+          <span className="cert-toolbar-label">Theme:</span>
+          <div className="cert-theme-swatches">
+            {Object.values(CERT_THEMES).map((t) => {
+              const tierMeta = themeTiers.tiers[t.id];
+              const isUnlocked = tierMeta?.isUnlocked;
+              const isActive = activeTheme === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleThemeChange(t.id)}
+                  className={`cert-swatch-btn ${isActive ? 'active' : ''}`}
+                  style={{
+                    background: t.swatch,
+                    opacity: isUnlocked || isActive ? 1 : 0.6
+                  }}
+                  title={`${t.name} (${t.badge}) - ${isUnlocked ? 'Unlocked' : 'Locked'}`}
+                  aria-label={t.name}
+                />
+              );
+            })}
+          </div>
         </div>
 
-        {/* Signature Style Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Feather size={16} color="#38bdf8" />
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Signature:</span>
-          <button
-            onClick={() => setSignatureVariant(signatureVariant === 'calligraphy' ? 'lowercase' : 'calligraphy')}
-            className="btn btn-sm"
-            style={{
-              backgroundColor: 'rgba(56, 189, 248, 0.15)',
-              color: '#38bdf8',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              borderRadius: 'var(--radius-sm)',
-              fontFamily: '"Pinyon Script", "Alex Brush", cursive',
-              fontSize: '1.15rem',
-              padding: '0.2rem 0.75rem',
-              cursor: 'pointer'
-            }}
-            title="Click to toggle cursive signature (Saumy Pandey / saumypandey)"
-          >
-            {signatureVariant === 'calligraphy' ? 'Saumy Pandey' : 'saumypandey'}
-          </button>
+        {/* Founder Signature Style Switcher */}
+        <div className="cert-toolbar-group">
+          <Feather size={16} color="var(--color-primary-forest)" />
+          <span className="cert-toolbar-label">Signature:</span>
+          {user ? (
+            <button
+              onClick={() => setSignatureVariant(signatureVariant === 'calligraphy' ? 'lowercase' : 'calligraphy')}
+              className="cert-signature-toggle-btn"
+              title="Toggle cursive signature style (Saumy Pandey / saumypandey)"
+            >
+              <span>{signatureVariant === 'calligraphy' ? 'Saumy Pandey' : 'saumypandey'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                toast.info('🔒 Sign up or Log in to customize founder signature styling!');
+                onNavigate('signup');
+              }}
+              className="cert-signature-toggle-btn"
+              title="Click to sign up and customize signature"
+            >
+              <span>Saumy Pandey</span>
+              <Lock size={12} color="#eab308" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Canvas Display Container with 3D Holographic Tilt & Dynamic Gold Glare */}
+      {/* 5. Canvas Display Container with 3D Holographic Tilt & Glare */}
       <div
+        className="cert-canvas-container"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         style={{
-          borderRadius: 'var(--radius-xl)',
-          overflow: 'hidden',
-          boxShadow: '0 25px 70px rgba(0, 0, 0, 0.9)',
-          border: '1px solid rgba(234, 179, 8, 0.4)',
-          backgroundColor: '#04060d',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          position: 'relative',
-          transform: `perspective(1400px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
-          transition: 'transform 0.1s ease-out'
+          transform: `perspective(1400px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`
         }}
       >
         {/* Dynamic Theme Accreditation or Locked Status Overlay */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '1.25rem',
-            right: '1.25rem',
-            zIndex: 10,
-            background: 'rgba(7, 11, 22, 0.88)',
-            backdropFilter: 'blur(12px)',
-            border: themeTiers.tiers[activeTheme]?.isUnlocked
-              ? '1px solid #22c55e'
-              : '1px solid rgba(234, 179, 8, 0.5)',
-            padding: '0.4rem 0.9rem',
-            borderRadius: '9999px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: themeTiers.tiers[activeTheme]?.isUnlocked
-              ? '0 0 15px rgba(34, 197, 94, 0.3)'
-              : '0 0 15px rgba(234, 179, 8, 0.25)'
-          }}
-        >
-          {themeTiers.tiers[activeTheme]?.isUnlocked ? (
+        <div className="cert-canvas-status-pill">
+          {isCurrentThemeUnlocked ? (
             <>
-              <ShieldCheck size={15} color="#4ade80" />
-              <span style={{ color: '#4ade80', fontSize: '0.825rem', fontWeight: 700 }}>
-                Accredited & Ready to Download
+              <ShieldCheck size={15} color="#22c55e" />
+              <span style={{ color: 'var(--color-primary-forest)', fontSize: '0.825rem', fontWeight: 700 }}>
+                Accredited &amp; Ready to Download
+              </span>
+            </>
+          ) : activeTheme === 'imperial-ivory' ? (
+            <>
+              <Sparkles size={15} color="#d97706" />
+              <span style={{ color: '#b45309', fontSize: '0.825rem', fontWeight: 700 }}>
+                Open Specimen (Curiosity Preview • Anti-Screenshot Protected)
               </span>
             </>
           ) : (
             <>
-              <Lock size={15} color="#facc15" />
-              <span style={{ color: '#fde047', fontSize: '0.825rem', fontWeight: 700 }}>
-                Previewing Locked Theme ({themeTiers.tiers[activeTheme]?.passedCount || 0}/4 Tasks)
+              <Lock size={15} color="#ef4444" />
+              <span style={{ color: '#dc2626', fontSize: '0.825rem', fontWeight: 700 }}>
+                Theme Locked &amp; Blurred ({currentTier?.passedCount || 0}/4 Tasks)
               </span>
             </>
           )}
         </div>
 
-        {/* Dynamic Gold Holographic Glare */}
+        {/* Dynamic Gold/Emerald Holographic Glare */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(234, 179, 8, 0.15) 0%, transparent 65%)`,
+            background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(234, 179, 8, 0.12) 0%, transparent 65%)`,
             zIndex: 2
           }}
         />
+
+        {/* Canvas with Blur & Anti-Screenshot Safeguards */}
         <canvas
           ref={canvasRef}
+          onContextMenu={(e) => e.preventDefault()}
+          draggable={false}
+          className="cert-canvas-element"
           style={{
-            width: '100%',
-            height: 'auto',
-            maxHeight: '750px',
-            display: 'block',
-            objectFit: 'contain'
+            filter: isBlurredLockedTheme ? 'blur(26px) brightness(0.55)' : 'none',
+            transform: isBlurredLockedTheme ? 'scale(1.02)' : 'none',
+            transition: 'filter 0.35s ease, transform 0.35s ease',
+            pointerEvents: isBlurredLockedTheme ? 'none' : 'auto'
           }}
         />
+
+        {/* Frosted Glass Lock Shield Overlay (For the 3 Locked & Blurred Themes) */}
+        {isBlurredLockedTheme && (
+          <div className="cert-lock-overlay">
+            {/* Glowing 3D Lock Emblem */}
+            <div className="cert-lock-emblem">
+              <Lock size={38} strokeWidth={2.4} />
+            </div>
+
+            <div
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                color: '#facc15',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                marginBottom: '0.35rem'
+              }}
+            >
+              Tier {currentTier?.tier || 2} Diploma Locked • Requires Level {currentTier?.unlockLevel || 20}
+            </div>
+
+            <h3 className="cert-lock-heading">
+              {currentTier?.name || 'Exclusive Luxury Theme'}
+            </h3>
+
+            <p className="cert-lock-desc">
+              This official high-prestige diploma is blurred and locked to protect credential integrity.
+              Reach Account Level {currentTier?.unlockLevel || 20} and pass the {currentTier?.examDurationSeconds || 60}s typing benchmark to unlock this theme without watermarks.
+            </p>
+
+            {/* Quest Progress Pill */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                border: '1px solid rgba(234, 179, 8, 0.35)',
+                borderRadius: 'var(--radius-full)',
+                padding: '0.4rem 1.2rem',
+                marginBottom: '1.5rem',
+                fontSize: '0.85rem'
+              }}
+            >
+              <span style={{ color: '#94a3b8' }}>Milestones Cleared:</span>
+              <span style={{ fontWeight: 800, color: '#facc15' }}>
+                {currentTier?.passedCount || 0} / {currentTier?.totalCount || 4} Tasks ({currentTier?.progressPercent || 0}%)
+              </span>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleLaunchTierExam(currentTier)}
+              >
+                <span>
+                  {!user
+                    ? `Sign Up to Unlock & Take Level ${currentTier?.unlockLevel || 20} Exam (${currentTier?.examDurationSeconds || 60}s) ⚡`
+                    : `Take Level ${currentTier?.unlockLevel || 20} Exam (${currentTier?.examDurationSeconds || 60}s) to Unlock ⚡`}
+                </span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                className="btn btn-outline"
+                onClick={() => handleThemeChange('imperial-ivory')}
+                style={{
+                  borderColor: 'rgba(255, 255, 255, 0.35)',
+                  color: '#f8fafc',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <span>View Open Specimen (Imperial Ivory) 👁️</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Action Footer */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          padding: '1.25rem 1.5rem',
-          borderRadius: 'var(--radius-xl)',
-          backgroundColor: '#0a0f1d',
-          border: '1px solid rgba(234, 179, 8, 0.35)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#94a3b8', fontSize: '0.875rem', flexWrap: 'wrap' }}>
-          <ShieldCheck size={18} color="#38bdf8" />
-          <span>Serial: <code style={{ color: '#eab308', fontWeight: 700 }}>{certId}</code></span>
-          <span style={{ color: '#64748b' }}>•</span>
+      {/* 6. Action & Ledger Verification Bar */}
+      <div className="cert-action-bar">
+        <div className="cert-serial-info">
+          <ShieldCheck size={18} color="var(--color-primary-forest)" />
+          <span>Serial: <code className="cert-serial-code">{certId}</code></span>
+          <span style={{ color: 'var(--color-border)' }}>•</span>
           <a
             href={`#verify/${certId}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#38bdf8', textDecoration: 'underline', fontSize: '0.85rem' }}
+            style={{ color: 'var(--color-primary-forest)', textDecoration: 'underline', fontSize: '0.85rem', fontWeight: 600 }}
           >
             Public Ledger Verification ↗
           </a>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="cert-btn-group">
           {/* 1-Click Add to LinkedIn */}
           <button
-            className="btn btn-outline"
+            className="btn btn-outline cert-linkedin-btn"
             onClick={() => {
+              if (!user) {
+                toast.info('🔒 Sign up or Log in to certify and add your official credential directly to your LinkedIn profile!');
+                onNavigate('signup');
+                return;
+              }
+              if (!isCurrentThemeUnlocked) {
+                toast.info('🔒 Add to LinkedIn is available once you pass the qualification exam and claim your accredited credential!');
+                return;
+              }
               const url = getLinkedInCertificationUrl({
                 certId,
                 recipientName,
@@ -1474,44 +1580,34 @@ export function CertificatePage({ onNavigate }) {
               });
               window.open(url, '_blank', 'noopener,noreferrer');
             }}
-            style={{ borderColor: '#0077b5', color: '#38bdf8', backgroundColor: 'rgba(0, 119, 181, 0.1)' }}
-            title="Add Credential directly to your LinkedIn Profile"
+            title={!user ? "Sign up to add to LinkedIn" : "Add Credential directly to your LinkedIn Profile"}
           >
             <ExternalLink size={15} />
-            <span>Add to LinkedIn</span>
+            <span>{!user ? 'Add to LinkedIn 🔒' : 'Add to LinkedIn'}</span>
           </button>
 
           <button
             className="btn btn-outline"
             onClick={handleCopyId}
-            style={{ borderColor: 'rgba(255, 255, 255, 0.25)', color: '#cbd5e1' }}
           >
             <Share2 size={16} />
-            <span>Copy Credential</span>
+            <span>{!user ? 'Copy Credential 🔒' : 'Copy Credential'}</span>
           </button>
 
           <button
             className="btn btn-outline"
             onClick={handlePrint}
-            style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}
           >
             <Printer size={16} />
-            <span>Print / Save PDF</span>
+            <span>{!user ? 'Print / PDF 🔒' : 'Print / Save PDF'}</span>
           </button>
 
           <button
             className="btn btn-primary"
             onClick={handleDownload}
-            style={{
-              background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)',
-              color: '#070b14',
-              fontWeight: 700,
-              border: 'none',
-              boxShadow: '0 4px 16px rgba(234, 179, 8, 0.45)'
-            }}
           >
             <Download size={16} />
-            <span>Download Ultra HD (2400x1600 4K PNG)</span>
+            <span>{!user ? 'Sign Up to Claim 4K Certificate 🎓' : 'Download Ultra HD (2400x1600 4K PNG)'}</span>
           </button>
         </div>
       </div>

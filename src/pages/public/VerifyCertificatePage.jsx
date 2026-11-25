@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../utils/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import {
   getLinkedInCertificationUrl,
   getSocialShareUrls,
@@ -29,6 +30,8 @@ import { soundEngine } from '../../utils/soundEngine.js';
 
 export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
   const toast = useToast();
+  const { settings } = useSettings();
+  const isDark = settings?.theme === 'dark';
   const [certId, setCertId] = useState(initialCertId || '');
   const [searchInput, setSearchInput] = useState(initialCertId || '');
   const [loading, setLoading] = useState(true);
@@ -109,14 +112,17 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Top Banner / Verification Header */}
+      {/* Header Search & Verification Portal Card */}
       <div
         className="card"
         style={{
           padding: '2.5rem 2rem',
           textAlign: 'center',
-          background: 'radial-gradient(ellipse at 50% -20%, rgba(234, 179, 8, 0.22) 0%, rgba(15, 23, 42, 0.95) 75%)',
-          border: '1px solid rgba(234, 179, 8, 0.4)',
-          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
+          background: isDark
+            ? 'radial-gradient(ellipse at 50% -20%, rgba(234, 179, 8, 0.22) 0%, rgba(15, 23, 42, 0.95) 75%)'
+            : 'radial-gradient(ellipse at 50% -20%, rgba(254, 240, 138, 0.5) 0%, #ffffff 80%)',
+          border: isDark ? '1px solid rgba(234, 179, 8, 0.4)' : '1px solid rgba(217, 119, 6, 0.3)',
+          boxShadow: isDark ? '0 12px 36px rgba(0, 0, 0, 0.45)' : '0 12px 36px rgba(120, 53, 15, 0.08)',
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -128,9 +134,9 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
             gap: '0.5rem',
             padding: '0.4rem 1rem',
             borderRadius: '9999px',
-            backgroundColor: 'rgba(56, 189, 248, 0.12)',
-            border: '1px solid rgba(56, 189, 248, 0.35)',
-            color: '#38bdf8',
+            backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 132, 199, 0.08)',
+            border: isDark ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(2, 132, 199, 0.25)',
+            color: isDark ? '#38bdf8' : '#0284c7',
             fontSize: '0.85rem',
             fontWeight: 700,
             textTransform: 'uppercase',
@@ -142,12 +148,12 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
           <span>CodeTyper Global Accreditation Registry</span>
         </div>
 
-        <h1 style={{ fontSize: '2.4rem', fontWeight: 900, color: '#f8fafc', margin: '0 0 0.75rem 0', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: '2.4rem', fontWeight: 900, color: isDark ? '#f8fafc' : '#15291F', margin: '0 0 0.75rem 0', letterSpacing: '-0.02em' }}>
           Official Credential Verification
         </h1>
-        <p style={{ maxWidth: '620px', margin: '0 auto 1.5rem auto', color: '#94a3b8', fontSize: '1rem', lineHeight: 1.6 }}>
+        <p style={{ maxWidth: '620px', margin: '0 auto 1.5rem auto', color: isDark ? '#94a3b8' : '#50665A', fontSize: '1rem', lineHeight: 1.6 }}>
           Immutable proof of touch-typing competency, standardized speed assessment, and authentic founder sign-off by{' '}
-          <strong style={{ color: '#f8fafc' }}>Saumy Pandey</strong>.
+          <strong style={{ color: isDark ? '#f8fafc' : '#15291F' }}>Saumy Pandey</strong>.
         </p>
 
         {/* Search Bar for Other IDs */}
@@ -163,9 +169,9 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
               style={{
                 width: '100%',
                 paddingLeft: '2.8rem',
-                backgroundColor: 'rgba(7, 11, 20, 0.85)',
-                borderColor: 'rgba(234, 179, 8, 0.35)',
-                color: '#f8fafc',
+                backgroundColor: isDark ? 'rgba(7, 11, 20, 0.85)' : '#ffffff',
+                borderColor: isDark ? 'rgba(234, 179, 8, 0.35)' : 'rgba(217, 119, 6, 0.3)',
+                color: isDark ? '#f8fafc' : '#15291F',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 fontSize: '0.9rem'
@@ -190,7 +196,7 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
 
       {/* Loading State */}
       {loading && (
-        <div className="card" style={{ padding: '3.5rem', textAlign: 'center' }}>
+        <div className="card" style={{ padding: '3.5rem', textAlign: 'center', backgroundColor: isDark ? 'var(--color-bg-surface)' : '#ffffff' }}>
           <div
             style={{
               width: '48px',
@@ -202,8 +208,8 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
               animation: 'spin 0.8s linear infinite'
             }}
           />
-          <h3 style={{ margin: '0 0 0.5rem 0' }}>Querying Global Certificate Ledger...</h3>
-          <p style={{ color: '#94a3b8', margin: 0 }}>Validating digital signature and cryptographic hash...</p>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: isDark ? '#f8fafc' : '#15291F' }}>Querying Global Certificate Ledger...</h3>
+          <p style={{ color: isDark ? '#94a3b8' : '#50665A', margin: 0 }}>Validating digital signature and cryptographic hash...</p>
         </div>
       )}
 
@@ -215,7 +221,10 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
             padding: '2.5rem',
             textAlign: 'center',
             borderColor: 'rgba(239, 68, 68, 0.4)',
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(15, 23, 42, 0.9) 100%)'
+            background: isDark
+              ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(15, 23, 42, 0.9) 100%)'
+              : 'linear-gradient(135deg, #fef2f2 0%, #ffffff 100%)',
+            boxShadow: isDark ? 'none' : '0 10px 30px rgba(239, 68, 68, 0.08)'
           }}
         >
           <div
@@ -233,14 +242,18 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
           >
             <AlertTriangle size={28} />
           </div>
-          <h2 style={{ color: '#f8fafc', margin: '0 0 0.5rem 0' }}>Credential Not Authenticated</h2>
-          <p style={{ color: '#fca5a5', maxWidth: '520px', margin: '0 auto 1.5rem auto' }}>{error}</p>
+          <h2 style={{ color: isDark ? '#f8fafc' : '#991b1b', margin: '0 0 0.5rem 0' }}>Credential Not Authenticated</h2>
+          <p style={{ color: isDark ? '#fca5a5' : '#b91c1c', maxWidth: '520px', margin: '0 auto 1.5rem auto' }}>{error}</p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <button
               className="btn btn-outline"
               onClick={() => {
                 setCertId('CT-2026-DEMO');
                 setSearchInput('CT-2026-DEMO');
+              }}
+              style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
+                color: isDark ? '#cbd5e1' : '#475569'
               }}
             >
               Try Demo Certificate ID
@@ -260,9 +273,11 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
             className="card"
             style={{
               padding: '2rem 2.25rem',
-              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid rgba(234, 179, 8, 0.55)',
-              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.35)',
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%)'
+                : 'linear-gradient(135deg, #ffffff 0%, #fffdf7 100%)',
+              border: isDark ? '2px solid rgba(234, 179, 8, 0.55)' : '2px solid rgba(217, 119, 6, 0.45)',
+              boxShadow: isDark ? '0 16px 40px rgba(0, 0, 0, 0.35)' : '0 16px 40px rgba(120, 53, 15, 0.12)',
               position: 'relative'
             }}
           >
@@ -274,7 +289,7 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '1rem',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.08)',
                 paddingBottom: '1.25rem',
                 marginBottom: '1.75rem'
               }}
@@ -296,10 +311,10 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                   <CheckCircle2 size={22} />
                 </div>
                 <div>
-                  <div style={{ color: '#10b981', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  <div style={{ color: isDark ? '#10b981' : '#059669', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                     Authentic & Verified Active Credential
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#64748b' }}>
                     Issued by CodeTyper Examination Commission • ISO/IEC Competency
                   </div>
                 </div>
@@ -310,11 +325,11 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                   fontFamily: 'monospace',
                   fontWeight: 700,
                   fontSize: '1rem',
-                  color: '#facc15',
-                  backgroundColor: 'rgba(234, 179, 8, 0.12)',
+                  color: isDark ? '#facc15' : '#b45309',
+                  backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : 'rgba(217, 119, 6, 0.08)',
                   padding: '0.35rem 0.85rem',
                   borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(234, 179, 8, 0.3)'
+                  border: isDark ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid rgba(217, 119, 6, 0.25)'
                 }}
               >
                 ID: {certData.certId}
@@ -323,18 +338,20 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
 
             {/* Recipient Spotlight */}
             <div style={{ textAlign: 'center', margin: '1rem 0 2rem 0' }}>
-              <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#78716c', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
                 This is to officially certify that
               </span>
               <h2
                 style={{
                   fontSize: '2.5rem',
                   margin: '0.35rem 0 0.25rem 0',
-                  color: '#f8fafc',
+                  color: isDark ? '#f8fafc' : '#15291F',
                   fontWeight: 900,
                   fontFamily: '"Playfair Display", "Outfit", serif',
                   letterSpacing: '0.02em',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #fef08a 100%)',
+                  background: isDark
+                    ? 'linear-gradient(135deg, #ffffff 0%, #fef08a 100%)'
+                    : 'linear-gradient(135deg, #15291F 0%, #854d0e 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}
@@ -350,11 +367,11 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                     gap: '0.5rem',
                     padding: '0.3rem 0.85rem',
                     borderRadius: '9999px',
-                    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                    color: '#38bdf8',
+                    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 132, 199, 0.08)',
+                    color: isDark ? '#38bdf8' : '#0284c7',
                     fontSize: '0.9rem',
                     fontWeight: 700,
-                    border: '1px solid rgba(56, 189, 248, 0.3)'
+                    border: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(2, 132, 199, 0.25)'
                   }}
                 >
                   <Sparkles size={14} />
@@ -369,11 +386,11 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                       gap: '0.4rem',
                       padding: '0.3rem 0.85rem',
                       borderRadius: '9999px',
-                      backgroundColor: 'rgba(234, 179, 8, 0.15)',
-                      color: '#facc15',
+                      backgroundColor: isDark ? 'rgba(234, 179, 8, 0.15)' : 'rgba(217, 119, 6, 0.08)',
+                      color: isDark ? '#facc15' : '#b45309',
                       fontSize: '0.9rem',
                       fontWeight: 700,
-                      border: '1px solid rgba(234, 179, 8, 0.4)'
+                      border: isDark ? '1px solid rgba(234, 179, 8, 0.4)' : '1px solid rgba(217, 119, 6, 0.3)'
                     }}
                   >
                     <Award size={14} />
@@ -396,19 +413,20 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 style={{
                   padding: '1.25rem 1rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(7, 11, 20, 0.75)',
-                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  backgroundColor: isDark ? 'rgba(7, 11, 20, 0.75)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid rgba(217, 119, 6, 0.25)',
+                  boxShadow: isDark ? 'none' : '0 2px 10px rgba(0, 0, 0, 0.04)',
                   textAlign: 'center'
                 }}
               >
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Net Typing Speed
                 </span>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#facc15', margin: '0.25rem 0 0 0' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: isDark ? '#facc15' : '#b45309', margin: '0.25rem 0 0 0' }}>
                   {certData.netWpm}{' '}
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#94a3b8' }}>WPM</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: isDark ? '#94a3b8' : '#78716c' }}>WPM</span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '0.2rem', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.75rem', color: isDark ? '#38bdf8' : '#0284c7', marginTop: '0.2rem', fontWeight: 600 }}>
                   Gross: {certData.grossWpm} WPM
                 </div>
               </div>
@@ -417,18 +435,19 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 style={{
                   padding: '1.25rem 1rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(7, 11, 20, 0.75)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  backgroundColor: isDark ? 'rgba(7, 11, 20, 0.75)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(2, 132, 199, 0.25)',
+                  boxShadow: isDark ? 'none' : '0 2px 10px rgba(0, 0, 0, 0.04)',
                   textAlign: 'center'
                 }}
               >
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Accuracy Rate
                 </span>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8', margin: '0.25rem 0 0 0' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: isDark ? '#38bdf8' : '#0284c7', margin: '0.25rem 0 0 0' }}>
                   {certData.accuracy}%
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '0.2rem', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.75rem', color: isDark ? '#10b981' : '#059669', marginTop: '0.2rem', fontWeight: 600 }}>
                   Precision Standard
                 </div>
               </div>
@@ -437,18 +456,19 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 style={{
                   padding: '1.25rem 1rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(7, 11, 20, 0.75)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  backgroundColor: isDark ? 'rgba(7, 11, 20, 0.75)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)',
+                  boxShadow: isDark ? 'none' : '0 2px 10px rgba(0, 0, 0, 0.04)',
                   textAlign: 'center'
                 }}
               >
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Accredited Tier
                 </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', margin: '0.45rem 0 0 0' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: isDark ? '#10b981' : '#059669', margin: '0.45rem 0 0 0' }}>
                   {certData.tierTitle}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#78716c', marginTop: '0.2rem' }}>
                   {certData.tierGrade}
                 </div>
               </div>
@@ -457,18 +477,19 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 style={{
                   padding: '1.25rem 1rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(7, 11, 20, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  backgroundColor: isDark ? 'rgba(7, 11, 20, 0.75)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.1)',
+                  boxShadow: isDark ? 'none' : '0 2px 10px rgba(0, 0, 0, 0.04)',
                   textAlign: 'center'
                 }}
               >
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Assessment Exam
                 </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', margin: '0.45rem 0 0 0' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: isDark ? '#f8fafc' : '#15291F', margin: '0.45rem 0 0 0' }}>
                   {certData.durationSeconds}s Timed
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#78716c', marginTop: '0.2rem' }}>
                   {certData.totalCharacters} Keystrokes
                 </div>
               </div>
@@ -482,7 +503,7 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 gap: '1.25rem',
                 marginTop: '1.75rem',
                 paddingTop: '1.5rem',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+                borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.08)'
               }}
             >
               {/* Founder Signatory Box */}
@@ -490,8 +511,9 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(2, 132, 199, 0.25)',
+                  boxShadow: isDark ? 'none' : '0 2px 10px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '1rem'
@@ -502,8 +524,8 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                     width: '48px',
                     height: '48px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                    color: '#38bdf8',
+                    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.1)',
+                    color: isDark ? '#38bdf8' : '#0284c7',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -513,25 +535,25 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                   <Feather size={24} />
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.75rem', color: isDark ? '#38bdf8' : '#0284c7', fontWeight: 700, textTransform: 'uppercase' }}>
                     Authorized Signatory
                   </span>
                   <div
                     style={{
                       fontFamily: '"Pinyon Script", "Alex Brush", cursive',
                       fontSize: '1.85rem',
-                      color: '#f8fafc',
+                      color: isDark ? '#f8fafc' : '#15291F',
                       lineHeight: 1.1,
                       margin: '0.15rem 0'
                     }}
                   >
                     Saumy Pandey
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#64748b' }}>
                     {certData.signatoryTitle || 'App Owner & Creator • Founder, CodeTyper'}
                   </div>
-                  <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '0.2rem' }}>
-                    Signatory ID: <code style={{ color: '#38bdf8' }}>CT-OWNER-01</code>
+                  <div style={{ fontSize: '0.725rem', color: isDark ? '#64748b' : '#94a3b8', marginTop: '0.2rem' }}>
+                    Signatory ID: <code style={{ color: isDark ? '#38bdf8' : '#0284c7' }}>CT-OWNER-01</code>
                   </div>
                 </div>
               </div>
@@ -541,8 +563,9 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)',
+                  boxShadow: isDark ? 'none' : '0 2px 10px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '1rem'
@@ -553,8 +576,8 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                     width: '48px',
                     height: '48px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                    color: '#10b981',
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+                    color: isDark ? '#10b981' : '#059669',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -564,13 +587,13 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                   <ShieldCheck size={24} />
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.75rem', color: isDark ? '#10b981' : '#059669', fontWeight: 700, textTransform: 'uppercase' }}>
                     Biometric Keystroke Dynamics
                   </span>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', margin: '0.15rem 0' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: isDark ? '#f8fafc' : '#15291F', margin: '0.15rem 0' }}>
                     Anti-Cheat & Flight-Time Authenticated
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                  <div style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                     SHA-256: {certData.sha256Fingerprint ? certData.sha256Fingerprint.slice(0, 24) + '...' : 'SECURE_DIPLOMA_HASH'}
                   </div>
                 </div>
@@ -587,7 +610,7 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                 gap: '0.85rem',
                 marginTop: '1.75rem',
                 paddingTop: '1.25rem',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+                borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.08)'
               }}
             >
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -619,16 +642,23 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
                     window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
                   }}
                   style={{
-                    borderColor: '#0077b5',
-                    color: '#38bdf8',
-                    backgroundColor: 'rgba(0, 119, 181, 0.1)'
+                    borderColor: isDark ? '#0077b5' : '#0284c7',
+                    color: isDark ? '#38bdf8' : '#0369a1',
+                    backgroundColor: isDark ? 'rgba(0, 119, 181, 0.1)' : 'rgba(2, 132, 199, 0.08)'
                   }}
                 >
                   <ExternalLink size={15} />
                   <span>Add to LinkedIn</span>
                 </button>
 
-                <button className="btn btn-outline" onClick={handleCopyLink}>
+                <button
+                  className="btn btn-outline"
+                  onClick={handleCopyLink}
+                  style={{
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
+                    color: isDark ? '#cbd5e1' : '#475569'
+                  }}
+                >
                   {copied ? <Check size={15} color="#10b981" /> : <Share2 size={15} />}
                   <span>{copied ? 'Link Copied!' : 'Copy Verification Link'}</span>
                 </button>
@@ -637,14 +667,14 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
               {/* Social Quick Share Buttons */}
               {shareUrls && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#94a3b8', marginRight: '0.2rem' }}>Share:</span>
+                  <span style={{ fontSize: '0.775rem', color: isDark ? '#94a3b8' : '#64748b', marginRight: '0.2rem' }}>Share:</span>
                   <a
                     href={shareUrls.twitter}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-ghost btn-sm"
                     title="Share on Twitter / X"
-                    style={{ padding: '0.35rem 0.6rem', color: '#38bdf8' }}
+                    style={{ padding: '0.35rem 0.6rem', color: isDark ? '#38bdf8' : '#0284c7' }}
                   >
                     𝕏
                   </a>
@@ -683,13 +713,15 @@ export function VerifyCertificatePage({ certId: initialCertId, onNavigate }) {
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '1rem',
-              backgroundColor: 'rgba(15, 23, 42, 0.7)'
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : '#ffffff',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: isDark ? 'none' : '0 4px 16px rgba(0, 0, 0, 0.04)'
             }}
           >
             <div>
-              <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc' }}>Want your own Accredited Typing Diploma?</h4>
-              <p style={{ margin: 0, fontSize: '0.875rem', color: '#94a3b8' }}>
-                Complete a 60-second typing test and earn a verifiable diploma signed by founder Saumy Pandey.
+              <h4 style={{ margin: '0 0 0.25rem 0', color: isDark ? '#f8fafc' : '#15291F' }}>Want your own Accredited Typing Diploma?</h4>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: isDark ? '#94a3b8' : '#50665A' }}>
+                Level up every 20 levels, pass tier-scaled examinations (60s to 300s), and earn verifiable diplomas signed by founder Saumy Pandey.
               </p>
             </div>
             <button className="btn btn-primary btn-sm" onClick={() => onNavigate && onNavigate('test')}>

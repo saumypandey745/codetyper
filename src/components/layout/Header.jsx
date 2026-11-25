@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Sun, Moon, Search, Volume2, VolumeX, LogOut, User, Settings, Check } from 'lucide-react';
+import { Menu, Sun, Moon, Search, Volume2, VolumeX, LogOut, User, Settings, Check, BookOpen, Code2, Timer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
-export function Header({ onToggleSidebar, onNavigate, onOpenSearch }) {
+export function Header({ onToggleSidebar, onNavigate, onOpenSearch, currentView }) {
   const { user, logout, userStats } = useAuth();
   const { settings, toggleTheme, updateSetting } = useSettings();
   const toast = useToast();
@@ -54,6 +54,37 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch }) {
           <Search size={15} />
           <span>Quick Find...</span>
           <span className="search-kbd">Ctrl K</span>
+        </button>
+      </div>
+
+      {/* Quick Mode Switcher in App Header */}
+      <div className="header-mode-nav" role="tablist" aria-label="Typing Practice Modes">
+        <button
+          id="app-header-nav-english"
+          className={`header-mode-btn ${currentView === 'english' || currentView === 'practice' ? 'active' : ''}`}
+          onClick={() => onNavigate('english')}
+          title="English Typing Practice"
+        >
+          <BookOpen size={14} />
+          <span>English Typing</span>
+        </button>
+        <button
+          id="app-header-nav-coding"
+          className={`header-mode-btn ${currentView === 'coding' ? 'active' : ''}`}
+          onClick={() => onNavigate('coding')}
+          title="Coding Practice (25+ Languages)"
+        >
+          <Code2 size={14} />
+          <span>Coding Practice</span>
+        </button>
+        <button
+          id="app-header-nav-test"
+          className={`header-mode-btn ${currentView === 'test' ? 'active' : ''}`}
+          onClick={() => onNavigate('test')}
+          title="Speed Typing Test"
+        >
+          <Timer size={14} />
+          <span>Typing Test</span>
         </button>
       </div>
 

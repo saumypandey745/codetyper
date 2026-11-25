@@ -317,12 +317,27 @@ export function TypingEngine({
                 type="button"
                 className={`btn btn-sm ${activeAmbientTrack ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setShowAmbientMenu((prev) => !prev)}
-                title="Ambient Soundscapes"
+                title={activeAmbientTrack ? 'Ambient Soundscape Playing. Click to adjust or change.' : 'Ambient Soundscapes'}
                 aria-pressed={!!activeAmbientTrack}
                 aria-haspopup="true"
                 aria-expanded={showAmbientMenu}
+                style={{ position: 'relative' }}
               >
                 <CloudDrizzle size={14} />
+                {activeAmbientTrack && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-primary-forest)',
+                      boxShadow: '0 0 5px var(--color-primary-forest)'
+                    }}
+                  />
+                )}
               </button>
 
               {showAmbientMenu && (
@@ -429,6 +444,9 @@ export function TypingEngine({
         tabIndex={0}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        onClick={() => {
+          if (viewportRef.current) viewportRef.current.focus();
+        }}
         onKeyDown={handleKeyDown}
         role="textbox"
         aria-label="Typing practice input field"
@@ -437,6 +455,19 @@ export function TypingEngine({
           fontSize: settings.font_size === 'large' ? '1.3rem' : settings.font_size === 'small' ? '1.05rem' : '1.18rem'
         }}
       >
+        {/* Unfocused Click-to-Focus Overlay Banner */}
+        {!isFocused && status !== 'countdown' && (
+          <div
+            className="typing-unfocused-banner"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (viewportRef.current) viewportRef.current.focus();
+            }}
+          >
+            <Keyboard size={15} />
+            <span>Click anywhere inside or press any key to focus</span>
+          </div>
+        )}
         {/* Countdown Overlay */}
         {status === 'countdown' && (
           <div

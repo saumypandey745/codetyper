@@ -24,8 +24,9 @@ import {
 import confetti from 'canvas-confetti';
 import { soundEngine } from '../../utils/soundEngine.js';
 import { useSettings } from '../../context/SettingsContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
-// 4 iconic dev snippets with syntax tokens
+// 5 iconic snippets with syntax tokens (including English Prose)
 const SNIPPETS = [
   {
     id: 'js',
@@ -189,11 +190,23 @@ const SNIPPETS = [
       { text: 'true', type: 'keyword' },
       { text: ';\n}', type: 'punct' }
     ]
+  },
+  {
+    id: 'english',
+    filename: 'clarity_focus.txt',
+    language: 'English Prose',
+    iconColor: '#10B981',
+    tag: 'English Prose',
+    code: `Clarity of thought is the ultimate superpower. By mastering typing cadence and eliminating cognitive friction, ideas transform into reality effortlessly.`,
+    tokens: [
+      { text: 'Clarity of thought is the ultimate superpower. By mastering typing cadence and eliminating cognitive friction, ideas transform into reality effortlessly.', type: 'plain' }
+    ]
   }
 ];
 
 export function HeroInteractiveEditor({ onNavigate, onStartPractice }) {
   const { settings, updateSetting } = useSettings();
+  const { user } = useAuth();
   const [activeTabId, setActiveTabId] = useState('js');
   const activeSnippet = useMemo(() => {
     return SNIPPETS.find((s) => s.id === activeTabId) || SNIPPETS[0];
@@ -265,6 +278,18 @@ export function HeroInteractiveEditor({ onNavigate, onStartPractice }) {
       editorViewportRef.current.focus({ preventScroll: true });
     }
   }, [activeTabId, resetSession]);
+
+  // Support external switching (e.g., from header or landing page modes)
+  useEffect(() => {
+    const handleSwitch = (e) => {
+      if (e.detail?.tabId) {
+        setActiveTabId(e.detail.tabId);
+        resetSession();
+      }
+    };
+    window.addEventListener('codetyper-switch-hero-snippet', handleSwitch);
+    return () => window.removeEventListener('codetyper-switch-hero-snippet', handleSwitch);
+  }, [resetSession]);
 
   // Live timer interval
   useEffect(() => {
@@ -513,7 +538,7 @@ export function HeroInteractiveEditor({ onNavigate, onStartPractice }) {
   }, [cursorIndex, targetText]);
 
   return (
-    <div className="hero-editor-master-stage">
+    <div id="home-editor" className="hero-editor-master-stage">
       {/* Dynamic Ambient Aurora Lighting Rig */}
       <div className="hero-editor-ambient-glow" aria-hidden="true" />
 
@@ -893,6 +918,10 @@ export function HeroInteractiveEditor({ onNavigate, onStartPractice }) {
                   type="button"
                   className="btn-celebration-hero-primary"
                   onClick={() => {
+                    if (!user) {
+                      onNavigate('signup');
+                      return;
+                    }
                     if (onStartPractice) {
                       onStartPractice('coding');
                     } else if (onNavigate) {
@@ -902,7 +931,7 @@ export function HeroInteractiveEditor({ onNavigate, onStartPractice }) {
                 >
                   <span className="btn-shine-bar" />
                   <Sparkles size={16} />
-                  <span>Launch Full Practice Arena</span>
+                  <span>{!user ? 'Sign Up to Unlock Full 25+ Stacks Arena 🚀' : 'Launch Full Practice Arena'}</span>
                   <ArrowRight size={16} className="btn-arrow-icon" />
                 </button>
 

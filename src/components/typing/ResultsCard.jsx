@@ -13,7 +13,7 @@ export function ResultsCard({
   onNextPractice,
   onNavigate
 }) {
-  const { userStats } = useAuth();
+  const { user, userStats } = useAuth();
   const [showCertModal, setShowCertModal] = useState(false);
 
   const eligibility = useMemo(() => checkCertificateEligibility(result), [result]);
@@ -388,7 +388,9 @@ export function ResultsCard({
               </span>
             </div>
             <div style={{ fontSize: '0.825rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-              {eligibility.isEligible
+              {!user
+                ? `🔥 You hit ${Math.round(result.netWpm || 0)} WPM! Sign up free to permanently record your score on the leaderboard, level up, and claim your accredited 4K diploma.`
+                : eligibility.isEligible
                 ? `High distinction ${eligibility.tierTitle} diploma unlocked with verified owner signature & 4K download!`
                 : `Verified competency certificate with authentic cursive signature of founder Saumy Pandey (${eligibility.passedCount}/4 criteria met).`}
             </div>
@@ -398,22 +400,34 @@ export function ResultsCard({
         <button
           className="btn btn-sm"
           style={{
-            background: eligibility.isEligible
+            background: (!user || eligibility.isEligible)
               ? 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)'
               : 'rgba(56, 189, 248, 0.15)',
-            color: eligibility.isEligible ? '#070b14' : '#38bdf8',
-            border: eligibility.isEligible ? 'none' : '1px solid rgba(56, 189, 248, 0.4)',
+            color: (!user || eligibility.isEligible) ? '#070b14' : '#38bdf8',
+            border: (!user || eligibility.isEligible) ? 'none' : '1px solid rgba(56, 189, 248, 0.4)',
             fontWeight: 700,
-            boxShadow: eligibility.isEligible ? '0 4px 14px rgba(234, 179, 8, 0.4)' : 'none',
+            boxShadow: (!user || eligibility.isEligible) ? '0 4px 14px rgba(234, 179, 8, 0.4)' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.45rem',
             padding: '0.5rem 1rem'
           }}
-          onClick={() => setShowCertModal(true)}
+          onClick={() => {
+            if (!user) {
+              onNavigate('signup');
+            } else {
+              setShowCertModal(true);
+            }
+          }}
         >
           <Award size={15} />
-          <span>{eligibility.isEligible ? 'Claim Official Certificate 🎓' : 'Preview Certificate & Signature 📜'}</span>
+          <span>
+            {!user
+              ? 'Sign Up to Claim Diploma 🎓'
+              : eligibility.isEligible
+              ? 'Claim Official Certificate 🎓'
+              : 'Preview Certificate & Signature 📜'}
+          </span>
         </button>
       </div>
 
@@ -438,7 +452,25 @@ export function ResultsCard({
           <span>View Statistics</span>
         </button>
 
-        {eligibility.isEligible ? (
+        {!user ? (
+          <button
+            className="btn btn-primary"
+            style={{
+              background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #facc15 100%)',
+              color: '#0f172a',
+              border: '1px solid #eab308',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(234, 179, 8, 0.35)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}
+            onClick={() => onNavigate('signup')}
+          >
+            <Award size={16} />
+            <span>Sign Up to Claim Diploma 🎓</span>
+          </button>
+        ) : eligibility.isEligible ? (
           <button
             className="btn btn-primary"
             style={{

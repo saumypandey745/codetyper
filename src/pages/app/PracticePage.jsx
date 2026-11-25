@@ -46,9 +46,38 @@ import { programmingLanguages, englishCategories } from '../../../server/seedDat
 
 const GUEST_COMPLETED_KEY = 'codetyper_completed_lessons';
 
+const popularCodingLanguages = [
+  { id: 'JavaScript', label: 'JS' },
+  { id: 'TypeScript', label: 'TS' },
+  { id: 'Python', label: 'Python' },
+  { id: 'React/JSX', label: 'React' },
+  { id: 'C++', label: 'C++' },
+  { id: 'Java', label: 'Java' },
+  { id: 'HTML', label: 'HTML' },
+  { id: 'CSS', label: 'CSS' },
+  { id: 'Go', label: 'Go' },
+  { id: 'Rust', label: 'Rust' },
+  { id: 'SQL', label: 'SQL' },
+  { id: 'Algorithms (DSA)', label: 'DSA' }
+];
+
+const popularEnglishCategories = [
+  { id: 'All', label: 'All Topics' },
+  { id: 'General English', label: 'General' },
+  { id: 'Developer Knowledge', label: 'Developer' },
+  { id: 'Programming Concepts', label: 'Concepts' },
+  { id: 'Daily Life', label: 'Daily Life' },
+  { id: 'Business', label: 'Business' },
+  { id: 'Technology', label: 'Tech' },
+  { id: 'Science', label: 'Science' },
+  { id: 'Productivity', label: 'Productivity' },
+  { id: 'Short Stories', label: 'Stories' }
+];
+
 export function PracticePage({
   initialType = 'practice',
   initialLanguage = null,
+  initialDuration = null,
   onNavigate
 }) {
   const { user, updateUserStats } = useAuth();
@@ -61,7 +90,7 @@ export function PracticePage({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [mode, setMode] = useState(initialType === 'test' ? 'time' : 'time');
-  const [duration, setDuration] = useState(initialType === 'test' ? 60 : 30);
+  const [duration, setDuration] = useState(initialDuration || (initialType === 'test' ? 60 : 30));
   const [wordCount, setWordCount] = useState(25);
 
   // Content & Curriculum state
@@ -135,17 +164,56 @@ export function PracticePage({
   const [completedResult, setCompletedResult] = useState(null);
   const [engineKey, setEngineKey] = useState(Date.now());
 
-  // Sync when initialType changes from sidebar
+  // Sync when initialType or initialDuration changes from navigation
   useEffect(() => {
     if (initialType) {
       setPracticeType(initialType);
       setCompletedResult(null);
       if (initialType === 'test') {
-        setDuration(60);
+        setDuration(initialDuration || 60);
+        setMode('time');
+      } else if (initialDuration) {
+        setDuration(initialDuration);
         setMode('time');
       }
     }
-  }, [initialType]);
+  }, [initialType, initialDuration]);
+
+  useEffect(() => {
+    if (initialLanguage) {
+      setSelectedLanguage(initialLanguage);
+    }
+  }, [initialLanguage]);
+
+  const handleSwitchPracticeType = (newType, customDuration = null) => {
+    setPracticeType(newType);
+    setCompletedResult(null);
+    setIsCustomMode(false);
+    if (newType === 'test') {
+      setDuration(customDuration || 60);
+      setMode('time');
+    } else if (customDuration) {
+      setDuration(customDuration);
+    }
+    setEngineKey(Date.now());
+    if (onNavigate) {
+      onNavigate(newType);
+    }
+  };
+
+  const handleSelectLanguage = (lang) => {
+    setSelectedLanguage(lang);
+    setIsCustomMode(false);
+    setCompletedResult(null);
+    setEngineKey(Date.now());
+  };
+
+  const handleSelectCategory = (cat) => {
+    setSelectedCategory(cat);
+    setIsCustomMode(false);
+    setCompletedResult(null);
+    setEngineKey(Date.now());
+  };
 
   const isCode = practiceType === 'coding';
   const isTest = practiceType === 'test';
@@ -534,211 +602,325 @@ export function PracticePage({
     <div className={`typing-stage-wrapper ${isCompactMode ? 'compact-stage' : ''} ${engineStatus === 'typing' ? 'flow-focus-active' : ''}`}>
       {/* Space-Saving Minimalist Toolbar (Focus Mode) */}
       {isCompactMode ? (
-        <div className="compact-command-deck" role="toolbar" aria-label="Practice Controls">
-          {/* Mode Segmented Switcher */}
-          <div className="compact-modes-pill" role="tablist" aria-label="Practice Modes">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={practiceType === 'practice'}
-              className={`compact-mode-btn ${practiceType === 'practice' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('practice'); setCompletedResult(null); }}
-              title="Quick Practice"
-            >
-              <Keyboard size={13} />
-              <span>Quick</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={practiceType === 'coding'}
-              className={`compact-mode-btn ${practiceType === 'coding' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('coding'); setCompletedResult(null); }}
-              title="Coding Practice"
-            >
-              <Code2 size={13} />
-              <span>Coding</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={practiceType === 'english'}
-              className={`compact-mode-btn ${practiceType === 'english' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('english'); setCompletedResult(null); }}
-              title="English Practice"
-            >
-              <BookOpen size={13} />
-              <span>English</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={practiceType === 'test'}
-              className={`compact-mode-btn ${practiceType === 'test' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('test'); setDuration(60); setMode('time'); setCompletedResult(null); }}
-              title="Typing Speed Test"
-            >
-              <Timer size={13} />
-              <span>Test</span>
-            </button>
-          </div>
+        <div className="compact-command-deck-container">
+          <div className="compact-command-deck" role="toolbar" aria-label="Practice Controls">
+            {/* Primary Mode Segmented Switcher */}
+            <div className="compact-modes-pill" role="tablist" aria-label="Practice Modes">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={practiceType === 'english' || practiceType === 'practice'}
+                className={`compact-mode-btn ${(practiceType === 'english' || practiceType === 'practice') ? 'active' : ''}`}
+                onClick={() => handleSwitchPracticeType('english')}
+                title="English Typing Practice"
+              >
+                <BookOpen size={14} />
+                <span>English</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={practiceType === 'coding'}
+                className={`compact-mode-btn ${practiceType === 'coding' ? 'active' : ''}`}
+                onClick={() => handleSwitchPracticeType('coding')}
+                title="Coding Practice (25+ Languages)"
+              >
+                <Code2 size={14} />
+                <span>Coding</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={practiceType === 'test'}
+                className={`compact-mode-btn ${practiceType === 'test' ? 'active' : ''}`}
+                onClick={() => handleSwitchPracticeType('test', 60)}
+                title="Official Speed Typing Test"
+              >
+                <Timer size={14} />
+                <span>Speed Test</span>
+              </button>
+            </div>
 
-          {/* Center Pacing & Filter Controls */}
-          <div className="compact-center-group">
-            {/* Pacing Durations & Mode */}
-            <div className="compact-micro-group" title="Duration / Mode">
-              {[15, 30, 60].map((sec) => (
-                <button
-                  key={sec}
-                  type="button"
-                  className={`compact-micro-btn ${mode === 'time' && duration === sec ? 'active' : ''}`}
-                  onClick={() => { setMode('time'); setDuration(sec); setCompletedResult(null); setEngineKey(Date.now()); }}
-                >
-                  {sec}s
-                </button>
-              ))}
+            {/* Center Pacing & Filter Controls */}
+            <div className="compact-center-group">
+              {/* Pacing Durations & Mode (Hidden in Test mode to avoid duplication with test banner) */}
               {!isTest && (
-                <button
-                  type="button"
-                  className={`compact-micro-btn ${mode === 'words' ? 'active' : ''}`}
-                  onClick={() => { setMode('words'); setWordCount(25); setCompletedResult(null); setEngineKey(Date.now()); }}
-                  title="25 Words"
-                >
-                  25w
-                </button>
+                <div className="compact-micro-group" title="Duration / Mode">
+                  {[15, 30, 60, 120].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      className={`compact-micro-btn ${mode === 'time' && duration === sec ? 'active' : ''}`}
+                      onClick={() => { setMode('time'); setDuration(sec); setCompletedResult(null); setEngineKey(Date.now()); }}
+                      title={`${sec >= 60 ? `${sec / 60}m` : `${sec}s`} timer`}
+                    >
+                      {sec >= 60 ? `${sec / 60}m` : `${sec}s`}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`compact-micro-btn ${mode === 'words' ? 'active' : ''}`}
+                    onClick={() => { setMode('words'); setWordCount(25); setCompletedResult(null); setEngineKey(Date.now()); }}
+                    title="25 Words sprint"
+                  >
+                    25w
+                  </button>
+                  <button
+                    type="button"
+                    className={`compact-micro-btn ${mode === 'text' ? 'active' : ''}`}
+                    onClick={() => { setMode('text'); setCompletedResult(null); setEngineKey(Date.now()); }}
+                    title="Complete full passage"
+                  >
+                    Full
+                  </button>
+                </div>
+              )}
+
+              {/* Coding Language Select */}
+              {practiceType === 'coding' && (
+                <div className="compact-select-wrapper" title="Select Programming Language">
+                  <Code2 size={13} color="var(--color-primary-forest)" />
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => handleSelectLanguage(e.target.value)}
+                    aria-label="Select Programming Language"
+                  >
+                    {programmingLanguages.map((lang) => (
+                      <option key={lang} value={lang}>{lang}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* English Category Select */}
+              {(practiceType === 'english' || practiceType === 'practice') && (
+                <div className="compact-select-wrapper" title="Select English Topic">
+                  <BookOpen size={13} color="var(--color-primary-forest)" />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => handleSelectCategory(e.target.value)}
+                    aria-label="Select English Topic"
+                  >
+                    <option value="All">All Topics</option>
+                    {englishCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Difficulty Level */}
+              {!isTest && (
+                <div className="compact-micro-group" title="Difficulty Level">
+                  {['all', 'beginner', 'intermediate', 'advanced'].map((lvl) => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      className={`compact-micro-btn ${selectedDifficulty === lvl ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedDifficulty(lvl);
+                        setIsCustomMode(false);
+                        setCompletedResult(null);
+                      }}
+                    >
+                      {lvl === 'intermediate' ? 'med' : lvl === 'beginner' ? 'beg' : lvl === 'advanced' ? 'adv' : 'all'}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Coding Language Select */}
-            {practiceType === 'coding' && (
-              <div className="compact-select-wrapper" title="Programming Language">
-                <Code2 size={12} color="var(--color-primary-forest)" />
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => {
-                    setSelectedLanguage(e.target.value);
-                    setIsCustomMode(false);
-                    setCompletedResult(null);
-                  }}
-                  aria-label="Language"
-                >
-                  {programmingLanguages.map((lang) => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Right Action Tools & Expand Toggle */}
+            <div className="compact-right-group">
+              {/* Quick Lesson Indicator & Prev/Next */}
+              {!isCustomMode && !isTest && totalLessons > 0 && (
+                <div className="compact-lesson-chip">
+                  <button
+                    type="button"
+                    className="compact-arrow-btn"
+                    disabled={!prevLesson}
+                    onClick={handlePrevSnippet}
+                    title={prevLesson ? `Previous: Lesson ${currentLessonNumber - 1}` : 'First lesson'}
+                    aria-label="Previous lesson"
+                  >
+                    <ArrowLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="compact-lesson-badge-btn"
+                    onClick={() => setShowCurriculumModal(true)}
+                    title={`Lesson ${currentLessonNumber} of ${totalLessons} (${completedCount} completed). Click to open full curriculum.`}
+                  >
+                    <BookOpen size={12} style={{ color: 'var(--color-primary-forest)' }} />
+                    <span>L{currentLessonNumber}/{totalLessons}</span>
+                    {isCurrentCompleted && <CheckCircle2 size={12} color="var(--color-primary-forest)" />}
+                  </button>
+                  <button
+                    type="button"
+                    className="compact-arrow-btn"
+                    disabled={!nextLesson || !isLessonUnlocked(currentLessonIndex + 1)}
+                    onClick={handleNextSnippet}
+                    title={nextLesson ? `Next: Lesson ${currentLessonNumber + 1}` : 'Last lesson'}
+                    aria-label="Next lesson"
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              )}
 
-            {/* English Category Select */}
-            {practiceType === 'english' && (
-              <div className="compact-select-wrapper" title="English Category">
-                <BookOpen size={12} color="var(--color-primary-forest)" />
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => {
-                    setSelectedCategory(e.target.value);
-                    setIsCustomMode(false);
-                    setCompletedResult(null);
-                  }}
-                  aria-label="Category"
-                >
-                  <option value="All">All Categories</option>
-                  {englishCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Difficulty Level */}
-            <div className="compact-micro-group" title="Difficulty Level">
-              {['all', 'beginner', 'intermediate', 'advanced'].map((lvl) => (
+              {/* Shuffle Next */}
+              {!isTest && (
                 <button
-                  key={lvl}
                   type="button"
-                  className={`compact-micro-btn ${selectedDifficulty === lvl ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedDifficulty(lvl);
-                    setIsCustomMode(false);
-                    setCompletedResult(null);
-                  }}
+                  className="compact-btn"
+                  onClick={handleNextSnippet}
+                  title="Next Passage / Snippet (Shuffle)"
                 >
-                  {lvl === 'intermediate' ? 'med' : lvl === 'beginner' ? 'beg' : lvl === 'advanced' ? 'adv' : 'all'}
+                  <Shuffle size={13} />
+                  <span>Next</span>
                 </button>
-              ))}
+              )}
+
+              {/* Coding tools: Custom & AI */}
+              {practiceType === 'coding' && (
+                <button
+                  type="button"
+                  className="compact-btn"
+                  onClick={() => setShowCustomModal(true)}
+                  title="Paste custom code or import from GitHub"
+                >
+                  <FileCode size={13} />
+                  <span>Custom / GitHub</span>
+                </button>
+              )}
+
+              {/* Weakness Drill */}
+              {!isTest && (
+                <button
+                  type="button"
+                  className={`compact-btn ${currentSnippet?.isWeaknessDrill ? 'active' : ''}`}
+                  onClick={handleStartWeaknessDrill}
+                  title="Generate intelligent drill targeting error-prone keys"
+                >
+                  <Target size={13} />
+                  <span>Drill</span>
+                </button>
+              )}
+
+              {/* Expand Full Options & Syllabus Toggle */}
+              <button
+                type="button"
+                className="compact-btn compact-expand-btn"
+                onClick={toggleCompactMode}
+                title="Expand full studio deck, lesson details & roadmap"
+              >
+                <SlidersHorizontal size={13} />
+                <span>Options ▾</span>
+              </button>
             </div>
           </div>
 
-          {/* Right Action Tools & Expand Toggle */}
-          <div className="compact-right-group">
-            {/* Quick Lesson Indicator & Prev/Next */}
-            {!isCustomMode && !isTest && totalLessons > 0 && (
-              <div className="compact-lesson-chip">
+          {/* Dedicated Sub-bar for Coding: Popular Language Quick Chips */}
+          {practiceType === 'coding' && (
+            <div className="quick-filter-strip" role="group" aria-label="Popular Coding Languages">
+              <span className="quick-filter-strip-label">
+                <Code2 size={13} />
+                <span>Languages:</span>
+              </span>
+              <div className="quick-filter-chips-scroll">
+                {popularCodingLanguages.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`quick-chip-btn ${selectedLanguage === item.id ? 'active' : ''}`}
+                    onClick={() => handleSelectLanguage(item.id)}
+                    title={`Practice ${item.id} code typing`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dedicated Sub-bar for English Typing: Popular Category Quick Chips */}
+          {(practiceType === 'english' || practiceType === 'practice') && (
+            <div className="quick-filter-strip" role="group" aria-label="Popular English Topics">
+              <span className="quick-filter-strip-label">
+                <BookOpen size={13} />
+                <span>Topics:</span>
+              </span>
+              <div className="quick-filter-chips-scroll">
+                {popularEnglishCategories.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`quick-chip-btn ${selectedCategory === item.id ? 'active' : ''}`}
+                    onClick={() => handleSelectCategory(item.id)}
+                    title={`Practice ${item.id}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dedicated Sub-bar for Speed Typing Test: Official Test Hero Banner */}
+          {practiceType === 'test' && (
+            <div className="typing-test-hero-card">
+              <div className="test-hero-left">
+                <div className="test-hero-icon">
+                  <Timer size={22} />
+                </div>
+                <div className="test-hero-text">
+                  <div className="test-hero-title-row">
+                    <h3 style={{ margin: 0, fontSize: '0.975rem', fontWeight: 700 }}>Official Speed Typing Test</h3>
+                    <span className="test-badge-certified">Certified Benchmark</span>
+                  </div>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                    Standardized timed test under exam conditions. Real-time net WPM with error penalty. 40+ WPM &amp; 95%+ accuracy qualifies for an accredited diploma.
+                  </p>
+                </div>
+              </div>
+              <div className="test-hero-right">
+                <div className="test-duration-selector">
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Timer:</span>
+                  {[
+                    { sec: 60, label: '1m Sprint' },
+                    { sec: 120, label: '2m Standard' },
+                    { sec: 180, label: '3m Pro' },
+                    { sec: 300, label: '5m Exam' }
+                  ].map((t) => (
+                    <button
+                      key={t.sec}
+                      type="button"
+                      className={`compact-micro-btn ${duration === t.sec ? 'active' : ''}`}
+                      onClick={() => {
+                        setMode('time');
+                        setDuration(t.sec);
+                        setCompletedResult(null);
+                        setEngineKey(Date.now());
+                      }}
+                      style={{ minHeight: '28px', padding: '0.25rem 0.65rem' }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
-                  className="compact-arrow-btn"
-                  disabled={!prevLesson}
-                  onClick={handlePrevSnippet}
-                  title={prevLesson ? `Previous: Lesson ${currentLessonNumber - 1}` : 'First lesson'}
-                  aria-label="Previous lesson"
-                >
-                  <ArrowLeft size={11} />
-                </button>
-                <button
-                  type="button"
-                  className="compact-lesson-badge-btn"
-                  onClick={() => setShowCurriculumModal(true)}
-                  title={`Lesson ${currentLessonNumber} of ${totalLessons} (${completedCount} completed). Click to open full curriculum.`}
-                >
-                  <span>L{currentLessonNumber}/{totalLessons}</span>
-                  {isCurrentCompleted && <CheckCircle2 size={11} color="var(--color-primary-forest)" />}
-                </button>
-                <button
-                  type="button"
-                  className="compact-arrow-btn"
-                  disabled={!nextLesson || !isLessonUnlocked(currentLessonIndex + 1)}
+                  className="btn btn-sm btn-outline"
                   onClick={handleNextSnippet}
-                  title={nextLesson ? `Next: Lesson ${currentLessonNumber + 1}` : 'Last lesson'}
-                  aria-label="Next lesson"
+                  title="Load another test passage"
+                  style={{ gap: '0.35rem', fontSize: '0.785rem' }}
                 >
-                  <ArrowRight size={11} />
+                  <Shuffle size={13} />
+                  <span>New Passage</span>
                 </button>
               </div>
-            )}
-
-            {/* Shuffle Next */}
-            <button
-              type="button"
-              className="compact-btn"
-              onClick={handleNextSnippet}
-              title="Next Snippet (Shuffle)"
-            >
-              <Shuffle size={12} />
-              <span>Next</span>
-            </button>
-
-            {/* Weakness Drill */}
-            <button
-              type="button"
-              className={`compact-btn ${currentSnippet?.isWeaknessDrill ? 'active' : ''}`}
-              onClick={handleStartWeaknessDrill}
-              title="Generate intelligent drill targeting error-prone keys"
-            >
-              <Target size={12} />
-              <span>Drill</span>
-            </button>
-
-            {/* Expand Full Options & Syllabus Toggle */}
-            <button
-              type="button"
-              className="compact-btn compact-expand-btn"
-              onClick={toggleCompactMode}
-              title="Expand full studio deck, lesson details & roadmap"
-            >
-              <SlidersHorizontal size={12} />
-              <span>Options ▾</span>
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -773,41 +955,31 @@ export function PracticePage({
             <button
               type="button"
               role="tab"
-              aria-selected={practiceType === 'practice'}
-              className={`segmented-mode-btn ${practiceType === 'practice' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('practice'); setCompletedResult(null); }}
+              aria-selected={practiceType === 'english' || practiceType === 'practice'}
+              className={`segmented-mode-btn ${(practiceType === 'english' || practiceType === 'practice') ? 'active' : ''}`}
+              onClick={() => handleSwitchPracticeType('english')}
             >
-              <Keyboard size={14} />
-              <span>Quick</span>
+              <BookOpen size={15} />
+              <span>English Typing</span>
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={practiceType === 'coding'}
               className={`segmented-mode-btn ${practiceType === 'coding' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('coding'); setCompletedResult(null); }}
+              onClick={() => handleSwitchPracticeType('coding')}
             >
-              <Code2 size={14} />
-              <span>Coding</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={practiceType === 'english'}
-              className={`segmented-mode-btn ${practiceType === 'english' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('english'); setCompletedResult(null); }}
-            >
-              <BookOpen size={14} />
-              <span>English</span>
+              <Code2 size={15} />
+              <span>Coding Practice</span>
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={practiceType === 'test'}
               className={`segmented-mode-btn ${practiceType === 'test' ? 'active' : ''}`}
-              onClick={() => { setPracticeType('test'); setDuration(60); setMode('time'); setCompletedResult(null); }}
+              onClick={() => handleSwitchPracticeType('test', 60)}
             >
-              <Timer size={14} />
+              <Timer size={15} />
               <span>Speed Test</span>
             </button>
           </div>
@@ -848,7 +1020,7 @@ export function PracticePage({
             {mode === 'time' && (
               <div className="deck-micro-pills">
                 <span className="micro-pill-label">Time</span>
-                {(isTest ? [30, 60, 120, 300] : [15, 30, 60, 120, 300]).map((sec) => (
+                {(isTest ? [60, 120, 180, 300] : [15, 30, 60, 120, 180, 300]).map((sec) => (
                   <button
                     key={sec}
                     type="button"

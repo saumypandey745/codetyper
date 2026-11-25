@@ -31,6 +31,7 @@ import {
   getSocialShareUrls
 } from '../../utils/certificateEligibility.js';
 import { soundEngine } from '../../utils/soundEngine.js';
+import { calculateLevelFromXp } from '../../utils/gamificationEngine.js';
 
 // --- LUXURY CERTIFICATE THEME PALETTES ---
 const CERT_THEMES = {
@@ -145,10 +146,10 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   const { user, userStats } = useAuth();
   const toast = useToast();
 
-  const defaultName = user?.display_name || user?.username || 'Saumy Pandey';
+  const defaultName = user ? (user?.display_name || user?.username || 'Saumy Pandey') : 'DEMO SPECIMEN - JOHNATHAN DOE';
   const [recipientName, setRecipientName] = useState(defaultName);
   const [titleRole, setTitleRole] = useState(result?.titleRole || 'Touch-Typing Specialist');
-  const [activeTheme, setActiveTheme] = useState('royal-obsidian');
+  const [activeTheme, setActiveTheme] = useState('imperial-ivory');
   const [signatureVariant, setSignatureVariant] = useState('calligraphy'); // 'calligraphy' | 'lowercase'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [tilt, setTilt] = useState({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
@@ -179,11 +180,22 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   const duration = result?.durationSeconds !== undefined ? Math.round(Number(result.durationSeconds)) : 60;
   const language = result?.language || 'All Disciplines (English & Code)';
 
+  const userLevel = useMemo(() => {
+    if (userStats?.level && userStats.level > 1) return userStats.level;
+    const storedXp = typeof window !== 'undefined'
+      ? parseInt(localStorage.getItem('codetyper_total_xp') || '0', 10)
+      : 0;
+    if (storedXp > 0) return calculateLevelFromXp(storedXp);
+    const tests = userStats?.total_tests || 0;
+    return tests >= 30 ? 80 : tests >= 20 ? 60 : tests >= 12 ? 40 : tests >= 5 ? 20 : Math.max(1, tests * 2);
+  }, [userStats]);
+
   const themeTiers = useMemo(() => {
     const arenaWins = typeof window !== 'undefined'
       ? parseInt(localStorage.getItem('codetyper_arena_wins') || '0', 10)
       : 0;
     return evaluateThemeTiers({
+      level: userLevel,
       wpm: Math.max(wpm, userStats?.best_wpm || 0),
       accuracy: Math.max(accuracy, userStats?.avg_accuracy || 0),
       totalTests: (userStats?.total_tests || 0) + 1,
@@ -193,7 +205,11 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
       arenaWins,
       duration
     });
-  }, [wpm, accuracy, userStats, duration]);
+  }, [userLevel, wpm, accuracy, userStats, duration]);
+
+  const currentTier = themeTiers.tiers[activeTheme];
+  const isCurrentThemeUnlocked = Boolean(user && currentTier?.isUnlocked && eligibility.isEligible);
+  const isBlurredLockedTheme = Boolean(activeTheme !== 'imperial-ivory' && !isCurrentThemeUnlocked);
 
   // When eligibility changes, update activeTab accordingly
   useEffect(() => {
@@ -487,7 +503,10 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.fillText('THIS IS TO OFFICIALLY ACCREDIT AND CERTIFY THAT', width / 2, 460);
 
     // 9. Candidate Name (Majestic Centerpiece)
-    const displayName = (recipientName || 'CodeTyper Typist').trim();
+    const isUnlocked = isCurrentThemeUnlocked;
+    const displayName = isUnlocked
+      ? (recipientName || 'CodeTyper Typist').trim()
+      : 'DEMO CANDIDATE (SPECIMEN PREVIEW)';
     ctx.fillStyle = theme.textColor;
     ctx.font = 'bold 78px "Cinzel", "Playfair Display", "Times New Roman", Georgia, serif';
     ctx.shadowColor = theme.accentColor;
@@ -514,9 +533,12 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.fill();
 
     // Candidate Subtitle / Role Selection
+    const roleText = isUnlocked
+      ? (titleRole || 'Touch-Typing Specialist').toUpperCase()
+      : 'SPECIMEN CANDIDATE • VERIFICATION PENDING';
     ctx.fillStyle = theme.accentColor;
     ctx.font = '700 22px "Outfit", system-ui, sans-serif';
-    ctx.fillText(`❖   ${(titleRole || 'Touch-Typing Specialist').toUpperCase()}   ❖`, width / 2, 634);
+    ctx.fillText(`❖   ${roleText}   ❖`, width / 2, 634);
 
     // 10. Citation & Achievement Text
     ctx.fillStyle = theme.citationColor;
@@ -798,7 +820,62 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.fillText('★ VERIFIED OWNER SIGNATURE • SECURE AUDIT KEY ★', sigCenterX, sigBaseY + 105);
     ctx.restore();
 
-    // 16. Bottom Security Microtext
+    // 16. Anti-Screenshot & Anti-Forgery Specimen Watermark Overlay (when not unlocked)
+    if (!isCurrentThemeUnlocked) {
+      // 16a. Diagonal Repeating Security Watermarks across Canvas
+      ctx.save();
+      ctx.rotate((-22 * Math.PI) / 180);
+      ctx.textAlign = 'center';
+
+      for (let y = -800; y < height + 1400; y += 180) {
+        ctx.fillStyle = theme.isDark ? 'rgba(234, 179, 8, 0.16)' : 'rgba(180, 83, 9, 0.18)';
+        ctx.font = '900 48px "Outfit", system-ui, sans-serif';
+        ctx.fillText('★ SPECIMEN ONLY • NOT ACCREDITED • COPYRIGHT PROTECTED ★', width / 2 - 260, y);
+
+        ctx.fillStyle = theme.isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(153, 27, 27, 0.15)';
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText('CODETYPER OFFICIAL REGISTRY • COPY FORGERY VOID • PASS EXAM TO CERTIFY YOUR NAME', width / 2 - 260, y + 42);
+      }
+      ctx.restore();
+
+      // 16b. Prominent Security Banner Strip across top inside border
+      ctx.save();
+      const bannerH = 46;
+      ctx.fillStyle = 'rgba(185, 28, 28, 0.94)'; // Crimson Red Security Header
+      ctx.fillRect(104, 104, width - 208, bannerH);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(104, 104, width - 208, bannerH);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Outfit", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        '⚠️ SPECIMEN DEMO PREVIEW • COPYRIGHT PROTECTED BY SAUMY PANDEY • PASS TIMED EXAM TO CLAIM OFFICIAL CREDENTIAL',
+        width / 2,
+        104 + bannerH / 2
+      );
+      ctx.restore();
+
+      // 16c. Anti-Screenshot Red Box Stamp over Candidate Name
+      ctx.save();
+      ctx.translate(width / 2, 560);
+      ctx.rotate((-7 * Math.PI) / 180);
+      ctx.strokeStyle = 'rgba(220, 38, 38, 0.7)';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(-430, -56, 860, 112);
+      ctx.fillStyle = 'rgba(220, 38, 38, 0.14)';
+      ctx.fillRect(-430, -56, 860, 112);
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.92)';
+      ctx.font = '900 34px "Outfit", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('★ SPECIMEN ONLY • NOT ACCREDITED ★', 0, 0);
+      ctx.restore();
+    }
+
+    // 17. Bottom Security Microtext
     ctx.save();
     ctx.textAlign = 'center';
     ctx.fillStyle = theme.isDark ? '#475569' : '#64748b';
@@ -809,7 +886,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
       1520
     );
     ctx.restore();
-  }, [recipientName, titleRole, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr]);
+  }, [recipientName, titleRole, activeTheme, signatureVariant, wpm, grossWpm, accuracy, duration, language, tierTitle, tierGrade, certId, dateStr, isCurrentThemeUnlocked]);
 
   // Redraw when modal opens, font is loaded, or settings change
   useEffect(() => {
@@ -827,9 +904,16 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   // --- ACTIONS ---
   const handleDownload = () => {
-    const selectedTier = themeTiers.tiers[activeTheme];
-    if (selectedTier && !selectedTier.isUnlocked) {
-      toast.error(`🔒 ${selectedTier.name} is locked (${selectedTier.passedCount}/${selectedTier.totalCount} tasks completed)! Complete all tasks to unlock this certificate.`);
+    if (!user) {
+      toast.info('🔒 Please Sign Up or Log In first to claim, certify, and download your official 4K accredited diploma!');
+      if (typeof window !== 'undefined') {
+        window.location.hash = '#signup';
+      }
+      if (onClose) onClose();
+      return;
+    }
+    if (!isCurrentThemeUnlocked) {
+      toast.error(`🔒 ${currentTier?.name || 'Theme'} is locked! Reach Account Level ${currentTier?.unlockLevel || 20} and pass the ${currentTier?.examDurationSeconds || 60}s exam to unlock official downloading without watermarks.`);
       return;
     }
     if (!canvasRef.current) return;
@@ -843,9 +927,16 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   };
 
   const handlePrint = () => {
-    const selectedTier = themeTiers.tiers[activeTheme];
-    if (selectedTier && !selectedTier.isUnlocked) {
-      toast.error(`🔒 ${selectedTier.name} is locked! Complete all tasks to print or export this certificate.`);
+    if (!user) {
+      toast.info('🔒 Please Sign Up or Log In first to print or export your official accredited diploma!');
+      if (typeof window !== 'undefined') {
+        window.location.hash = '#signup';
+      }
+      if (onClose) onClose();
+      return;
+    }
+    if (!isCurrentThemeUnlocked) {
+      toast.error(`🔒 ${currentTier?.name || 'Theme'} is locked! Reach Account Level ${currentTier?.unlockLevel || 20} and pass the ${currentTier?.examDurationSeconds || 60}s exam to print or export PDF.`);
       return;
     }
     if (!canvasRef.current) return;
@@ -1143,7 +1234,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                     boxShadow: '0 4px 14px rgba(234, 179, 8, 0.35)'
                   }}
                 >
-                  <span>Take 60s Certification Exam</span>
+                  <span>Take Level {currentTier?.unlockLevel || 20} Exam ({currentTier?.examDurationSeconds || 60}s)</span>
                   <ArrowRight size={14} />
                 </button>
               )}
@@ -1154,6 +1245,50 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
         {/* --- VIEW 2: CERTIFICATE PREVIEW & CUSTOMIZATION --- */}
         {activeTab === 'certificate' && (
           <>
+            {/* Guest Conversion Hook Banner */}
+            {!user && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  padding: '0.65rem 1rem',
+                  marginBottom: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, #090e1c 0%, #0d1a33 100%)',
+                  border: '1px solid rgba(234, 179, 8, 0.45)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles size={16} color="#facc15" />
+                  <span style={{ fontSize: '0.825rem', color: '#f8fafc', fontWeight: 600 }}>
+                    Viewing Specimen Preview! Sign up free to certify your real name & download without watermarks.
+                  </span>
+                </div>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') window.location.hash = '#signup';
+                    if (onClose) onClose();
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #eab308 0%, #facc15 100%)',
+                    color: '#070b14',
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    padding: '0.3rem 0.75rem',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>Sign Up Free to Claim ⚡</span>
+                </button>
+              </div>
+            )}
+
             {/* Customization Toolbar */}
             <div
               style={{
@@ -1170,52 +1305,154 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
               }}
             >
               {/* Recipient Name Input */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <UserCheck size={16} color="#38bdf8" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <UserCheck size={16} color={user && isCurrentThemeUnlocked ? "#38bdf8" : "#94a3b8"} />
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Candidate:</span>
-                <input
-                  type="text"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="Enter candidate full name"
-                  maxLength={40}
-                  style={{
-                    backgroundColor: '#070b14',
-                    color: '#ffffff',
-                    border: '1px solid rgba(234, 179, 8, 0.4)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.25rem 0.6rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    minWidth: '150px'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={user ? (isCurrentThemeUnlocked ? recipientName : 'DEMO CANDIDATE (LOCKED)') : 'DEMO SPECIMEN - JOHNATHAN DOE'}
+                    onChange={(e) => {
+                      if (user && isCurrentThemeUnlocked) {
+                        setRecipientName(e.target.value);
+                      }
+                    }}
+                    onClick={() => {
+                      if (!user) {
+                        toast.info('🔒 Sign up or Log in to put your official name on this diploma!');
+                        if (typeof window !== 'undefined') window.location.hash = '#signup';
+                        if (onClose) onClose();
+                      }
+                    }}
+                    readOnly={!user || !isCurrentThemeUnlocked}
+                    placeholder={user ? (isCurrentThemeUnlocked ? "Enter candidate full name" : "Locked (Pass exam to edit)") : "Sign up to put your real name"}
+                    maxLength={40}
+                    style={{
+                      backgroundColor: user && isCurrentThemeUnlocked ? '#070b14' : 'rgba(15, 23, 42, 0.75)',
+                      color: user && isCurrentThemeUnlocked ? '#ffffff' : '#facc15',
+                      border: user && isCurrentThemeUnlocked
+                        ? '1px solid rgba(234, 179, 8, 0.4)'
+                        : '1px dashed rgba(234, 179, 8, 0.35)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.25rem 1.8rem 0.25rem 0.6rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      minWidth: '190px',
+                      cursor: user && isCurrentThemeUnlocked ? 'text' : 'pointer',
+                      opacity: user && isCurrentThemeUnlocked ? 1 : 0.85
+                    }}
+                  />
+                  {(!user || !isCurrentThemeUnlocked) && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: '#facc15'
+                      }}
+                      title={!user ? "Sign up to customize recipient name" : "Name editing is disabled until qualification benchmarks are cleared."}
+                    >
+                      <Lock size={13} />
+                    </span>
+                  )}
+                </div>
+                {!user ? (
+                  <button
+                    onClick={() => {
+                      toast.info('🔒 Sign up or Log in to put your official real name on this diploma!');
+                      if (typeof window !== 'undefined') window.location.hash = '#signup';
+                      if (onClose) onClose();
+                    }}
+                    style={{
+                      fontSize: '0.7rem',
+                      color: '#070b14',
+                      fontWeight: 800,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      background: 'linear-gradient(135deg, #eab308 0%, #facc15 100%)',
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: '9999px',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Lock size={10} />
+                    <span>Sign Up to Unlock Real Name ⚡</span>
+                  </button>
+                ) : !isCurrentThemeUnlocked && (
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      color: '#facc15',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(234, 179, 8, 0.25)'
+                    }}
+                  >
+                    <Lock size={9} />
+                    <span>Name Editor Off</span>
+                  </span>
+                )}
               </div>
 
               {/* Title / Role Selector */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Briefcase size={15} color="#eab308" />
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Role:</span>
-                <select
-                  value={titleRole}
-                  onChange={(e) => setTitleRole(e.target.value)}
-                  style={{
-                    backgroundColor: '#070b14',
-                    color: '#facc15',
-                    border: '1px solid rgba(234, 179, 8, 0.4)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.25rem 0.6rem',
-                    fontSize: '0.825rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {CERTIFICATE_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                {user ? (
+                  <select
+                    value={titleRole}
+                    onChange={(e) => setTitleRole(e.target.value)}
+                    style={{
+                      backgroundColor: '#070b14',
+                      color: '#facc15',
+                      border: '1px solid rgba(234, 179, 8, 0.4)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.25rem 0.6rem',
+                      fontSize: '0.825rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {CERTIFICATE_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={() => {
+                      toast.info('🔒 Sign up or Log in to choose your certified engineering title (Full-Stack, AI, Cloud, etc.)!');
+                      if (typeof window !== 'undefined') window.location.hash = '#signup';
+                      if (onClose) onClose();
+                    }}
+                    style={{
+                      backgroundColor: '#070b14',
+                      color: '#94a3b8',
+                      border: '1px dashed rgba(234, 179, 8, 0.4)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.25rem 0.6rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}
+                    title="Click to sign up and choose role title"
+                  >
+                    <span>Full-Stack Software Engineer</span>
+                    <Lock size={11} color="#facc15" />
+                  </button>
+                )}
               </div>
 
               {/* Theme Selector */}
@@ -1262,23 +1499,50 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Feather size={15} color="#38bdf8" />
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Sign:</span>
-                <button
-                  onClick={() => setSignatureVariant(signatureVariant === 'calligraphy' ? 'lowercase' : 'calligraphy')}
-                  className="btn btn-xs"
-                  style={{
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                    color: '#38bdf8',
-                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontFamily: '"Pinyon Script", "Alex Brush", cursive',
-                    fontSize: '1rem',
-                    padding: '0.15rem 0.6rem',
-                    cursor: 'pointer'
-                  }}
-                  title="Click to toggle signature cursive variant (Saumy Pandey / saumypandey)"
-                >
-                  {signatureVariant === 'calligraphy' ? 'Saumy Pandey' : 'saumypandey'}
-                </button>
+                {user ? (
+                  <button
+                    onClick={() => setSignatureVariant(signatureVariant === 'calligraphy' ? 'lowercase' : 'calligraphy')}
+                    className="btn btn-xs"
+                    style={{
+                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                      color: '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontFamily: '"Pinyon Script", "Alex Brush", cursive',
+                      fontSize: '1rem',
+                      padding: '0.15rem 0.6rem',
+                      cursor: 'pointer'
+                    }}
+                    title="Click to toggle signature cursive variant (Saumy Pandey / saumypandey)"
+                  >
+                    {signatureVariant === 'calligraphy' ? 'Saumy Pandey' : 'saumypandey'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      toast.info('🔒 Sign up or Log in to customize founder signature styling!');
+                      if (typeof window !== 'undefined') window.location.hash = '#signup';
+                      if (onClose) onClose();
+                    }}
+                    className="btn btn-xs"
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      color: '#94a3b8',
+                      border: '1px dashed rgba(255, 255, 255, 0.2)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.75rem',
+                      padding: '0.15rem 0.5rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}
+                    title="Click to sign up and customize signature"
+                  >
+                    <span style={{ fontFamily: '"Pinyon Script", cursive', fontSize: '0.95rem', color: '#e2e8f0' }}>Saumy Pandey</span>
+                    <Lock size={11} color="#facc15" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1309,7 +1573,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   zIndex: 10,
                   background: 'rgba(7, 11, 22, 0.88)',
                   backdropFilter: 'blur(10px)',
-                  border: themeTiers.tiers[activeTheme]?.isUnlocked
+                  border: isCurrentThemeUnlocked
                     ? '1px solid #22c55e'
                     : '1px solid rgba(234, 179, 8, 0.5)',
                   padding: '0.25rem 0.65rem',
@@ -1320,18 +1584,25 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
                 }}
               >
-                {themeTiers.tiers[activeTheme]?.isUnlocked ? (
+                {isCurrentThemeUnlocked ? (
                   <>
                     <ShieldCheck size={13} color="#4ade80" />
                     <span style={{ color: '#4ade80', fontSize: '0.75rem', fontWeight: 700 }}>
                       Accredited & Ready
                     </span>
                   </>
+                ) : activeTheme === 'imperial-ivory' ? (
+                  <>
+                    <Sparkles size={13} color="#facc15" />
+                    <span style={{ color: '#fde047', fontSize: '0.75rem', fontWeight: 700 }}>
+                      Open Specimen (Curiosity Preview • Anti-Screenshot Active)
+                    </span>
+                  </>
                 ) : (
                   <>
-                    <Lock size={13} color="#facc15" />
-                    <span style={{ color: '#fde047', fontSize: '0.75rem', fontWeight: 700 }}>
-                      Previewing Locked Theme ({themeTiers.tiers[activeTheme]?.passedCount || 0}/4)
+                    <Lock size={13} color="#f87171" />
+                    <span style={{ color: '#f87171', fontSize: '0.75rem', fontWeight: 700 }}>
+                      Theme Locked & Blurred ({currentTier?.passedCount || 0}/4)
                     </span>
                   </>
                 )}
@@ -1347,16 +1618,136 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   zIndex: 2
                 }}
               />
+
+              {/* Canvas with Blur & Anti-Screenshot Safeguards */}
               <canvas
                 ref={canvasRef}
+                onContextMenu={(e) => e.preventDefault()}
+                draggable={false}
                 style={{
                   width: '100%',
                   height: 'auto',
                   maxHeight: isFullscreen ? '78vh' : '540px',
                   display: 'block',
-                  objectFit: 'contain'
+                  objectFit: 'contain',
+                  filter: isBlurredLockedTheme ? 'blur(24px) brightness(0.55)' : 'none',
+                  transform: isBlurredLockedTheme ? 'scale(1.02)' : 'none',
+                  transition: 'filter 0.35s ease, transform 0.35s ease',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  pointerEvents: isBlurredLockedTheme ? 'none' : 'auto'
                 }}
               />
+
+              {/* Frosted Glass Lock Shield Overlay (For the 3 Locked & Blurred Themes) */}
+              {isBlurredLockedTheme && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1.5rem',
+                    textAlign: 'center',
+                    background: 'radial-gradient(circle at center, rgba(3, 7, 18, 0.75) 0%, rgba(3, 7, 18, 0.94) 100%)',
+                    backdropFilter: 'blur(8px)'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(239, 68, 68, 0.25) 100%)',
+                      border: '2px solid rgba(234, 179, 8, 0.6)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#facc15',
+                      boxShadow: '0 0 25px rgba(234, 179, 8, 0.4)',
+                      marginBottom: '0.75rem'
+                    }}
+                  >
+                    <Lock size={32} strokeWidth={2.4} />
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#facc15',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      marginBottom: '0.25rem'
+                    }}
+                  >
+                    Tier {currentTier?.tier || 2} Theme Locked & Blurred • Requires Level {currentTier?.unlockLevel || 20}
+                  </div>
+
+                  <h3
+                    style={{
+                      fontSize: '1.35rem',
+                      fontWeight: 900,
+                      color: '#ffffff',
+                      margin: '0 0 0.35rem'
+                    }}
+                  >
+                    {currentTier?.name || 'Exclusive Luxury Theme'}
+                  </h3>
+
+                  <p
+                    style={{
+                      maxWidth: '460px',
+                      fontSize: '0.85rem',
+                      color: '#cbd5e1',
+                      margin: '0 0 1rem',
+                      lineHeight: 1.45
+                    }}
+                  >
+                    This theme is blurred and locked to protect credential value. Reach Account Level {currentTier?.unlockLevel || 20} and pass the {currentTier?.examDurationSeconds || 60}s typing benchmark to unlock this prestigious certificate.
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleThemeChange('imperial-ivory')}
+                      style={{ borderColor: 'rgba(255, 255, 255, 0.35)', color: '#f8fafc', backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+                    >
+                      <span>View Open Specimen (Imperial Ivory) 👁️</span>
+                    </button>
+                    {onStartCertTest && (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          if (!user) {
+                            toast.info(`⚡ Please Sign Up or Log In first so your exam score, level, and accredited certificate are permanently registered!`);
+                            if (typeof window !== 'undefined') window.location.hash = '#signup';
+                            if (onClose) onClose();
+                            return;
+                          }
+                          onClose();
+                          onStartCertTest();
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 100%)',
+                          color: '#070b14',
+                          fontWeight: 700
+                        }}
+                      >
+                        <span>
+                          {!user
+                            ? `Sign Up to Take Level ${currentTier?.unlockLevel || 20} Exam (${currentTier?.examDurationSeconds || 60}s) ⚡`
+                            : `Take Level ${currentTier?.unlockLevel || 20} Exam (${currentTier?.examDurationSeconds || 60}s) ⚡`}
+                        </span>
+                        <ArrowRight size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Bottom Action Controls */}
@@ -1389,6 +1780,16 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                 <button
                   className="btn btn-outline btn-sm"
                   onClick={() => {
+                    if (!user) {
+                      toast.info('🔒 Please Sign Up or Log In first to certify and add your official credential directly to your LinkedIn profile!');
+                      if (typeof window !== 'undefined') window.location.hash = '#signup';
+                      if (onClose) onClose();
+                      return;
+                    }
+                    if (!isCurrentThemeUnlocked) {
+                      toast.info('🔒 Add to LinkedIn is available once you pass the qualification exam and claim your accredited credential!');
+                      return;
+                    }
                     const linkedInUrl = getLinkedInCertificationUrl({
                       certId,
                       recipientName,
@@ -1399,20 +1800,28 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                     window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
                   }}
                   style={{ borderColor: '#0077b5', color: '#38bdf8', backgroundColor: 'rgba(0, 119, 181, 0.1)' }}
-                  title="Add to your LinkedIn Profile"
+                  title={!user ? "Sign up to add to LinkedIn" : "Add to your LinkedIn Profile"}
                 >
                   <ExternalLink size={14} />
-                  <span>Add to LinkedIn</span>
+                  <span>{!user ? 'Add to LinkedIn 🔒' : 'Add to LinkedIn'}</span>
                 </button>
 
                 <button
                   className="btn btn-outline btn-sm"
-                  onClick={handleCopyId}
+                  onClick={() => {
+                    if (!user) {
+                      toast.info('🔒 Sign up or Log in to register your verified credential on the ledger!');
+                      if (typeof window !== 'undefined') window.location.hash = '#signup';
+                      if (onClose) onClose();
+                      return;
+                    }
+                    handleCopyId();
+                  }}
                   style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: '#cbd5e1' }}
-                  title="Copy verification link"
+                  title={!user ? "Sign up to copy credential" : "Copy verification link"}
                 >
                   <Share2 size={14} />
-                  <span>Copy Credential</span>
+                  <span>{!user ? 'Copy Credential 🔒' : 'Copy Credential'}</span>
                 </button>
 
                 <button
@@ -1422,7 +1831,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   title="Print or Save as PDF"
                 >
                   <Printer size={14} />
-                  <span>Print PDF</span>
+                  <span>{!user ? 'Print PDF 🔒' : 'Print PDF'}</span>
                 </button>
 
                 <button
@@ -1437,7 +1846,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
                   }}
                 >
                   <Download size={14} />
-                  <span>Download Ultra HD (4K PNG)</span>
+                  <span>{!user ? 'Sign Up to Claim (4K) 🎓' : 'Download Ultra HD (4K PNG)'}</span>
                 </button>
               </div>
             </div>

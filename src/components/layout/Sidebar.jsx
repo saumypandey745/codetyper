@@ -74,8 +74,9 @@ export function Sidebar({ currentView, onNavigate, isOpen, onClose }) {
         <div className="sidebar-header">
           <button
             className="brand-logo"
-            onClick={() => handleItemClick('dashboard')}
+            onClick={() => handleItemClick(user ? 'dashboard' : 'landing')}
             style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            title={user ? 'Go to Dashboard' : 'Go to Home'}
           >
             <div className="brand-icon">
               <Code2 size={20} />
@@ -111,7 +112,35 @@ export function Sidebar({ currentView, onNavigate, isOpen, onClose }) {
           })}
         </nav>
 
-        {user && (
+        {!user ? (
+          <div className="sidebar-footer" style={{ padding: '0.85rem' }}>
+            <div
+              style={{
+                padding: '0.75rem 0.85rem',
+                backgroundColor: 'var(--color-bg-soft)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.45rem'
+              }}
+            >
+              <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                Guest Practice Mode
+              </div>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.3 }}>
+                Sign up free to preserve your streak, stats & certificates.
+              </p>
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ width: '100%', fontSize: '0.78rem', marginTop: '0.2rem' }}
+                onClick={() => handleItemClick('signup')}
+              >
+                Sign Up Free
+              </button>
+            </div>
+          </div>
+        ) : (
           <div className="sidebar-footer">
             <div className="sidebar-user-card" onClick={() => handleItemClick('profile')}>
               <img
