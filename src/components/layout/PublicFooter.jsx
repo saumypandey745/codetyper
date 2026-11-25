@@ -19,21 +19,31 @@ import {
   Check
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
+import { api } from '../../utils/api.js';
 
 export function PublicFooter({ onNavigate }) {
   const toast = useToast();
   const [email, setEmail] = useState('');
+  const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) {
+    if (!email || !email.includes('@') || !email.includes('.')) {
       toast?.error?.('Please enter a valid developer email address.');
       return;
     }
-    setSubscribed(true);
-    toast?.success?.('Subscribed! You will receive developer release notes and snippet packs.');
-    setEmail('');
+    setSubscribing(true);
+    try {
+      const res = await api.newsletter.subscribe({ email: email.trim() });
+      setSubscribed(true);
+      toast?.success?.(res.message || 'Subscribed! Check your inbox for your welcome dispatch.');
+      setEmail('');
+    } catch (err) {
+      toast?.error?.(err.message || 'Subscription failed. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   const handleBackToTop = () => {
@@ -103,8 +113,8 @@ export function PublicFooter({ onNavigate }) {
                     required
                   />
                 </div>
-                <button type="submit" className="footer-newsletter-btn" title="Subscribe to Updates">
-                  <span>Subscribe</span>
+                <button type="submit" className="footer-newsletter-btn" title="Subscribe to Updates" disabled={subscribing}>
+                  <span>{subscribing ? 'Joining...' : 'Subscribe'}</span>
                   <Send size={14} />
                 </button>
               </form>

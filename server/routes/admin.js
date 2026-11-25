@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { db, logAdminAudit } from '../db.js';
 import { authenticate, requireAdmin } from '../authMiddleware.js';
 import { announcementBroadcaster } from '../announcements.js';
+import { sendFeedbackResolutionEmail, sendBroadcastUpdateEmail } from '../mailer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +28,30 @@ router.get('/stats', (req, res) => {
   const totalSeconds = db.prepare('SELECT SUM(duration_seconds) as total FROM typing_sessions WHERE COALESCE(is_disqualified, 0) = 0').get().total || 0;
   const auditCount = db.prepare('SELECT COUNT(*) as count FROM admin_audit_logs').get().count;
 
+  let certCount = 0;
+  let revokedCertCount = 0;
+  try {
+    certCount = db.prepare('SELECT COUNT(*) as count FROM certificates').get().count;
+    revokedCertCount = db.prepare('SELECT COUNT(*) as count FROM certificates WHERE is_revoked = 1').get().count;
+  } catch (e) {}
+
+  let feedbackCount = 0;
+  let pendingFeedbackCount = 0;
+  try {
+    feedbackCount = db.prepare('SELECT COUNT(*) as count FROM feedback_reports').get().count;
+    pendingFeedbackCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'pending'").get().count;
+  } catch (e) {}
+
+  let subscribersCount = 0;
+  try {
+    subscribersCount = db.prepare("SELECT COUNT(*) as count FROM newsletter_subscribers WHERE status = 'active'").get().count;
+  } catch (e) {}
+
+  let emailsDispatchedCount = 0;
+  try {
+    emailsDispatchedCount = db.prepare('SELECT COUNT(*) as count FROM email_logs').get().count;
+  } catch (e) {}
+
   return res.json({
     users: userCount,
     bannedUsers: bannedCount,
@@ -35,7 +60,13 @@ router.get('/stats', (req, res) => {
     flaggedSessions: flaggedCount,
     contentItems: contentCount,
     totalPracticeHours: Number((totalSeconds / 3600).toFixed(1)),
-    auditLogCount: auditCount
+    auditLogCount: auditCount,
+    certificatesCount: certCount,
+    revokedCertificatesCount: revokedCertCount,
+    feedbackCount: feedbackCount,
+    pendingFeedbackCount: pendingFeedbackCount,
+    subscribersCount: subscribersCount,
+    emailsDispatchedCount: emailsDispatchedCount
   });
 });
 
@@ -553,6 +584,334 @@ router.get('/audit-logs', (req, res) => {
   `).all();
 
   return res.json({ logs });
+});
+
+// ==========================================
+// 7. Official Certificate Governance & Invalidation Registry
+// ==========================================
+router.get('/certificates', (req, res) => {
+  const { search, status = 'all', limit = 100, offset = 0 } = req.query;
+  let sql = `
+    SELECT c.*, u.username, u.email as user_email
+    FROM certificates c
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (status === 'active') {
+    sql += ' AND COALESCE(c.is_revoked, 0) = 0';
+  } else if (status === 'revoked') {
+    sql += ' AND c.is_revoked = 1';
+  }
+
+  if (search) {
+    const q = `%${search.trim()}%`;
+    sql += ' AND (c.cert_id LIKE ? OR c.recipient_name LIKE ? OR c.discipline LIKE ? OR c.sha256_fingerprint LIKE ? OR u.username LIKE ?)';
+    params.push(q, q, q, q, q);
+  }
+
+  sql += ' ORDER BY c.id DESC LIMIT ? OFFSET ?';
+  params.push(Number(limit), Number(offset));
+
+  const certs = db.prepare(sql).all(...params);
+
+  // Calculate live summary stats
+  const totalCount = db.prepare('SELECT COUNT(*) as count FROM certificates').get().count;
+  const activeCount = db.prepare('SELECT COUNT(*) as count FROM certificates WHERE COALESCE(is_revoked, 0) = 0').get().count;
+  const revokedCount = db.prepare('SELECT COUNT(*) as count FROM certificates WHERE is_revoked = 1').get().count;
+  const highestWpmRow = db.prepare('SELECT MAX(net_wpm) as max_wpm FROM certificates').get();
+
+  return res.json({
+    certificates: certs,
+    summary: {
+      total: totalCount,
+      active: activeCount,
+      revoked: revokedCount,
+      highestWpm: highestWpmRow?.max_wpm || 0
+    }
+  });
+});
+
+router.put('/certificates/:certId/revoke', (req, res) => {
+  const cleanId = req.params.certId.trim().toUpperCase();
+  const { is_revoked, reason } = req.body;
+
+  const existing = db.prepare('SELECT id, cert_id, recipient_name, is_revoked FROM certificates WHERE UPPER(cert_id) = ?').get(cleanId);
+  if (!existing) {
+    return res.status(404).json({ error: 'Certificate record not found.' });
+  }
+
+  const revokedVal = is_revoked ? 1 : 0;
+  const revokeReason = revokedVal ? (reason?.trim() || 'Revoked by platform administrator') : null;
+  const revokedAt = revokedVal ? new Date().toISOString() : null;
+
+  db.prepare(`
+    UPDATE certificates
+    SET is_revoked = ?, revoked_reason = ?, revoked_at = ?
+    WHERE id = ?
+  `).run(revokedVal, revokeReason, revokedAt, existing.id);
+
+  logAdminAudit(req.user, revokedVal ? 'REVOKE_CERTIFICATE' : 'REINSTATE_CERTIFICATE', 'certificates', existing.cert_id, {
+    recipient_name: existing.recipient_name,
+    reason: revokeReason
+  });
+
+  return res.json({
+    message: revokedVal
+      ? `Certificate ${existing.cert_id} for "${existing.recipient_name}" has been revoked.`
+      : `Certificate ${existing.cert_id} reinstated to active standing.`,
+    is_revoked: revokedVal
+  });
+});
+
+router.delete('/certificates/:certId', (req, res) => {
+  const cleanId = req.params.certId.trim().toUpperCase();
+  const existing = db.prepare('SELECT id, cert_id, recipient_name FROM certificates WHERE UPPER(cert_id) = ?').get(cleanId);
+  if (!existing) {
+    return res.status(404).json({ error: 'Certificate record not found.' });
+  }
+
+  db.prepare('DELETE FROM certificates WHERE id = ?').run(existing.id);
+  logAdminAudit(req.user, 'DELETE_CERTIFICATE', 'certificates', existing.cert_id, { recipient_name: existing.recipient_name });
+
+  return res.json({ message: `Certificate ${existing.cert_id} permanently removed from registry.` });
+});
+
+// ==========================================
+// 8. User Feedback & Support Reports Governance
+// ==========================================
+router.get('/feedback', (req, res) => {
+  const { status = 'all', category, search, limit = 100, offset = 0 } = req.query;
+  let sql = `
+    SELECT f.*, u.username as user_username
+    FROM feedback_reports f
+    LEFT JOIN users u ON f.user_id = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (status && status !== 'all') {
+    sql += ' AND f.status = ?';
+    params.push(status);
+  }
+
+  if (category && category !== 'all') {
+    sql += ' AND f.category = ?';
+    params.push(category);
+  }
+
+  if (search) {
+    const q = `%${search.trim()}%`;
+    sql += ' AND (f.name LIKE ? OR f.email LIKE ? OR f.subject LIKE ? OR f.message LIKE ?)';
+    params.push(q, q, q, q);
+  }
+
+  sql += ' ORDER BY f.id DESC LIMIT ? OFFSET ?';
+  params.push(Number(limit), Number(offset));
+
+  const items = db.prepare(sql).all(...params);
+
+  // Calculate counts for badges
+  const totalCount = db.prepare('SELECT COUNT(*) as count FROM feedback_reports').get().count;
+  const pendingCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'pending'").get().count;
+  const inReviewCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'in_review'").get().count;
+  const resolvedCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'resolved'").get().count;
+  const archivedCount = db.prepare("SELECT COUNT(*) as count FROM feedback_reports WHERE status = 'archived'").get().count;
+
+  return res.json({
+    feedback: items,
+    counts: {
+      total: totalCount,
+      pending: pendingCount,
+      inReview: inReviewCount,
+      resolved: resolvedCount,
+      archived: archivedCount
+    }
+  });
+});
+
+router.put('/feedback/:id/status', async (req, res) => {
+  const id = Number(req.params.id);
+  const { status, admin_notes, notify_user = true } = req.body;
+
+  const validStatuses = ['pending', 'in_review', 'resolved', 'archived'];
+  if (status && !validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+  }
+
+  const existing = db.prepare('SELECT id, subject, name, email, category, message, status, admin_notes FROM feedback_reports WHERE id = ?').get(id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Feedback report not found.' });
+  }
+
+  const newStatus = status || existing.status;
+  const newNotes = admin_notes !== undefined ? admin_notes : existing.admin_notes;
+
+  db.prepare(`
+    UPDATE feedback_reports
+    SET status = ?, admin_notes = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(newStatus, newNotes, id);
+
+  let emailOutcome = { delivered: false, simulated: false };
+
+  // Automated notification: If marked 'resolved' and user has an email, dispatch resolution email
+  if (newStatus === 'resolved' && existing.email && notify_user) {
+    try {
+      emailOutcome = await sendFeedbackResolutionEmail({
+        toEmail: existing.email,
+        recipientName: existing.name,
+        subject: existing.subject,
+        category: existing.category,
+        originalMessage: existing.message,
+        adminNotes: newNotes,
+        origin: req.headers.origin
+      });
+    } catch (err) {
+      console.warn(`[Admin Mailer] Failed to auto-dispatch resolution email to ${existing.email}:`, err.message);
+    }
+  }
+
+  logAdminAudit(req.user, 'UPDATE_FEEDBACK_STATUS', 'feedback_reports', id, {
+    sender_name: existing.name,
+    subject: existing.subject,
+    oldStatus: existing.status,
+    newStatus,
+    autoEmailDispatched: emailOutcome.delivered || emailOutcome.simulated
+  });
+
+  return res.json({
+    message: `Report #${id} status updated to ${newStatus}.${emailOutcome.delivered || emailOutcome.simulated ? ' Automatic resolution email sent to user.' : ''}`,
+    status: newStatus,
+    admin_notes: newNotes,
+    emailOutcome
+  });
+});
+
+router.delete('/feedback/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT id, subject, name FROM feedback_reports WHERE id = ?').get(id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Feedback report not found.' });
+  }
+
+  db.prepare('DELETE FROM feedback_reports WHERE id = ?').run(id);
+  logAdminAudit(req.user, 'DELETE_FEEDBACK', 'feedback_reports', id, { subject: existing.subject, sender_name: existing.name });
+
+  return res.json({ message: `Feedback note #${id} removed permanently.` });
+});
+
+// ==========================================
+// 9. Newsletter & Subscribers Management
+// ==========================================
+router.get('/subscribers', (req, res) => {
+  const { search = '', status = 'all', limit = 100, offset = 0 } = req.query;
+
+  let query = 'SELECT * FROM newsletter_subscribers WHERE 1=1';
+  const params = [];
+
+  if (status !== 'all') {
+    query += ' AND status = ?';
+    params.push(status);
+  }
+
+  if (search.trim()) {
+    query += ' AND email LIKE ?';
+    params.push(`%${search.trim().toLowerCase()}%`);
+  }
+
+  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  params.push(Number(limit), Number(offset));
+
+  const items = db.prepare(query).all(...params);
+
+  const totalCount = db.prepare('SELECT COUNT(*) as count FROM newsletter_subscribers').get().count;
+  const activeCount = db.prepare("SELECT COUNT(*) as count FROM newsletter_subscribers WHERE status = 'active'").get().count;
+  const unsubscribedCount = db.prepare("SELECT COUNT(*) as count FROM newsletter_subscribers WHERE status = 'unsubscribed'").get().count;
+
+  return res.json({
+    subscribers: items,
+    counts: {
+      total: totalCount,
+      active: activeCount,
+      unsubscribed: unsubscribedCount
+    }
+  });
+});
+
+router.delete('/subscribers/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT id, email FROM newsletter_subscribers WHERE id = ?').get(id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Subscriber not found.' });
+  }
+
+  db.prepare('DELETE FROM newsletter_subscribers WHERE id = ?').run(id);
+  logAdminAudit(req.user, 'DELETE_SUBSCRIBER', 'newsletter_subscribers', id, { email: existing.email });
+
+  return res.json({ message: `Subscriber ${existing.email} removed.` });
+});
+
+// Broadcast platform update to all active newsletter subscribers
+router.post('/broadcast-update', async (req, res) => {
+  const { title, changelog, versionTag } = req.body;
+
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Please enter an update title or announcement headline.' });
+  }
+
+  if (!changelog || typeof changelog !== 'string' || !changelog.trim()) {
+    return res.status(400).json({ error: 'Please provide changelog notes or release highlights.' });
+  }
+
+  const subscribers = db.prepare("SELECT email FROM newsletter_subscribers WHERE status = 'active'").all();
+  if (subscribers.length === 0) {
+    return res.status(400).json({ error: 'No active subscribers found in the database.' });
+  }
+
+  const emails = subscribers.map((s) => s.email);
+
+  try {
+    const outcome = await sendBroadcastUpdateEmail({
+      toEmails: emails,
+      updateTitle: title.trim(),
+      changelogNotes: changelog.trim(),
+      versionTag: versionTag ? versionTag.trim() : 'v2.5 LTS',
+      origin: req.headers.origin
+    });
+
+    logAdminAudit(req.user, 'BROADCAST_RELEASE_UPDATE', 'newsletter_subscribers', null, {
+      title: title.trim(),
+      versionTag: versionTag || 'v2.5 LTS',
+      recipientCount: outcome.count || emails.length
+    });
+
+    return res.json({
+      success: true,
+      count: outcome.count || emails.length,
+      message: `Update broadcast successfully sent to ${outcome.count || emails.length} active subscriber(s)!`
+    });
+  } catch (err) {
+    console.error('[Broadcast Update Error]', err);
+    return res.status(500).json({ error: 'Failed to dispatch broadcast update.' });
+  }
+});
+
+// View recent transactional & automated email logs (Outbox history)
+router.get('/email-logs', (req, res) => {
+  try {
+    const logs = db.prepare('SELECT * FROM email_logs ORDER BY created_at DESC LIMIT 50').all();
+    const stats = {
+      total: db.prepare('SELECT COUNT(*) as count FROM email_logs').get().count,
+      sent: db.prepare("SELECT COUNT(*) as count FROM email_logs WHERE status = 'sent'").get().count,
+      simulated: db.prepare("SELECT COUNT(*) as count FROM email_logs WHERE status = 'simulated'").get().count,
+      failed: db.prepare("SELECT COUNT(*) as count FROM email_logs WHERE status = 'failed'").get().count
+    };
+    return res.json({ logs, stats });
+  } catch (err) {
+    return res.status(500).json({ error: 'Could not fetch email logs.' });
+  }
 });
 
 export default router;

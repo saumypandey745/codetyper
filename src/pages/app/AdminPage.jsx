@@ -3,6 +3,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Shield,
+  ShieldOff,
   Users,
   UserX,
   UserCheck,
@@ -30,12 +31,23 @@ import {
   EyeOff,
   Database,
   Bell,
-  RefreshCw
+  RefreshCw,
+  Award,
+  MessageSquare,
+  Mail,
+  ExternalLink,
+  Copy,
+  FileText,
+  Inbox,
+  Filter,
+  Send,
+  Sparkles
 } from 'lucide-react';
 import { api } from '../../utils/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { programmingLanguages, englishCategories } from '../../../server/seedData.js';
+import { TypingCertificateModal } from '../../components/typing/TypingCertificateModal.jsx';
 
 export function AdminPage({ onNavigate }) {
   const { user } = useAuth();
@@ -84,6 +96,42 @@ export function AdminPage({ onNavigate }) {
   const [disqualifyModalSession, setDisqualifyModalSession] = useState(null);
   const [disqualifyReason, setDisqualifyReason] = useState('');
 
+  // Certificates Governance Tab State
+  const [certificatesList, setCertificatesList] = useState([]);
+  const [certSummary, setCertSummary] = useState({ total: 0, active: 0, revoked: 0, highestWpm: 0 });
+  const [certFilter, setCertFilter] = useState('all'); // 'all' | 'active' | 'revoked'
+  const [certSearch, setCertSearch] = useState('');
+  const [revokeModalCert, setRevokeModalCert] = useState(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [previewCert, setPreviewCert] = useState(null);
+  const [quickCertLookupId, setQuickCertLookupId] = useState('');
+
+  // Feedback & Reports Tab State
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [feedbackCounts, setFeedbackCounts] = useState({ total: 0, pending: 0, inReview: 0, resolved: 0, archived: 0 });
+  const [feedbackFilter, setFeedbackFilter] = useState('all'); // 'all' | 'pending' | 'in_review' | 'resolved' | 'archived'
+  const [feedbackCategory, setFeedbackCategory] = useState('all');
+  const [feedbackSearch, setFeedbackSearch] = useState('');
+  const [expandedFeedbackId, setExpandedFeedbackId] = useState(null);
+  const [editingNotesId, setEditingNotesId] = useState(null);
+  const [adminNotesText, setAdminNotesText] = useState('');
+
+  // Newsletter & Subscribers Tab State
+  const [subscribersList, setSubscribersList] = useState([]);
+  const [subscriberCounts, setSubscriberCounts] = useState({ total: 0, active: 0, unsubscribed: 0 });
+  const [subscriberFilter, setSubscriberFilter] = useState('all'); // 'all' | 'active' | 'unsubscribed'
+  const [subscriberSearch, setSubscriberSearch] = useState('');
+  const [emailLogs, setEmailLogs] = useState([]);
+  const [emailStats, setEmailStats] = useState({ total: 0, sent: 0, simulated: 0, failed: 0 });
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({
+    title: '',
+    versionTag: 'v2.5 LTS',
+    changelog: ''
+  });
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [subscribersViewMode, setSubscribersViewMode] = useState('subscribers'); // 'subscribers' | 'outbox'
+
   // Platform Settings Tab State
   const [systemSettings, setSystemSettings] = useState({
     announcement_text: '',
@@ -100,14 +148,18 @@ export function AdminPage({ onNavigate }) {
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      const [statsRes, contentRes, usersRes, secRes, settingsRes, auditRes, scoresRes] = await Promise.all([
+      const [statsRes, contentRes, usersRes, secRes, settingsRes, auditRes, scoresRes, certsRes, feedbackRes, subsRes, emailLogsRes] = await Promise.all([
         api.admin.getStats().catch(() => null),
         api.admin.getContent({ limit: 200 }).catch(() => ({ items: [] })),
         api.admin.getUsers().catch(() => ({ users: [] })),
         api.admin.getSecuritySummary().catch(() => null),
         api.admin.getSettings().catch(() => ({ settings: {} })),
         api.admin.getAuditLogs().catch(() => ({ logs: [] })),
-        api.admin.getScores({ suspicious: true, limit: 100 }).catch(() => ({ scores: [] }))
+        api.admin.getScores({ suspicious: true, limit: 100 }).catch(() => ({ scores: [] })),
+        api.admin.getCertificates({ limit: 100 }).catch(() => ({ certificates: [], summary: {} })),
+        api.admin.getFeedback({ limit: 100 }).catch(() => ({ feedback: [], counts: {} })),
+        api.admin.getSubscribers({ limit: 100 }).catch(() => ({ subscribers: [], counts: {} })),
+        api.admin.getEmailLogs().catch(() => ({ logs: [], stats: {} }))
       ]);
 
       if (statsRes) setStats(statsRes);
@@ -124,6 +176,22 @@ export function AdminPage({ onNavigate }) {
       }
       if (auditRes?.logs) setAuditLogs(auditRes.logs);
       if (scoresRes?.scores) setScoresList(scoresRes.scores);
+      if (certsRes?.certificates) {
+        setCertificatesList(certsRes.certificates);
+        if (certsRes.summary) setCertSummary(certsRes.summary);
+      }
+      if (feedbackRes?.feedback) {
+        setFeedbackList(feedbackRes.feedback);
+        if (feedbackRes.counts) setFeedbackCounts(feedbackRes.counts);
+      }
+      if (subsRes?.subscribers) {
+        setSubscribersList(subsRes.subscribers);
+        if (subsRes.counts) setSubscriberCounts(subsRes.counts);
+      }
+      if (emailLogsRes?.logs) {
+        setEmailLogs(emailLogsRes.logs);
+        if (emailLogsRes.stats) setEmailStats(emailLogsRes.stats);
+      }
     } catch (err) {
       console.warn('[Admin] Load failed:', err);
       toast.error('Could not load administrative console data.');
@@ -137,6 +205,26 @@ export function AdminPage({ onNavigate }) {
       loadAdminData();
     }
   }, [user]);
+
+  const loadCertificates = async (filter = certFilter, search = certSearch) => {
+    try {
+      const res = await api.admin.getCertificates({ status: filter, search: search.trim(), limit: 100 });
+      setCertificatesList(res.certificates || []);
+      if (res.summary) setCertSummary(res.summary);
+    } catch (err) {
+      toast.error('Could not load certificates list.');
+    }
+  };
+
+  const loadFeedback = async (status = feedbackFilter, category = feedbackCategory, search = feedbackSearch) => {
+    try {
+      const res = await api.admin.getFeedback({ status, category, search: search.trim(), limit: 100 });
+      setFeedbackList(res.feedback || []);
+      if (res.counts) setFeedbackCounts(res.counts);
+    } catch (err) {
+      toast.error('Could not load user feedback reports.');
+    }
+  };
 
   // Load Scores when tab or filter changes
   const loadScores = async (suspiciousOnly = scoresFilter === 'suspicious') => {
@@ -379,6 +467,153 @@ export function AdminPage({ onNavigate }) {
   };
 
   // ==========================================
+  // Certificate Governance Handlers
+  // ==========================================
+  const handleOpenRevokeModal = (cert) => {
+    setRevokeModalCert(cert);
+    setRevokeReason(cert.revoked_reason || '');
+  };
+
+  const handleToggleRevoke = async (e) => {
+    e.preventDefault();
+    if (!revokeModalCert) return;
+    const isRevoking = !revokeModalCert.is_revoked;
+    try {
+      const res = await api.admin.revokeCertificate(revokeModalCert.cert_id, {
+        is_revoked: isRevoking,
+        reason: isRevoking ? revokeReason : null
+      });
+      toast.success(res.message);
+      setRevokeModalCert(null);
+      setRevokeReason('');
+      loadCertificates();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Could not update certificate revocation status.');
+    }
+  };
+
+  const handleDeleteCertificate = async (cert) => {
+    if (!window.confirm(`Permanently purge certificate ${cert.cert_id} for "${cert.recipient_name}" from the global registry?`)) return;
+    try {
+      const res = await api.admin.deleteCertificate(cert.cert_id);
+      toast.success(res.message);
+      loadCertificates();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete certificate.');
+    }
+  };
+
+  const handleQuickLookup = (e) => {
+    e.preventDefault();
+    if (!quickCertLookupId.trim()) return;
+    const clean = quickCertLookupId.trim().toUpperCase();
+    setCertSearch(clean);
+    loadCertificates(certFilter, clean);
+  };
+
+  // ==========================================
+  // Feedback & Reports Handlers
+  // ==========================================
+  const handleUpdateFeedbackStatus = async (item, newStatus) => {
+    try {
+      const res = await api.admin.updateFeedbackStatus(item.id, { status: newStatus });
+      setFeedbackList((prev) =>
+        prev.map((f) => (f.id === item.id ? { ...f, status: newStatus } : f))
+      );
+      toast.success(res.message);
+      loadFeedback();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Could not update status.');
+    }
+  };
+
+  const handleSaveAdminNotes = async (item) => {
+    try {
+      const res = await api.admin.updateFeedbackStatus(item.id, { admin_notes: adminNotesText });
+      setFeedbackList((prev) =>
+        prev.map((f) => (f.id === item.id ? { ...f, admin_notes: adminNotesText } : f))
+      );
+      setEditingNotesId(null);
+      toast.success('Admin note saved.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save admin note.');
+    }
+  };
+
+  const handleDeleteFeedback = async (item) => {
+    if (!window.confirm(`Permanently remove note #${item.id} from "${item.name}"?`)) return;
+    try {
+      const res = await api.admin.deleteFeedback(item.id);
+      setFeedbackList((prev) => prev.filter((f) => f.id !== item.id));
+      toast.success(res.message);
+      loadFeedback();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete feedback note.');
+    }
+  };
+
+  // ==========================================
+  // Newsletter & Subscribers Handlers
+  // ==========================================
+  const loadSubscribers = async (status = subscriberFilter, search = subscriberSearch) => {
+    try {
+      const res = await api.admin.getSubscribers({ status, search: search.trim(), limit: 100 });
+      setSubscribersList(res.subscribers || []);
+      if (res.counts) setSubscriberCounts(res.counts);
+    } catch (err) {
+      toast.error('Could not load newsletter subscribers.');
+    }
+  };
+
+  const loadEmailLogs = async () => {
+    try {
+      const res = await api.admin.getEmailLogs();
+      setEmailLogs(res.logs || []);
+      if (res.stats) setEmailStats(res.stats);
+    } catch (err) {
+      console.warn('[Admin] Failed to load email logs:', err);
+    }
+  };
+
+  const handleDeleteSubscriber = async (sub) => {
+    if (!window.confirm(`Permanently remove subscriber "${sub.email}"?`)) return;
+    try {
+      const res = await api.admin.deleteSubscriber(sub.id);
+      setSubscribersList((prev) => prev.filter((s) => s.id !== sub.id));
+      toast.success(res.message);
+      loadSubscribers();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Could not delete subscriber.');
+    }
+  };
+
+  const handleBroadcastUpdate = async (e) => {
+    e.preventDefault();
+    if (!broadcastForm.title.trim() || !broadcastForm.changelog.trim()) {
+      toast.error('Please enter both announcement headline and changelog notes.');
+      return;
+    }
+    setBroadcasting(true);
+    try {
+      const res = await api.admin.broadcastUpdate(broadcastForm);
+      toast.success(res.message || 'Update broadcast dispatched successfully!');
+      setShowBroadcastModal(false);
+      setBroadcastForm({ title: '', versionTag: 'v2.5 LTS', changelog: '' });
+      loadEmailLogs();
+      loadAdminData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to dispatch broadcast update.');
+    } finally {
+      setBroadcasting(false);
+    }
+  };
+
+  // ==========================================
   // Platform Settings Handlers
   // ==========================================
   const handleSaveSystemSettings = async (e) => {
@@ -475,7 +710,7 @@ export function AdminPage({ onNavigate }) {
       </div>
 
       {/* KPI Overview Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
         <div className="stat-card">
           <div className="stat-card-header">
             <span className="stat-label">Active Typists</span>
@@ -518,6 +753,39 @@ export function AdminPage({ onNavigate }) {
 
         <div className="stat-card">
           <div className="stat-card-header">
+            <span className="stat-label">Accredited Certs</span>
+            <div className="stat-icon"><Award size={16} /></div>
+          </div>
+          <div className="stat-value" style={{ color: '#0284c7' }}>
+            {stats?.certificatesCount || 0}
+          </div>
+          <span className="stat-subtext">{stats?.revokedCertificatesCount || 0} revoked</span>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Feedback & Inquiries</span>
+            <div className="stat-icon"><MessageSquare size={16} /></div>
+          </div>
+          <div className="stat-value" style={{ color: (stats?.pendingFeedbackCount || 0) > 0 ? '#D97706' : 'inherit' }}>
+            {stats?.feedbackCount || 0}
+          </div>
+          <span className="stat-subtext">{stats?.pendingFeedbackCount || 0} pending review</span>
+        </div>
+
+        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => { setActiveTab('subscribers'); loadSubscribers(); loadEmailLogs(); }}>
+          <div className="stat-card-header">
+            <span className="stat-label">Subscribers &amp; Mailer</span>
+            <div className="stat-icon"><Mail size={16} /></div>
+          </div>
+          <div className="stat-value" style={{ color: 'var(--color-primary-forest)' }}>
+            {stats?.subscribersCount || subscriberCounts?.active || 0}
+          </div>
+          <span className="stat-subtext">{stats?.emailsDispatchedCount || emailStats?.total || 0} emails dispatched</span>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
             <span className="stat-label">Audit Log Actions</span>
             <div className="stat-icon"><Activity size={16} /></div>
           </div>
@@ -553,6 +821,54 @@ export function AdminPage({ onNavigate }) {
         >
           <Flag size={16} />
           <span>Leaderboard & Anti-Cheat</span>
+        </button>
+
+        <button
+          className={`btn btn-sm ${activeTab === 'certificates' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => {
+            setActiveTab('certificates');
+            loadCertificates();
+          }}
+        >
+          <Award size={16} />
+          <span>Certificates Hub ({certificatesList.length})</span>
+        </button>
+
+        <button
+          className={`btn btn-sm ${activeTab === 'feedback' ? 'btn-primary' : 'btn-ghost'}`}
+          style={{ position: 'relative' }}
+          onClick={() => {
+            setActiveTab('feedback');
+            loadFeedback();
+          }}
+        >
+          <MessageSquare size={16} />
+          <span>User Feedback &amp; Reports ({feedbackList.length})</span>
+          {feedbackCounts.pending > 0 && (
+            <span style={{
+              marginLeft: '0.4rem',
+              backgroundColor: '#D97706',
+              color: '#fff',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              padding: '0.1rem 0.45rem',
+              borderRadius: '9999px'
+            }}>
+              {feedbackCounts.pending} new
+            </span>
+          )}
+        </button>
+
+        <button
+          className={`btn btn-sm ${activeTab === 'subscribers' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => {
+            setActiveTab('subscribers');
+            loadSubscribers();
+            loadEmailLogs();
+          }}
+        >
+          <Mail size={16} />
+          <span>Subscribers &amp; Mailer ({subscriberCounts.active})</span>
         </button>
 
         <button
@@ -1248,6 +1564,865 @@ export function AdminPage({ onNavigate }) {
       )}
 
       {/* ========================================================================= */}
+      {/* TAB 6: CERTIFICATES GOVERNANCE & VERIFICATION REGISTRY */}
+      {/* ========================================================================= */}
+      {activeTab === 'certificates' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Certificate Overview Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div className="stat-card">
+              <span className="stat-label">Accredited Typists</span>
+              <div className="stat-value" style={{ color: '#0284c7' }}>{certSummary.total}</div>
+              <span className="stat-subtext">Official issued credentials</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-label">Active &amp; Valid Standing</span>
+              <div className="stat-value" style={{ color: 'var(--color-primary-forest)' }}>{certSummary.active}</div>
+              <span className="stat-subtext">Passes cryptographic audit</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-label">Revoked Credentials</span>
+              <div className="stat-value" style={{ color: certSummary.revoked > 0 ? 'var(--color-error)' : 'inherit' }}>
+                {certSummary.revoked}
+              </div>
+              <span className="stat-subtext">Flagged / invalidated by admin</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-label">Peak Velocity Certified</span>
+              <div className="stat-value" style={{ color: '#ca8a04' }}>{certSummary.highestWpm} <span style={{ fontSize: '1rem' }}>WPM</span></div>
+              <span className="stat-subtext">Highest verified typing speed</span>
+            </div>
+          </div>
+
+          {/* Controls Bar & Quick Verifier */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              {/* Filter Tabs */}
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  className={`btn btn-sm ${certFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setCertFilter('all');
+                    loadCertificates('all', certSearch);
+                  }}
+                >
+                  All ({certSummary.total})
+                </button>
+                <button
+                  className={`btn btn-sm ${certFilter === 'active' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setCertFilter('active');
+                    loadCertificates('active', certSearch);
+                  }}
+                >
+                  Active Valid ({certSummary.active})
+                </button>
+                <button
+                  className={`btn btn-sm ${certFilter === 'revoked' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setCertFilter('revoked');
+                    loadCertificates('revoked', certSearch);
+                  }}
+                >
+                  Revoked ({certSummary.revoked})
+                </button>
+              </div>
+
+              {/* Direct Quick Serial Lookup */}
+              <form onSubmit={handleQuickLookup} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 320px', maxWidth: '420px' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Search size={15} color="var(--color-text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    placeholder="Search Cert ID (CT-2026-...), name, fingerprint..."
+                    value={certSearch}
+                    onChange={(e) => {
+                      setCertSearch(e.target.value);
+                      loadCertificates(certFilter, e.target.value);
+                    }}
+                  />
+                </div>
+                {certSearch && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      setCertSearch('');
+                      loadCertificates(certFilter, '');
+                    }}
+                    title="Clear filter"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* Certificates Table */}
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                <Award size={18} color="var(--color-primary-forest)" />
+                <span>Accredited Certificate Ledger ({certificatesList.length} records)</span>
+              </div>
+              <button className="btn btn-outline btn-sm" onClick={() => loadCertificates()} title="Refresh list">
+                <RefreshCw size={14} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', backgroundColor: 'var(--color-bg-subtle)' }}>
+                    <th style={{ padding: '0.75rem 1.25rem' }}>Certificate Serial</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Accredited Typist</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Velocity &amp; Accuracy</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Tier &amp; Discipline</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Issued Date</th>
+                    <th style={{ padding: '0.75rem 1.25rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {certificatesList.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                        <Award size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
+                        <p style={{ margin: 0, fontWeight: 500 }}>No certificates found in the registry.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    certificatesList.map((c) => {
+                      const isRevoked = Boolean(c.is_revoked);
+                      return (
+                        <tr key={c.id || c.cert_id} style={{ borderBottom: '1px solid var(--color-border-subtle)', backgroundColor: isRevoked ? 'rgba(239, 68, 68, 0.03)' : 'transparent' }}>
+                          <td style={{ padding: '0.75rem 1.25rem', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.85rem', color: isRevoked ? 'var(--color-error)' : 'var(--color-primary-forest)' }}>
+                                {c.cert_id}
+                              </span>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ padding: '0.2rem', minWidth: 'auto', height: 'auto' }}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(c.cert_id);
+                                  toast.success(`Copied ${c.cert_id}`);
+                                }}
+                                title="Copy Serial"
+                              >
+                                <Copy size={13} />
+                              </button>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{c.recipient_name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {c.username ? `@${c.username}` : (c.user_email || 'Unregistered')}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                              {c.net_wpm} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>WPM</span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {c.accuracy}% acc • {c.duration_seconds || 60}s drill
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                              <span className="badge badge-sage" style={{ fontSize: '0.75rem' }}>
+                                {c.tier_badge || c.tier_title || 'Certified'}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                                {c.tier_grade || 'Grade A'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {c.discipline}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                            {isRevoked ? (
+                              <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--color-error)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem' }} title={c.revoked_reason || 'Revoked by admin'}>
+                                <ShieldOff size={13} />
+                                <span>Revoked</span>
+                              </span>
+                            ) : (
+                              <span className="badge badge-sage" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem' }}>
+                                <CheckCircle2 size={13} />
+                                <span>Active</span>
+                              </span>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                            {new Date(c.issued_at || c.created_at).toLocaleDateString()}
+                          </td>
+
+                          <td style={{ padding: '0.75rem 1.25rem', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setPreviewCert(c)}
+                                title="Inspect Full Official Certificate"
+                              >
+                                <Eye size={15} />
+                              </button>
+
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => window.open(`/#verify/${c.cert_id}`, '_blank')}
+                                title="Open Public Verifier URL"
+                              >
+                                <ExternalLink size={15} />
+                              </button>
+
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => handleOpenRevokeModal(c)}
+                                title={isRevoked ? 'Reinstate Certificate' : 'Revoke / Invalidate Certificate'}
+                                style={{ color: isRevoked ? 'var(--color-primary-forest)' : 'var(--color-error)' }}
+                              >
+                                {isRevoked ? <RotateCcw size={15} /> : <ShieldAlert size={15} />}
+                              </button>
+
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => handleDeleteCertificate(c)}
+                                style={{ color: 'var(--color-error)' }}
+                                title="Permanently Purge Record"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 7: USER FEEDBACK, TYPO REPORTS & INQUIRIES */}
+      {/* ========================================================================= */}
+      {activeTab === 'feedback' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Feedback Filter Bar */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              {/* Status Filter Tabs */}
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  className={`btn btn-sm ${feedbackFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setFeedbackFilter('all');
+                    loadFeedback('all', feedbackCategory, feedbackSearch);
+                  }}
+                >
+                  All ({feedbackCounts.total})
+                </button>
+                <button
+                  className={`btn btn-sm ${feedbackFilter === 'pending' ? 'btn-primary' : 'btn-ghost'}`}
+                  style={feedbackCounts.pending > 0 && feedbackFilter !== 'pending' ? { borderColor: '#D97706', color: '#D97706' } : {}}
+                  onClick={() => {
+                    setFeedbackFilter('pending');
+                    loadFeedback('pending', feedbackCategory, feedbackSearch);
+                  }}
+                >
+                  Pending Review ({feedbackCounts.pending})
+                </button>
+                <button
+                  className={`btn btn-sm ${feedbackFilter === 'in_review' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setFeedbackFilter('in_review');
+                    loadFeedback('in_review', feedbackCategory, feedbackSearch);
+                  }}
+                >
+                  In Review ({feedbackCounts.inReview})
+                </button>
+                <button
+                  className={`btn btn-sm ${feedbackFilter === 'resolved' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setFeedbackFilter('resolved');
+                    loadFeedback('resolved', feedbackCategory, feedbackSearch);
+                  }}
+                >
+                  Resolved ({feedbackCounts.resolved})
+                </button>
+                <button
+                  className={`btn btn-sm ${feedbackFilter === 'archived' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => {
+                    setFeedbackFilter('archived');
+                    loadFeedback('archived', feedbackCategory, feedbackSearch);
+                  }}
+                >
+                  Archived ({feedbackCounts.archived})
+                </button>
+              </div>
+
+              {/* Category Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Filter size={15} color="var(--color-text-muted)" />
+                  <select
+                    className="input"
+                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.65rem', height: 'auto' }}
+                    value={feedbackCategory}
+                    onChange={(e) => {
+                      setFeedbackCategory(e.target.value);
+                      loadFeedback(feedbackFilter, e.target.value, feedbackSearch);
+                    }}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="feedback">💡 Feedback &amp; Ideas</option>
+                    <option value="bug_report">🐛 Bug Reports</option>
+                    <option value="typo">🔤 Typo in Snippet</option>
+                    <option value="snippet_suggestion">📝 Snippet Requests</option>
+                    <option value="account">❓ Account Inquiries</option>
+                    <option value="other">💬 Other</option>
+                  </select>
+                </div>
+
+                {/* Search */}
+                <div style={{ position: 'relative', width: '220px' }}>
+                  <Search size={14} color="var(--color-text-muted)" style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="input"
+                    style={{ paddingLeft: '2rem', fontSize: '0.85rem', padding: '0.35rem 0.5rem 0.35rem 2rem', height: 'auto' }}
+                    placeholder="Search messages..."
+                    value={feedbackSearch}
+                    onChange={(e) => {
+                      setFeedbackSearch(e.target.value);
+                      loadFeedback(feedbackFilter, feedbackCategory, e.target.value);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Feedback Items List */}
+          {feedbackList.length === 0 ? (
+            <div className="card" style={{ padding: '3.5rem 2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              <Inbox size={42} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No User Feedback / Reports Found</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem' }}>
+                There are currently no inquiries matching your active filters.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {feedbackList.map((item) => {
+                const isResolved = item.status === 'resolved';
+                const isPending = item.status === 'pending';
+
+                // Category styling
+                let catBadge = { label: 'Feedback', color: 'var(--color-primary-forest)', bg: 'rgba(35, 107, 77, 0.12)' };
+                if (item.category === 'bug_report') {
+                  catBadge = { label: 'Bug Report', color: 'var(--color-error)', bg: 'rgba(239, 68, 68, 0.12)' };
+                } else if (item.category === 'typo') {
+                  catBadge = { label: 'Typo Report', color: '#D97706', bg: 'rgba(217, 119, 6, 0.12)' };
+                } else if (item.category === 'snippet_suggestion') {
+                  catBadge = { label: 'Snippet Request', color: '#0284c7', bg: 'rgba(2, 132, 199, 0.12)' };
+                } else if (item.category === 'account') {
+                  catBadge = { label: 'Account Inquiry', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' };
+                }
+
+                return (
+                  <div key={item.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: isPending ? '3px solid #D97706' : isResolved ? '3px solid var(--color-primary-forest)' : '1px solid var(--color-border)' }}>
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <span style={{
+                          backgroundColor: catBadge.bg,
+                          color: catBadge.color,
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700
+                        }}>
+                          {catBadge.label}
+                        </span>
+
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                          #{item.id} • {new Date(item.created_at).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Status Selector Dropdown */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Status:</span>
+                        <select
+                          className="input"
+                          style={{
+                            fontSize: '0.8rem',
+                            padding: '0.25rem 0.5rem',
+                            height: 'auto',
+                            fontWeight: 600,
+                            color: isPending ? '#D97706' : isResolved ? 'var(--color-primary-forest)' : 'inherit'
+                          }}
+                          value={item.status}
+                          onChange={(e) => handleUpdateFeedbackStatus(item, e.target.value)}
+                        >
+                          <option value="pending">⏳ Pending Review</option>
+                          <option value="in_review">🔍 In Review</option>
+                          <option value="resolved">✔ Resolved</option>
+                          <option value="archived">📁 Archived</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Sender Identity */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div>
+                        <span style={{ fontWeight: 700, fontSize: '1rem', marginRight: '0.5rem' }}>{item.name}</span>
+                        <a
+                          href={`mailto:${item.email}?subject=Re: [CodeTyper] ${encodeURIComponent(item.subject)}`}
+                          style={{ fontSize: '0.875rem', color: 'var(--color-primary-forest)', textDecoration: 'none' }}
+                          title="Click to write email"
+                        >
+                          &lt;{item.email}&gt;
+                        </a>
+                        {item.user_username && (
+                          <span className="badge badge-sage" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                            @{item.user_username}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Subject & Message Content */}
+                    <div>
+                      <h4 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem', fontWeight: 600 }}>{item.subject}</h4>
+                      <div style={{
+                        padding: '1rem',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--color-bg-subtle)',
+                        fontSize: '0.9rem',
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-wrap',
+                        color: 'var(--color-text-primary)'
+                      }}>
+                        {item.message}
+                      </div>
+                    </div>
+
+                    {/* Admin Internal Notepad Section */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                          Maintainer Internal Notes:
+                        </span>
+                        {editingNotesId !== item.id && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.15rem 0.45rem' }}
+                            onClick={() => {
+                              setEditingNotesId(item.id);
+                              setAdminNotesText(item.admin_notes || '');
+                            }}
+                          >
+                            <Edit size={12} />
+                            <span>{item.admin_notes ? 'Edit Note' : 'Add Note'}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {editingNotesId === item.id ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                          <input
+                            type="text"
+                            className="input"
+                            style={{ fontSize: '0.85rem', flex: 1 }}
+                            placeholder="Add internal resolution note (e.g. Fixed typo in commit 4b2)"
+                            value={adminNotesText}
+                            onChange={(e) => setAdminNotesText(e.target.value)}
+                          />
+                          <button className="btn btn-primary btn-sm" onClick={() => handleSaveAdminNotes(item)}>
+                            <Check size={14} />
+                            <span>Save</span>
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEditingNotesId(null)}>
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : item.admin_notes ? (
+                        <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                          📌 &quot;{item.admin_notes}&quot;
+                        </p>
+                      ) : (
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                          No maintainer notes attached yet.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <a
+                          href={`mailto:${item.email}?subject=Re: [CodeTyper] ${encodeURIComponent(item.subject)}`}
+                          className="btn btn-outline btn-sm"
+                          title="Open mail client"
+                        >
+                          <Mail size={14} />
+                          <span>Reply to Typist</span>
+                        </a>
+
+                        {item.status !== 'resolved' ? (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleUpdateFeedbackStatus(item, 'resolved')}
+                            title="Resolves issue and automatically emails the user"
+                          >
+                            <Send size={13} />
+                            <span>Resolve &amp; Email Typist</span>
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span className="badge badge-sage" style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <CheckCircle2 size={12} /> Auto-Resolution Email Sent
+                            </span>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => handleUpdateFeedbackStatus(item, 'pending')}
+                            >
+                              <RotateCcw size={13} />
+                              <span>Re-open</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: 'var(--color-error)' }}
+                        onClick={() => handleDeleteFeedback(item)}
+                        title="Delete Note"
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete Note</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 8: NEWSLETTER SUBSCRIBERS & AUTOMATED MAILER HUB */}
+      {/* ========================================================================= */}
+      {activeTab === 'subscribers' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Header Panel */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Mail size={20} color="var(--color-primary-forest)" />
+                  <span>Developer Digest Subscribers &amp; Email Automation</span>
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+                  Active typists subscribed via footer newsletter, automated issue resolution notifications, and platform release broadcasts.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowBroadcastModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Sparkles size={15} />
+                  <span>Broadcast New Update ({subscriberCounts.active})</span>
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => {
+                    loadSubscribers();
+                    loadEmailLogs();
+                    loadAdminData();
+                    toast.info('Refreshed subscriber & mailer records.');
+                  }}
+                >
+                  <RefreshCw size={14} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-View Switcher: Subscribers vs Outbox */}
+            <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--color-border-subtle)', marginTop: '1.25rem', paddingTop: '1rem' }}>
+              <button
+                className={`btn btn-sm ${subscribersViewMode === 'subscribers' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setSubscribersViewMode('subscribers')}
+              >
+                <Users size={15} />
+                <span>Active Subscribers ({subscriberCounts.active})</span>
+              </button>
+              <button
+                className={`btn btn-sm ${subscribersViewMode === 'outbox' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setSubscribersViewMode('outbox')}
+              >
+                <Send size={15} />
+                <span>Automated Email Outbox &amp; Logs ({emailStats.total})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* VIEW A: SUBSCRIBERS LIST */}
+          {subscribersViewMode === 'subscribers' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Search & Filter Bar */}
+              <div className="card" style={{ padding: '1rem 1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <button
+                      className={`btn btn-sm ${subscriberFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => {
+                        setSubscriberFilter('all');
+                        loadSubscribers('all', subscriberSearch);
+                      }}
+                    >
+                      All ({subscriberCounts.total})
+                    </button>
+                    <button
+                      className={`btn btn-sm ${subscriberFilter === 'active' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => {
+                        setSubscriberFilter('active');
+                        loadSubscribers('active', subscriberSearch);
+                      }}
+                    >
+                      Active ({subscriberCounts.active})
+                    </button>
+                    <button
+                      className={`btn btn-sm ${subscriberFilter === 'unsubscribed' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => {
+                        setSubscriberFilter('unsubscribed');
+                        loadSubscribers('unsubscribed', subscriberSearch);
+                      }}
+                    >
+                      Unsubscribed ({subscriberCounts.unsubscribed})
+                    </button>
+                  </div>
+
+                  <div style={{ position: 'relative', width: '260px' }}>
+                    <Search size={14} color="var(--color-text-muted)" style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="text"
+                      className="input"
+                      style={{ paddingLeft: '2rem', fontSize: '0.85rem', padding: '0.35rem 0.5rem 0.35rem 2rem', height: 'auto' }}
+                      placeholder="Search subscriber email..."
+                      value={subscriberSearch}
+                      onChange={(e) => {
+                        setSubscriberSearch(e.target.value);
+                        loadSubscribers(subscriberFilter, e.target.value);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Subscribers Table */}
+              <div className="card" style={{ padding: '0', overflowX: 'auto' }}>
+                <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)' }}>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Subscriber Email</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Source</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Status</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Subscribed On</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscribersList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                          <Mail size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.35 }} />
+                          <div>No newsletter subscribers found.</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      subscribersList.map((sub) => {
+                        const isActive = sub.status === 'active';
+                        return (
+                          <tr key={sub.id} style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
+                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Mail size={14} color="var(--color-primary-forest)" />
+                                <span>{sub.email}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span className="badge badge-subtle" style={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>
+                                {sub.source || 'footer'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span
+                                style={{
+                                  backgroundColor: isActive ? 'rgba(35, 107, 77, 0.12)' : 'rgba(156, 163, 175, 0.15)',
+                                  color: isActive ? 'var(--color-primary-forest)' : 'var(--color-text-muted)',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: 'var(--radius-sm)',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700
+                                }}
+                              >
+                                {isActive ? 'Active Typist' : 'Unsubscribed'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>
+                              {new Date(sub.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ color: 'var(--color-error)', padding: '0.2rem 0.5rem' }}
+                                onClick={() => handleDeleteSubscriber(sub)}
+                                title="Remove subscriber"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW B: EMAIL OUTBOX & LOGS */}
+          {subscribersViewMode === 'outbox' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Outbox Metrics Strip */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                <div className="card" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>Total Emails Dispatched</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{emailStats.total}</div>
+                </div>
+                <div className="card" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>Delivered via SMTP</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary-forest)' }}>{emailStats.sent}</div>
+                </div>
+                <div className="card" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>Simulated (Local / Dev)</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0284c7' }}>{emailStats.simulated}</div>
+                </div>
+                <div className="card" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>Failed Attempts</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: emailStats.failed > 0 ? 'var(--color-error)' : 'inherit' }}>{emailStats.failed}</div>
+                </div>
+              </div>
+
+              {/* Email Outbox Table */}
+              <div className="card" style={{ padding: '0', overflowX: 'auto' }}>
+                <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)' }}>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Recipient</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Type</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Subject &amp; Preview</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Status</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Sent At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emailLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                          <Send size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.35 }} />
+                          <div>No automated emails recorded yet.</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      emailLogs.map((log) => {
+                        let typeBadge = { label: 'System', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.12)' };
+                        if (log.email_type === 'feedback_resolved') {
+                          typeBadge = { label: 'Issue Resolved', color: 'var(--color-primary-forest)', bg: 'rgba(35, 107, 77, 0.12)' };
+                        } else if (log.email_type === 'newsletter_welcome') {
+                          typeBadge = { label: 'Welcome Digest', color: '#0284c7', bg: 'rgba(2, 132, 199, 0.12)' };
+                        } else if (log.email_type === 'broadcast') {
+                          typeBadge = { label: 'Release Broadcast', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' };
+                        } else if (log.email_type === 'password_reset') {
+                          typeBadge = { label: 'Password Reset', color: '#D97706', bg: 'rgba(217, 119, 6, 0.12)' };
+                        }
+
+                        return (
+                          <tr key={log.id} style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
+                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>
+                              {log.recipient_email}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                backgroundColor: typeBadge.bg,
+                                color: typeBadge.color,
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700
+                              }}>
+                                {typeBadge.label}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', maxWidth: '380px' }}>
+                              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{log.subject}</div>
+                              {log.preview_text && (
+                                <div style={{ fontSize: '0.775rem', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {log.preview_text}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                color: log.status === 'sent' ? 'var(--color-primary-forest)' : log.status === 'simulated' ? '#0284c7' : 'var(--color-error)'
+                              }}>
+                                {log.status === 'sent' ? '✓ Sent (SMTP)' : log.status === 'simulated' ? '⚡ Simulated (Local)' : '✖ Failed'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--color-text-muted)' }}>
+                              {new Date(log.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL 1: ADD / EDIT PRACTICE PASSAGE */}
       {/* ========================================================================= */}
       {showContentModal && (
@@ -1536,6 +2711,192 @@ export function AdminPage({ onNavigate }) {
                 </button>
                 <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#D97706', borderColor: '#D97706' }}>
                   Disqualify & Recalculate
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 6: REVOKE / REINSTATE CERTIFICATE */}
+      {/* ========================================================================= */}
+      {revokeModalCert && (
+        <div className="modal-backdrop" onClick={() => setRevokeModalCert(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', width: '92%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {revokeModalCert.is_revoked ? (
+                  <RotateCcw size={22} color="var(--color-primary-forest)" />
+                ) : (
+                  <ShieldAlert size={22} color="var(--color-error)" />
+                )}
+                <h3 style={{ margin: 0 }}>
+                  {revokeModalCert.is_revoked ? 'Reinstate Certificate' : 'Revoke Certificate Accreditation'}
+                </h3>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setRevokeModalCert(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleToggleRevoke} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-bg-subtle)', fontSize: '0.875rem' }}>
+                <div><strong>Certificate Serial:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{revokeModalCert.cert_id}</span></div>
+                <div><strong>Recipient:</strong> {revokeModalCert.recipient_name}</div>
+                <div><strong>Discipline:</strong> {revokeModalCert.discipline}</div>
+                <div><strong>Speed:</strong> {revokeModalCert.net_wpm} WPM ({revokeModalCert.accuracy}% accuracy)</div>
+              </div>
+
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', margin: 0, lineHeight: 1.5 }}>
+                {revokeModalCert.is_revoked
+                  ? 'Reinstating this certificate will restore its active standing and allow it to pass public verification searches.'
+                  : 'Revoking this certificate will invalidate it across the platform and return an explicit revocation alert to anyone scanning its QR code or verification link.'}
+              </p>
+
+              {!revokeModalCert.is_revoked && (
+                <div>
+                  <label className="input-label">Reason for Revocation *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    required
+                    placeholder="e.g. Automated script injection / suspected bot session"
+                    value={revokeReason}
+                    onChange={(e) => setRevokeReason(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setRevokeModalCert(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{
+                    backgroundColor: revokeModalCert.is_revoked ? 'var(--color-primary-forest)' : 'var(--color-error)',
+                    borderColor: revokeModalCert.is_revoked ? 'var(--color-primary-forest)' : 'var(--color-error)'
+                  }}
+                >
+                  {revokeModalCert.is_revoked ? 'Reinstate Standing' : 'Confirm Revocation'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 7: FULL LUXURY CERTIFICATE PREVIEW */}
+      {/* ========================================================================= */}
+      {previewCert && (
+        <TypingCertificateModal
+          certificate={{
+            certId: previewCert.cert_id,
+            recipientName: previewCert.recipient_name,
+            titleRole: previewCert.title_role || 'Touch-Typing Specialist',
+            discipline: previewCert.discipline,
+            netWpm: previewCert.net_wpm,
+            grossWpm: previewCert.gross_wpm,
+            accuracy: previewCert.accuracy,
+            durationSeconds: previewCert.duration_seconds || 60,
+            totalCharacters: previewCert.total_characters || 250,
+            tierTitle: previewCert.tier_title,
+            tierBadge: previewCert.tier_badge,
+            tierGrade: previewCert.tier_grade || 'Grade A',
+            signatoryName: previewCert.signatory_name || 'Saumy Pandey',
+            signatoryTitle: previewCert.signatory_title || 'App Owner & Creator • Founder, CodeTyper',
+            sha256Fingerprint: previewCert.sha256_fingerprint,
+            biometricVerified: Boolean(previewCert.biometric_verified),
+            theme: previewCert.theme || 'royal-obsidian',
+            issuedAt: previewCert.issued_at || previewCert.created_at,
+            verificationUrl: `https://codetyper.dev/#verify/${previewCert.cert_id}`
+          }}
+          onClose={() => setPreviewCert(null)}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 8: BROADCAST RELEASE ANNOUNCEMENT TO SUBSCRIBERS */}
+      {/* ========================================================================= */}
+      {showBroadcastModal && (
+        <div className="modal-backdrop" onClick={() => !broadcasting && setShowBroadcastModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '620px', width: '92%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={20} color="var(--color-primary-forest)" />
+                <h3 style={{ margin: 0 }}>Broadcast Platform Release Update</h3>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => !broadcasting && setShowBroadcastModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.875rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+              This will dispatch an official developer digest email to all <strong>{subscriberCounts.active} active typist subscribers</strong> and log the dispatch history in your Email Outbox.
+            </p>
+
+            <form onSubmit={handleBroadcastUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label className="input-label">Update Title / Headline</label>
+                <input
+                  type="text"
+                  className="input"
+                  required
+                  placeholder="e.g. CodeTyper v2.5: Custom Keypress Audio & Vim Navigation Mode"
+                  value={broadcastForm.title}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
+                  disabled={broadcasting}
+                />
+              </div>
+
+              <div>
+                <label className="input-label">Version Tag / Milestone</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="e.g. v2.5 LTS"
+                  value={broadcastForm.versionTag}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, versionTag: e.target.value })}
+                  disabled={broadcasting}
+                />
+              </div>
+
+              <div>
+                <label className="input-label">Release Changelog &amp; Highlights</label>
+                <textarea
+                  className="input"
+                  rows={6}
+                  required
+                  placeholder={`• Added 8 authentic mechanical switch audio synthesizer models
+• Introduced full Vim normal & insert mode for developer typists
+• Real-time multiplayer lobby reconnection resilience`}
+                  value={broadcastForm.changelog}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, changelog: e.target.value })}
+                  disabled={broadcasting}
+                  style={{ fontFamily: 'inherit', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setShowBroadcastModal(false)}
+                  disabled={broadcasting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={broadcasting || subscriberCounts.active === 0}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Send size={15} />
+                  <span>{broadcasting ? 'Broadcasting to Typists...' : `Send Broadcast (${subscriberCounts.active} Typists)`}</span>
                 </button>
               </div>
             </form>

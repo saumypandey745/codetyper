@@ -31,6 +31,26 @@ router.get('/verify/:certId', (req, res) => {
     `).get(cleanId);
 
     if (cert) {
+      if (cert.is_revoked) {
+        return res.status(403).json({
+          verified: false,
+          isRevoked: true,
+          error: `Certificate ID "${cleanId}" has been REVOKED by platform governance.`,
+          revokedReason: cert.revoked_reason || 'Certificate revoked due to integrity violation or credential invalidation.',
+          certificate: {
+            certId: cert.cert_id,
+            recipientName: cert.recipient_name,
+            discipline: cert.discipline,
+            netWpm: cert.net_wpm,
+            tierTitle: cert.tier_title,
+            issuedAt: cert.issued_at,
+            isRevoked: true,
+            revokedReason: cert.revoked_reason,
+            revokedAt: cert.revoked_at
+          }
+        });
+      }
+
       return res.json({
         verified: true,
         source: 'database',
@@ -52,6 +72,7 @@ router.get('/verify/:certId', (req, res) => {
           sha256Fingerprint: cert.sha256_fingerprint,
           biometricVerified: Boolean(cert.biometric_verified),
           theme: cert.theme || 'royal-obsidian',
+          isRevoked: false,
           issuedAt: cert.issued_at,
           verificationUrl: `https://codetyper.dev/#verify/${cert.cert_id}`
         }

@@ -172,6 +172,24 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_certificates_cert_id ON certificates(cert_id);
     CREATE INDEX IF NOT EXISTS idx_certificates_user ON certificates(user_id);
 
+    CREATE TABLE IF NOT EXISTS feedback_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      category TEXT DEFAULT 'feedback',
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      admin_notes TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback_reports(status);
+    CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback_reports(created_at);
+
     CREATE TABLE IF NOT EXISTS admin_audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER,
@@ -184,7 +202,31 @@ export function initDatabase() {
     );
     CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON admin_audit_logs(action);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_time ON admin_audit_logs(created_at);
+
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      source TEXT DEFAULT 'footer',
+      status TEXT DEFAULT 'active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscribers_email ON newsletter_subscribers(email);
+    CREATE INDEX IF NOT EXISTS idx_subscribers_status ON newsletter_subscribers(status);
+
+    CREATE TABLE IF NOT EXISTS email_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipient_email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      email_type TEXT NOT NULL,
+      status TEXT DEFAULT 'sent',
+      preview_text TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_logs_type ON email_logs(email_type);
+    CREATE INDEX IF NOT EXISTS idx_email_logs_time ON email_logs(created_at);
   `);
+
 
   // Safe migrations for newly added columns
   try { db.exec('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0;'); } catch (e) {}
@@ -196,6 +238,10 @@ export function initDatabase() {
   try { db.exec('ALTER TABLE practice_content ADD COLUMN is_published INTEGER DEFAULT 1;'); } catch (e) {}
   try { db.exec('ALTER TABLE practice_content ADD COLUMN lesson_number INTEGER DEFAULT 1;'); } catch (e) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_content_lang_lesson ON practice_content(is_code, language, lesson_number);'); } catch (e) {}
+  try { db.exec('ALTER TABLE certificates ADD COLUMN is_revoked INTEGER DEFAULT 0;'); } catch (e) {}
+  try { db.exec('ALTER TABLE certificates ADD COLUMN revoked_reason TEXT;'); } catch (e) {}
+  try { db.exec('ALTER TABLE certificates ADD COLUMN revoked_at DATETIME;'); } catch (e) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_certificates_revoked ON certificates(is_revoked);'); } catch (e) {}
 
   // Initialize default system settings
   const initSetting = (key, val) => {
@@ -484,4 +530,91 @@ function seedInitialData() {
       console.warn('Could not seed Saumy account', e);
     }
   }
+
+  // Seed initial sample feedback reports if table is fresh
+  try {
+    const feedbackCount = db.prepare('SELECT COUNT(*) as count FROM feedback_reports').get().count;
+    if (feedbackCount === 0) {
+      const insertFeedback = db.prepare(`
+        INSERT INTO feedback_reports (name, email, category, subject, message, status, admin_notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
+      `);
+      insertFeedback.run(
+        'Alex Rivers',
+        'alex.rivers@devmail.io',
+        'feedback',
+        'Loving the dark mode mechanical audio synthesis!',
+        'The sub-millisecond audio feedback and tactile sound themes are unmatched. Would love to see an option for custom keypress wav packs in future releases.',
+        'pending',
+        null,
+        '-2 hours'
+      );
+      insertFeedback.run(
+        'Priya Sharma',
+        'priya.code@techlab.org',
+        'typo',
+        'Typo in Python Snippet #14 (List Comprehensions)',
+        'In snippet #14 line 3, there is an extra trailing parenthesis `[x**2 for x in nums))` which causes a syntax error during typing.',
+        'in_review',
+        'Investigating snippet line 3 in practice_content',
+        '-5 hours'
+      );
+      insertFeedback.run(
+        'Marcus Vance',
+        'marcus.v@fullstack.dev',
+        'bug_report',
+        'Multiplayer race lobby reconnect glitch on iOS Safari',
+        'When switching tabs on mobile Safari during lobby countdown, the websocket connection sometimes fails to reconnect gracefully without full page refresh.',
+        'resolved',
+        'Fixed in v2.4 offline/online sync resilience handler',
+        '-1 day'
+      );
+      console.log('[DB] Sample developer feedback reports seeded.');
+    }
+  } catch (e) {
+    console.warn('[DB] Could not seed sample feedback reports:', e.message);
+  }
+
+  // Seed sample certified typist if certificates registry is fresh
+  try {
+    const certCount = db.prepare('SELECT COUNT(*) as count FROM certificates').get().count;
+    if (certCount === 0) {
+      const saumyUser = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'saumypandey745@gmail.com'").get();
+      db.prepare(`
+        INSERT INTO certificates (
+          cert_id, user_id, recipient_name, title_role, discipline, net_wpm, gross_wpm, accuracy,
+          duration_seconds, total_characters, tier_title, tier_badge, tier_grade, signatory_name,
+          signatory_title, sha256_fingerprint, biometric_verified, theme, is_revoked, created_at
+        ) VALUES (
+          'CT-2026-SAUMY88', ?, 'Saumy Pandey', 'Lead Architect & Systems Engineer', 'Full-Stack JavaScript & Systems Protocol',
+          92.4, 95.0, 98.8, 60, 462, 'Master Typist (Diamond Tier)', 'Diamond', 'Grade S+',
+          'Saumy Pandey', 'App Owner & Creator • Founder, CodeTyper',
+          'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          1, 'royal-obsidian', 0, datetime('now', '-3 days')
+        )
+      `).run(saumyUser?.id || null);
+      console.log('[DB] Benchmark master certificate seeded.');
+    }
+  } catch (e) {
+    console.warn('[DB] Could not seed benchmark certificate:', e.message);
+  }
+
+  // Seed sample newsletter subscribers if table is fresh
+  try {
+    const subCount = db.prepare('SELECT COUNT(*) as count FROM newsletter_subscribers').get().count;
+    if (subCount === 0) {
+      const insertSub = db.prepare(`
+        INSERT INTO newsletter_subscribers (email, source, status, created_at)
+        VALUES (?, ?, ?, datetime('now', ?))
+      `);
+      insertSub.run('dev.elena@systems.io', 'footer', 'active', '-3 days');
+      insertSub.run('kenji.takahashi@tokyotech.jp', 'footer', 'active', '-2 days');
+      insertSub.run('rachel.green@frontend.dev', 'footer', 'active', '-1 day');
+      insertSub.run('aravind.nair@kernel.org', 'footer', 'active', '-4 hours');
+      console.log('[DB] Sample newsletter subscribers seeded.');
+    }
+  } catch (e) {
+    console.warn('[DB] Could not seed sample subscribers:', e.message);
+  }
 }
+

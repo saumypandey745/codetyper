@@ -177,7 +177,58 @@ class ApiClient {
     deleteScore: (id) => this.request(`/admin/scores/${id}`, { method: 'DELETE' }),
     getSettings: () => this.request('/admin/settings'),
     updateSettings: (settings) => this.request('/admin/settings', { method: 'PUT', body: JSON.stringify(settings) }),
-    getAuditLogs: () => this.request('/admin/audit-logs')
+    getAuditLogs: () => this.request('/admin/audit-logs'),
+    getCertificates: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return this.request(`/admin/certificates?${query}`);
+    },
+    revokeCertificate: (certId, payload) =>
+      this.request(`/admin/certificates/${encodeURIComponent(certId)}/revoke`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+    deleteCertificate: (certId) =>
+      this.request(`/admin/certificates/${encodeURIComponent(certId)}`, {
+        method: 'DELETE'
+      }),
+    getFeedback: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return this.request(`/admin/feedback?${query}`);
+    },
+    updateFeedbackStatus: (id, payload) =>
+      this.request(`/admin/feedback/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+    deleteFeedback: (id) =>
+      this.request(`/admin/feedback/${id}`, {
+        method: 'DELETE'
+      }),
+    getSubscribers: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return this.request(`/admin/subscribers?${query}`);
+    },
+    deleteSubscriber: (id) =>
+      this.request(`/admin/subscribers/${id}`, {
+        method: 'DELETE'
+      }),
+    broadcastUpdate: (payload) =>
+      this.request('/admin/broadcast-update', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+    getEmailLogs: () => this.request('/admin/email-logs')
+  };
+
+  // Feedback & Developer Reports
+  feedback = {
+    submit: (payload) => this.request('/feedback', { method: 'POST', body: JSON.stringify(payload) })
+  };
+
+  // Newsletter & Developer Digest
+  newsletter = {
+    subscribe: (payload) => this.request('/newsletter/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
+    unsubscribe: (payload) => this.request('/newsletter/unsubscribe', { method: 'POST', body: JSON.stringify(payload) })
   };
 
   // Official Accredited Certificate Registry

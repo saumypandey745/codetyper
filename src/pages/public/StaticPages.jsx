@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Send, CheckCircle2, Shield, Heart, Terminal, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, CheckCircle2, Shield, Heart, Terminal, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { api } from '../../utils/api.js';
 
 export function AboutPage({ onNavigate }) {
   return (
@@ -74,17 +76,46 @@ export function AboutPage({ onNavigate }) {
 
 export function ContactPage() {
   const toast = useToast();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('Feedback');
+  const [category, setCategory] = useState('feedback');
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    if (user) {
+      if (user.full_name && !name) setName(user.full_name);
+      if (user.email && !email) setEmail(user.email);
+    }
+  }, [user]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !email || !message) return;
-    setSubmitted(true);
-    toast.success('Thank you! Your note has been received.');
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast.error('Please complete all required fields.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await api.feedback.submit({
+        name: name.trim(),
+        email: email.trim(),
+        category,
+        subject: subject.trim() || `${category.toUpperCase()}: Note from ${name.trim()}`,
+        message: message.trim()
+      });
+
+      setSubmitted(true);
+      toast.success(res.message || 'Thank you! Your feedback has been received.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit feedback. Please check your connection.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -92,25 +123,33 @@ export function ContactPage() {
       <div className="card" style={{ padding: '2.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <span className="badge badge-sage" style={{ marginBottom: '0.5rem' }}>We Value Your Thoughts</span>
-          <h2>Get in Touch</h2>
-          <p style={{ fontSize: '0.95rem' }}>Have a question, language snippet suggestion, or feedback?</p>
+          <h2>Get in Touch &amp; Report</h2>
+          <p style={{ fontSize: '0.95rem' }}>Have an issue, typo report, language suggestion, or general feedback?</p>
         </div>
 
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-            <CheckCircle2 size={42} color="var(--color-primary-forest)" style={{ margin: '0 auto 1rem' }} />
-            <h3 style={{ marginBottom: '0.5rem' }}>Message Dispatched</h3>
-            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-              Thank you for reaching out, {name}. Our maintainers read every note and will get back to you promptly.
+            <CheckCircle2 size={46} color="var(--color-primary-forest)" style={{ margin: '0 auto 1rem' }} />
+            <h3 style={{ marginBottom: '0.5rem' }}>Message Dispatched to Maintainers</h3>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              Thank you for reaching out, <strong>{name}</strong>. Your message is now in the administrative review inbox.
+              Our maintainers review every report and will follow up promptly via email if needed.
             </p>
-            <button className="btn btn-outline" onClick={() => setSubmitted(false)}>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setSubmitted(false);
+                setMessage('');
+                setSubject('');
+              }}
+            >
               Send Another Note
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Your Name</label>
+              <label className="form-label">Your Name *</label>
               <input
                 type="text"
                 className="form-input"
@@ -122,7 +161,7 @@ export function ContactPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Email Address *</label>
               <input
                 type="email"
                 className="form-input"
@@ -134,30 +173,53 @@ export function ContactPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Subject</label>
-              <select className="form-select" value={subject} onChange={(e) => setSubject(e.target.value)}>
-                <option value="Feedback">General Feedback & Ideas</option>
-                <option value="Bug">Report an Issue / Bug</option>
-                <option value="Snippet">Suggest Practice Content or Language</option>
-                <option value="Account">Account or Data Inquiry</option>
+              <label className="form-label">Inquiry Category</label>
+              <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="feedback">💡 General Feedback &amp; Ideas</option>
+                <option value="bug_report">🐛 Report a Bug / Technical Issue</option>
+                <option value="typo">🔤 Typo in Practice Snippet</option>
+                <option value="snippet_suggestion">📝 Suggest New Language or Passage</option>
+                <option value="account">❓ Account &amp; Data Inquiry</option>
+                <option value="other">💬 Other Communication</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Message</label>
+              <label className="form-label">Subject Line *</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Typo in JavaScript snippet #42 or Feature idea"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Detailed Message *</label>
               <textarea
                 className="form-textarea"
                 rows={5}
-                placeholder="Share your experience or inquiry..."
+                placeholder="Describe your suggestion, typo location, or experience in detail..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 required
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-              <Send size={16} />
-              <span>Send Message</span>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 size={16} className="spin" />
+                  <span>Submitting Note...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span>Send Message to Admin</span>
+                </>
+              )}
             </button>
           </form>
         )}
