@@ -22,6 +22,7 @@ import { VerifyCertificatePage } from './pages/public/VerifyCertificatePage.jsx'
 // Router & SEO helpers
 import { parseCurrentRoute, navigateToPath, ROUTES, ROUTE_METADATA } from './utils/router.js';
 import { updateDocumentHead } from './utils/seoConfig.js';
+import { Analytics } from '@vercel/analytics/react';
 
 // Heavy App Pages (Code-split with React.lazy to reduce initial JS payload)
 const Dashboard = lazy(() => import('./pages/app/Dashboard.jsx').then(m => ({ default: m.Dashboard })));
@@ -405,6 +406,7 @@ export function App() {
           navigateTo(view);
         }}
       />
+      <Analytics />
     </>
   );
 }

@@ -19,6 +19,7 @@
     "cli": "node ./bin/codetyper.js"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "cookie-parser": "^1.4.7",
