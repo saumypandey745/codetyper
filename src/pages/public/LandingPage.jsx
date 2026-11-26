@@ -256,7 +256,7 @@ const FAQS = [
   },
   {
     q: "Can I get an official verified typing certificate for coding and resumes?",
-    a: "Yes! Every certificate issued on CodeTyper is cryptographically registered in our global verification ledger with a unique Ledger ID (e.g., CT-2026-CERT). Employers, recruiters, and colleagues can verify your credentials anytime at codetyper.dev/#verify by entering your certificate ID or scanning the certificate's QR code."
+    a: "Yes! Every certificate issued on CodeTyper is cryptographically registered in our global verification ledger with a unique Ledger ID (e.g., CT-2026-CERT). Employers, recruiters, and colleagues can verify your credentials anytime on our public verification portal (/verify) by entering your certificate ID or scanning the certificate's QR code."
   },
   {
     q: "What is a good typing speed for developers, programmers, and writers?",
@@ -293,26 +293,26 @@ const FAQS = [
 ];
 
 const POPULAR_TYPING_TOPICS = [
-  { label: '1 Minute Typing Test', view: 'practice', desc: 'Quick 60-second speed check' },
-  { label: '3 Minute Typing Test', view: 'practice', desc: 'Sustained endurance test' },
-  { label: '5 Minute Typing Speed Test', view: 'practice', desc: 'Accredited pacing assessment' },
-  { label: 'WPM & Accuracy Test', view: 'practice', desc: 'Real-time Net WPM calculator' },
-  { label: 'JavaScript Typing Practice', view: 'practice', lang: 'js', desc: 'ES2024 functions & syntax' },
-  { label: 'Python Typing Test', view: 'practice', lang: 'python', desc: 'Clean indentation & loops' },
-  { label: 'TypeScript Code Typing', view: 'practice', lang: 'ts', desc: 'Generics & interfaces' },
-  { label: 'C++ Typing Practice', view: 'practice', lang: 'cpp', desc: 'Pointers & templates' },
-  { label: 'React Syntax Practice', view: 'practice', lang: 'react', desc: 'Hooks & JSX markup' },
-  { label: 'SQL Query Typing', view: 'practice', lang: 'sql', desc: 'SELECT, JOIN & indexing' },
-  { label: 'Rust Code Speed', view: 'practice', lang: 'rust', desc: 'Borrow checker & structs' },
-  { label: 'Go Syntax Test', view: 'practice', lang: 'go', desc: 'Goroutines & channels' },
-  { label: 'Touch Typing Practice', view: 'practice', desc: '10-finger muscle memory' },
-  { label: 'Free Typing Certificate', view: 'certificate', desc: 'Official diploma for resumes' },
-  { label: 'LinkedIn Verified Credential', view: 'certificate', desc: 'QR code verified badge' },
-  { label: 'Multiplayer Typing Arena', view: 'arena', desc: 'Real-time 1v1 speed races' },
-  { label: 'Global Speed Leaderboard', view: 'leaderboard', desc: 'Top ranked developer typists' },
-  { label: 'Mechanical Keyboard Simulator', view: 'practice', desc: 'Cherry MX & Topre audio' },
-  { label: 'Keystroke Accuracy Heatmap', view: 'heatmap', desc: 'Finger load & weak key analytics' },
-  { label: 'Monkeytype Alternative', view: 'practice', desc: 'Zen developer typing flow' }
+  { label: '1 Minute Typing Test', href: '/typing-test', view: 'test', duration: 60, desc: 'Quick 60-second speed check' },
+  { label: '3 Minute Typing Test', href: '/typing-test', view: 'test', duration: 180, desc: 'Sustained endurance test' },
+  { label: '5 Minute Typing Speed Test', href: '/typing-test', view: 'test', duration: 300, desc: 'Accredited pacing assessment' },
+  { label: 'WPM & Accuracy Calculator', href: '/wpm-calculator', view: 'wpm-calculator', desc: 'Real-time Net WPM calculation formula' },
+  { label: 'JavaScript Typing Practice', href: '/javascript-typing-practice', view: 'language-landing', lang: 'JavaScript', desc: 'ES2024 functions & syntax' },
+  { label: 'Python Typing Practice', href: '/python-typing-practice', view: 'language-landing', lang: 'Python', desc: 'Clean indentation & loops' },
+  { label: 'TypeScript Typing Practice', href: '/typescript-typing-practice', view: 'language-landing', lang: 'TypeScript', desc: 'Generics & interfaces' },
+  { label: 'C++ Typing Practice', href: '/cpp-typing-practice', view: 'language-landing', lang: 'C++', desc: 'Pointers & templates' },
+  { label: 'React Syntax Practice', href: '/coding-typing-test', view: 'coding', lang: 'React', desc: 'Hooks & JSX markup' },
+  { label: 'SQL Query Typing', href: '/sql-typing-practice', view: 'language-landing', lang: 'SQL', desc: 'SELECT, JOIN & indexing' },
+  { label: 'Rust Typing Practice', href: '/rust-typing-practice', view: 'language-landing', lang: 'Rust', desc: 'Borrow checker & structs' },
+  { label: 'Go Typing Practice', href: '/go-typing-practice', view: 'language-landing', lang: 'Go', desc: 'Goroutines & channels' },
+  { label: 'Touch Typing Practice', href: '/practice', view: 'practice', desc: '10-finger muscle memory' },
+  { label: 'Free Typing Certificate', href: '/certificate', view: 'certificate', desc: 'Official diploma for resumes' },
+  { label: 'LinkedIn Verified Credential', href: '/certificate', view: 'certificate', desc: 'QR code verified badge' },
+  { label: 'Multiplayer Typing Arena', href: '/multiplayer', view: 'multiplayer', desc: 'Real-time 1v1 speed races' },
+  { label: 'Global Speed Leaderboard', href: '/leaderboard', view: 'leaderboard', desc: 'Top ranked developer typists' },
+  { label: 'Mechanical Keyboard Simulator', href: '/practice', view: 'practice', desc: 'Cherry MX & Topre audio' },
+  { label: 'Keystroke Accuracy Heatmap', href: '/heatmap', view: 'heatmap', desc: 'Finger load & weak key analytics' },
+  { label: 'Coding Typing Test', href: '/coding-typing-test', view: 'coding', desc: 'Zen developer typing flow' }
 ];
 
 export function LandingPage({ onNavigate, onStartPractice }) {
@@ -480,17 +480,22 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           </div>
 
           {/* Shimmer Badge with Live Pulse Indicator */}
-          <div
+          <a
+            href="/certificate"
             className="hero-badge-shimmer"
-            onClick={() => onNavigate('certificate')}
-            style={{ cursor: 'pointer' }}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              onNavigate('certificate');
+            }}
+            style={{ cursor: 'pointer', textDecoration: 'none' }}
             title="Explore Official Accredited Typing Certificates"
           >
             <span className="hero-badge-pulse-dot" />
             <Award size={16} color="#eab308" />
             <span>Earn Official Accredited Typing Certificates • 4 Collectible Luxury Tiers</span>
             <ArrowRight size={13} color="#eab308" />
-          </div>
+          </a>
 
           {/* Master Heading: "Type Better. Code Faster. Improve Every Day." */}
           <h1 className="hero-title">
@@ -509,13 +514,26 @@ export function LandingPage({ onNavigate, onStartPractice }) {
 
           {/* Premium CTA Buttons */}
           <div className="hero-cta-group">
-            <button className="btn-premium-hero" onClick={() => onNavigate('signup')}>
+            <a
+              href="/signup"
+              className="btn-premium-hero"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                onNavigate('signup');
+              }}
+            >
               <span>Start Typing Free</span>
               <ArrowRight size={18} className="btn-icon-slide" />
-            </button>
-            <button
+            </a>
+            <a
+              href="/certificate"
               className="btn-glass-hero"
-              onClick={() => onNavigate('certificate')}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                onNavigate('certificate');
+              }}
               style={{
                 borderColor: 'rgba(234, 179, 8, 0.4)',
                 backgroundColor: 'rgba(234, 179, 8, 0.08)'
@@ -523,21 +541,25 @@ export function LandingPage({ onNavigate, onStartPractice }) {
             >
               <Award size={18} color="#eab308" />
               <span style={{ color: '#facc15' }}>Official Certificates 🎓</span>
-            </button>
-            <button
+            </a>
+            <a
+              href={!user ? '#home-editor' : '/coding-typing-test'}
               className="btn-glass-hero"
-              onClick={() => {
+              onClick={(e) => {
                 if (!user) {
+                  e.preventDefault();
                   const el = document.getElementById('home-editor');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 } else {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
                   onNavigate('coding');
                 }
               }}
             >
               <Code2 size={18} color="var(--color-primary-forest)" />
               <span>{!user ? 'Try Home Editor ⚡' : 'Practice Coding'}</span>
-            </button>
+            </a>
           </div>
 
           {/* Quick Tactile Badges Ribbon */}
@@ -685,13 +707,20 @@ export function LandingPage({ onNavigate, onStartPractice }) {
                     <span className="mode-tag">Go</span>
                   </div>
                 </div>
-                <div
+                <a
+                  href="/coding-typing-test"
                   className="mode-action-link"
-                  onClick={(e) => { e.stopPropagation(); onNavigate('coding'); }}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onNavigate('coding');
+                  }}
+                  style={{ textDecoration: 'none' }}
                 >
                   <span>Practice Code Now</span>
                   <ArrowRight size={14} />
-                </div>
+                </a>
               </div>
 
               {/* BACK */}
@@ -784,14 +813,20 @@ export function LandingPage({ onNavigate, onStartPractice }) {
                     <span className="mode-tag">Rhythm</span>
                   </div>
                 </div>
-                <div
+                <a
+                  href="/practice"
                   className="mode-action-link"
-                  style={{ color: '#0284c7' }}
-                  onClick={(e) => { e.stopPropagation(); onNavigate('english'); }}
+                  style={{ color: '#0284c7', textDecoration: 'none' }}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onNavigate('english');
+                  }}
                 >
                   <span>Read & Type Passages</span>
                   <ArrowRight size={14} />
-                </div>
+                </a>
               </div>
 
               {/* BACK */}
@@ -884,14 +919,20 @@ export function LandingPage({ onNavigate, onStartPractice }) {
                     <span className="mode-tag">Speedometer</span>
                   </div>
                 </div>
-                <div
+                <a
+                  href="/multiplayer"
                   className="mode-action-link"
-                  style={{ color: '#9333ea' }}
-                  onClick={(e) => { e.stopPropagation(); onNavigate('multiplayer'); }}
+                  style={{ color: '#9333ea', textDecoration: 'none' }}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onNavigate('multiplayer');
+                  }}
                 >
                   <span>Enter Race Arena</span>
                   <ArrowRight size={14} />
-                </div>
+                </a>
               </div>
 
               {/* BACK */}
@@ -991,14 +1032,20 @@ export function LandingPage({ onNavigate, onStartPractice }) {
                     <span className="mode-tag" style={{ color: isDark ? '#facc15' : '#854d0e', background: 'rgba(234, 179, 8, 0.15)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>Diamond</span>
                   </div>
                 </div>
-                <div
+                <a
+                  href="/certificate"
                   className="mode-action-link"
-                  style={{ color: '#ca8a04' }}
-                  onClick={(e) => { e.stopPropagation(); onNavigate('certificate'); }}
+                  style={{ color: '#ca8a04', textDecoration: 'none' }}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onNavigate('certificate');
+                  }}
                 >
                   <span>Explore Certificate Registry</span>
                   <ArrowRight size={14} />
-                </div>
+                </a>
               </div>
 
               {/* BACK */}
@@ -1694,14 +1741,19 @@ export function LandingPage({ onNavigate, onStartPractice }) {
                   </div>
                 </div>
               </div>
-              <button
+              <a
+                href="/verify"
                 className="btn btn-outline btn-sm"
-                onClick={() => onNavigate('verify')}
-                style={{ borderColor: '#16a34a', color: '#16a34a' }}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onNavigate('verify');
+                }}
+                style={{ borderColor: '#16a34a', color: '#16a34a', textDecoration: 'none' }}
               >
                 <span>Full Ledger Record</span>
                 <ExternalLink size={13} />
-              </button>
+              </a>
             </div>
           )}
         </div>
@@ -1927,14 +1979,19 @@ export function LandingPage({ onNavigate, onStartPractice }) {
             </div>
           </div>
 
-          <button
+          <a
+            href="/contact"
             className="btn btn-primary btn-sm"
-            onClick={() => onNavigate('contact')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              onNavigate('contact');
+            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', textDecoration: 'none' }}
           >
             <span>Leave a Review</span>
             <ArrowRight size={14} />
-          </button>
+          </a>
         </div>
       </section>
 
@@ -2007,13 +2064,18 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           width: '100%'
         }}>
           {POPULAR_TYPING_TOPICS.map((topic, i) => (
-            <div
+            <a
               key={i}
-              onClick={() => {
-                if (topic.lang && onStartPractice) {
+              href={topic.href}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                if (topic.duration && onStartPractice) {
+                  onStartPractice({ duration: topic.duration });
+                } else if (topic.lang && onStartPractice && topic.view === 'practice') {
                   onStartPractice({ language: topic.lang });
-                } else if (topic.view) {
-                  onNavigate(topic.view);
+                } else if (onNavigate) {
+                  onNavigate(topic.href);
                 }
               }}
               className="card"
@@ -2025,7 +2087,8 @@ export function LandingPage({ onNavigate, onStartPractice }) {
                 gap: '0.35rem',
                 transition: 'all 0.22s ease',
                 border: '1px solid var(--color-border)',
-                background: 'var(--color-surface)'
+                background: 'var(--color-surface)',
+                textDecoration: 'none'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-primary-forest)';
@@ -2045,7 +2108,7 @@ export function LandingPage({ onNavigate, onStartPractice }) {
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
                 {topic.desc}
               </span>
-            </div>
+            </a>
           ))}
         </div>
       </section>
@@ -2071,17 +2134,27 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           </p>
 
           <div className="grand-cta-actions-row">
-            <button
+            <a
+              href="/signup"
               className="btn-premium-hero"
               style={{ padding: '0.85rem 2rem', fontSize: '1.05rem' }}
-              onClick={() => onNavigate('signup')}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                onNavigate('signup');
+              }}
             >
               <span>Start Typing Free</span>
               <ArrowRight size={20} className="btn-icon-slide" />
-            </button>
-            <button
+            </a>
+            <a
+              href="/certificate"
               className="btn-glass-hero"
-              onClick={() => onNavigate('certificate')}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                onNavigate('certificate');
+              }}
               style={{
                 borderColor: 'rgba(234, 179, 8, 0.45)',
                 backgroundColor: 'rgba(234, 179, 8, 0.1)',
@@ -2090,7 +2163,7 @@ export function LandingPage({ onNavigate, onStartPractice }) {
             >
               <Award size={18} color="#eab308" />
               <span>Explore Official Certificates</span>
-            </button>
+            </a>
           </div>
 
           <div className="grand-cta-badges">

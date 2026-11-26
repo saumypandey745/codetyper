@@ -32,6 +32,7 @@ import {
 } from '../../utils/certificateEligibility.js';
 import { soundEngine } from '../../utils/soundEngine.js';
 import { calculateLevelFromXp } from '../../utils/gamificationEngine.js';
+import { getSiteUrl } from '../../utils/seoConfig.js';
 
 // --- LUXURY CERTIFICATE THEME PALETTES ---
 const CERT_THEMES = {
@@ -727,7 +728,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.fillText(`Conferral Date: ${dateStr}`, leftX + qrSize + 22, 1270);
     ctx.fillText('Standard: ISO/IEC Professional Typing Competency', leftX + qrSize + 22, 1294);
     ctx.fillText('Biometrics: Keystroke Flight-Time & Cadence Anti-Cheat Certified ✓', leftX + qrSize + 22, 1318);
-    ctx.fillText(`Public Registry: https://codetyper.dev/#verify/${certId}`, leftX + qrSize + 22, 1342);
+    ctx.fillText(`Public Registry: ${getSiteUrl()}/verify/${certId}`, leftX + qrSize + 22, 1342);
     ctx.restore();
 
     // 15. Bottom-Right: SAUMY PANDEY'S FOUNDER & APP OWNER SIGNATURE
@@ -881,7 +882,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     ctx.fillStyle = theme.isDark ? '#475569' : '#64748b';
     ctx.font = '15px monospace';
     ctx.fillText(
-      `Official CodeTyper Sovereign Credential • Electronically Signed by Founder & Owner Saumy Pandey • Verification: https://codetyper.dev/#verify/${certId}`,
+      `Official CodeTyper Sovereign Credential • Electronically Signed by Founder & Owner Saumy Pandey • Verification: ${getSiteUrl()}/verify/${certId}`,
       width / 2,
       1520
     );
@@ -984,7 +985,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(
-      `CodeTyper Verified Official Certificate ID: ${certId} | Recipient: ${recipientName} | Net Speed: ${wpm.toFixed(2)} WPM | Accuracy: ${accuracy.toFixed(2)}% | Signatory: Saumy Pandey (App Owner & Founder, CodeTyper) | Verification: https://codetyper.dev/verify/${certId}`
+      `CodeTyper Verified Official Certificate ID: ${certId} | Recipient: ${recipientName} | Net Speed: ${wpm.toFixed(2)} WPM | Accuracy: ${accuracy.toFixed(2)}% | Signatory: Saumy Pandey (App Owner & Founder, CodeTyper) | Verification: ${getSiteUrl()}/verify/${certId}`
     );
     toast.success('Certificate verification details copied to clipboard!');
   };

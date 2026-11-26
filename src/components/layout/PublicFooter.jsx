@@ -46,6 +46,16 @@ export function PublicFooter({ onNavigate }) {
     }
   };
 
+  const handleNavClick = (e, tab) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
+    e.preventDefault();
+    if (onNavigate) {
+      onNavigate(tab);
+    }
+  };
+
   const handleBackToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -135,7 +145,7 @@ export function PublicFooter({ onNavigate }) {
                   <input
                     type="email"
                     className="footer-newsletter-input"
-                    placeholder="developer@codetyper.dev"
+                    placeholder="developer@codetyper.app"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     aria-label="Developer Email for Updates"
@@ -170,30 +180,30 @@ export function PublicFooter({ onNavigate }) {
               <span>Practice Modes</span>
             </div>
             <div className="footer-links-list">
-              <button className="footer-nav-item" onClick={() => onNavigate('coding')}>
+              <a href="/coding-typing-test" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'coding')}>
                 <span className="nav-label">Coding Snippets</span>
                 <span className="footer-chip">25+ Langs</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('english')}>
+              </a>
+              <a href="/practice" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'english')}>
                 <span className="nav-label">Literary Passages</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('test')}>
+              </a>
+              <a href="/typing-test" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'test')}>
                 <span className="nav-label">Timed Speed Tests</span>
                 <span className="footer-chip">15s–60s</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('practice')}>
+              </a>
+              <a href="/practice" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'practice')}>
                 <span className="nav-label">Custom Flow</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('multiplayer')}>
+              </a>
+              <a href="/multiplayer" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'multiplayer')}>
                 <span className="nav-label">Multiplayer Arena</span>
                 <span className="footer-chip live">
                   <span className="chip-dot" />
                   Live
                 </span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('heatmap')}>
+              </a>
+              <a href="/heatmap" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'heatmap')}>
                 <span className="nav-label">Key Heatmap Drill</span>
-              </button>
+              </a>
             </div>
           </div>
 
@@ -204,25 +214,25 @@ export function PublicFooter({ onNavigate }) {
               <span>Platform</span>
             </div>
             <div className="footer-links-list">
-              <button className="footer-nav-item highlight" onClick={() => onNavigate('certificate')}>
+              <a href="/certificate" className="footer-nav-item highlight" onClick={(e) => handleNavClick(e, 'certificate')}>
                 <span className="nav-label">Official Certificates</span>
                 <span className="footer-chip cert">Verified</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('verify')}>
+              </a>
+              <a href="/verify" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'verify')}>
                 <span className="nav-label">Verify Certificate</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('dashboard')}>
+              </a>
+              <a href="/dashboard" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'dashboard')}>
                 <span className="nav-label">Personal Dashboard</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('statistics')}>
+              </a>
+              <a href="/statistics" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'statistics')}>
                 <span className="nav-label">Analytics &amp; Trends</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('history')}>
+              </a>
+              <a href="/history" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'history')}>
                 <span className="nav-label">Session Logs</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('settings')}>
+              </a>
+              <a href="/settings" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'settings')}>
                 <span className="nav-label">Engine Preferences</span>
-              </button>
+              </a>
             </div>
           </div>
 
@@ -233,25 +243,29 @@ export function PublicFooter({ onNavigate }) {
               <span>Developer Tools</span>
             </div>
             <div className="footer-links-list">
-              <button className="footer-nav-item" onClick={() => onNavigate('leaderboard')}>
+              <a href="/leaderboard" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'leaderboard')}>
                 <span className="nav-label">Global Leaderboards</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('heatmap')}>
+              </a>
+              <a href="/wpm-calculator" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'wpm-calculator')}>
+                <span className="nav-label">WPM &amp; Accuracy Calculator</span>
+                <span className="footer-chip">Guide</span>
+              </a>
+              <a href="/heatmap" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'heatmap')}>
                 <span className="nav-label">Keystroke Diagnostics</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('settings')}>
+              </a>
+              <a href="/settings" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'settings')}>
                 <span className="nav-label">Audio Synthesis &amp; FX</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('practice')}>
+              </a>
+              <a href="/practice" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'practice')}>
                 <span className="nav-label">Command Palette</span>
                 <span className="footer-chip">Ctrl+K</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('about')}>
+              </a>
+              <a href="/about" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'about')}>
                 <span className="nav-label">Offline PWA Engine</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('coding')}>
+              </a>
+              <a href="/coding-typing-test" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'coding')}>
                 <span className="nav-label">Syntax Highlighter</span>
-              </button>
+              </a>
             </div>
           </div>
 
@@ -262,24 +276,24 @@ export function PublicFooter({ onNavigate }) {
               <span>Resources</span>
             </div>
             <div className="footer-links-list">
-              <button className="footer-nav-item" onClick={() => onNavigate('about')}>
+              <a href="/about" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'about')}>
                 <span className="nav-label">About the Mission</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('contact')}>
+              </a>
+              <a href="/contact" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'contact')}>
                 <span className="nav-label">Feedback &amp; Contact</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('about')}>
+              </a>
+              <a href="/about" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'about')}>
                 <span className="nav-label">Typing Ergonomics</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('about')}>
+              </a>
+              <a href="/about" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'about')}>
                 <span className="nav-label">Green &amp; Cream Harmony</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('contact')}>
+              </a>
+              <a href="/contact" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'contact')}>
                 <span className="nav-label">Bug Reports &amp; Requests</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('landing')}>
+              </a>
+              <a href="/" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'landing')}>
                 <span className="nav-label">Documentation &amp; FAQ</span>
-              </button>
+              </a>
             </div>
           </div>
 
@@ -290,24 +304,24 @@ export function PublicFooter({ onNavigate }) {
               <span>Trust &amp; Legal</span>
             </div>
             <div className="footer-links-list">
-              <button className="footer-nav-item" onClick={() => onNavigate('privacy')}>
+              <a href="/privacy" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'privacy')}>
                 <span className="nav-label">Privacy Policy</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('terms')}>
+              </a>
+              <a href="/terms" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'terms')}>
                 <span className="nav-label">Terms of Service</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('privacy')}>
+              </a>
+              <a href="/privacy" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'privacy')}>
                 <span className="nav-label">Data Protection (GDPR)</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('terms')}>
+              </a>
+              <a href="/certificate" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'certificate')}>
                 <span className="nav-label">Certificate Integrity</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('privacy')}>
+              </a>
+              <a href="/privacy" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'privacy')}>
                 <span className="nav-label">Local Storage Model</span>
-              </button>
-              <button className="footer-nav-item" onClick={() => onNavigate('contact')}>
+              </a>
+              <a href="/contact" className="footer-nav-item" onClick={(e) => handleNavClick(e, 'contact')}>
                 <span className="nav-label">Responsible Disclosure</span>
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -383,15 +397,15 @@ export function PublicFooter({ onNavigate }) {
                 </svg>
               </a>
 
-              <button
-                type="button"
+              <a
+                href="/contact"
                 className="footer-social-btn"
-                onClick={() => onNavigate('contact')}
+                onClick={(e) => handleNavClick(e, 'contact')}
                 title="Direct Message / Contact Saumy Pandey"
                 aria-label="Contact Saumy Pandey"
               >
                 <Mail size={13} />
-              </button>
+              </a>
             </div>
           </div>
 

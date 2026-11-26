@@ -438,6 +438,7 @@
   color: #FFFFFF;
   box-shadow: 0 8px 24px -4px rgba(35, 107, 77, 0.38), 0 2px 6px rgba(35, 107, 77, 0.15);
   transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+  text-decoration: none;
 }
 
 [data-theme="dark"] .btn-premium-hero {
@@ -492,6 +493,7 @@
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition-smooth), border-color var(--transition-smooth), background var(--transition-smooth), box-shadow var(--transition-smooth);
+  text-decoration: none;
 }
 
 [data-theme="dark"] .btn-glass-hero {

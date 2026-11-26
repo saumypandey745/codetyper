@@ -282,7 +282,7 @@ export async function dispatchWebhookEvent(eventType, data = {}) {
             { name: '🎖️ Tier', value: `${data.tierTitle || 'Certified Typist'} (${data.tierBadge || 'Gold'})`, inline: true },
             { name: '⏱️ Duration', value: `${data.durationSeconds || 60}s`, inline: true },
             { name: '📜 Credential ID', value: `\`${data.certId}\``, inline: true },
-            { name: '🔗 Public Verification', value: `[Verify Certificate](${origin}/#certificate/${data.certId})`, inline: true }
+            { name: '🔗 Public Verification', value: `[Verify Certificate](${origin}/verify/${data.certId})`, inline: true }
           ],
           footer: { text: 'CodeTyper Tamper-Proof Cryptographic Accreditation' },
           timestamp: new Date().toISOString()
@@ -301,7 +301,7 @@ export async function dispatchWebhookEvent(eventType, data = {}) {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${data.recipientName}* achieved *${data.tierTitle || 'Certified Typist'}* accreditation!\n*Speed:* ${data.netWpm} Net WPM • *Accuracy:* ${data.accuracy}% • *Credential:* \`${data.certId}\`\n<${origin}/#certificate/${data.certId}|Verify Credential Online>`
+            text: `*${data.recipientName}* achieved *${data.tierTitle || 'Certified Typist'}* accreditation!\n*Speed:* ${data.netWpm} Net WPM • *Accuracy:* ${data.accuracy}% • *Credential:* \`${data.certId}\`\n<${origin}/verify/${data.certId}|Verify Credential Online>`
           }
         }
       ]

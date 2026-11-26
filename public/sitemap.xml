@@ -4,169 +4,148 @@
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 
-  <!-- Core Pages -->
+  <!-- Core Landing & Entry Points -->
   <url>
-    <loc>https://codetyper.dev/</loc>
+    <loc>https://codetyper-beta.vercel.app/</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#practice</loc>
+    <loc>https://codetyper-beta.vercel.app/typing-test</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#certificate</loc>
+    <loc>https://codetyper-beta.vercel.app/coding-typing-test</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Programming Language Specific Practice Pages -->
+  <url>
+    <loc>https://codetyper-beta.vercel.app/python-typing-practice</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.85</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#verify</loc>
+    <loc>https://codetyper-beta.vercel.app/javascript-typing-practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/typescript-typing-practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/cpp-typing-practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/rust-typing-practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/go-typing-practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/sql-typing-practice</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Platform Features & Educational Resources -->
+  <url>
+    <loc>https://codetyper-beta.vercel.app/certificate</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://codetyper-beta.vercel.app/verify</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#leaderboard</loc>
+    <loc>https://codetyper-beta.vercel.app/leaderboard</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>hourly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#arena</loc>
+    <loc>https://codetyper-beta.vercel.app/multiplayer</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#heatmap</loc>
+    <loc>https://codetyper-beta.vercel.app/wpm-calculator</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- Deep Search-Intent Pages: Developer Tech Stacks -->
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=python</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=javascript</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=typescript</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=cpp</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=react</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=sql</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=rust</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?lang=go</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-
-  <!-- Deep Search-Intent Pages: Timed Speed Tests -->
-  <url>
-    <loc>https://codetyper.dev/#practice?duration=60</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?duration=180</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.80</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#practice?duration=300</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
 
   <!-- Informational Pages -->
   <url>
-    <loc>https://codetyper.dev/#signup</loc>
+    <loc>https://codetyper-beta.vercel.app/about</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.60</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#login</loc>
+    <loc>https://codetyper-beta.vercel.app/contact</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.50</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#about</loc>
-    <lastmod>2026-11-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://codetyper.dev/#privacy</loc>
+    <loc>https://codetyper-beta.vercel.app/privacy</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.30</priority>
   </url>
 
   <url>
-    <loc>https://codetyper.dev/#terms</loc>
+    <loc>https://codetyper-beta.vercel.app/terms</loc>
     <lastmod>2026-11-26</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.30</priority>
   </url>
 
 </urlset>

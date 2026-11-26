@@ -5,6 +5,7 @@ import { authenticate, optionalAuthenticate } from '../authMiddleware.js';
 import { dispatchWebhookEvent } from '../webhookDispatcher.js';
 
 const router = Router();
+const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || process.env.VITE_PUBLIC_SITE_URL || 'https://codetyper-beta.vercel.app';
 
 /**
  * Public Verification Endpoint
@@ -75,7 +76,7 @@ router.get('/verify/:certId', (req, res) => {
           theme: cert.theme || 'royal-obsidian',
           isRevoked: false,
           issuedAt: cert.issued_at,
-          verificationUrl: `https://codetyper.dev/#verify/${cert.cert_id}`
+          verificationUrl: `${PUBLIC_SITE_URL}/verify/${cert.cert_id}`
         }
       });
     }
@@ -105,7 +106,7 @@ router.get('/verify/:certId', (req, res) => {
           biometricVerified: true,
           theme: 'royal-obsidian',
           issuedAt: new Date().toISOString(),
-          verificationUrl: `https://codetyper.dev/#verify/${cleanId}`
+          verificationUrl: `${PUBLIC_SITE_URL}/verify/${cleanId}`
         }
       });
     }
@@ -253,7 +254,7 @@ router.post('/issue', optionalAuthenticate, (req, res) => {
       success: true,
       certId: sanitizedId,
       sha256Fingerprint,
-      verificationUrl: `https://codetyper.dev/#verify/${sanitizedId}`
+      verificationUrl: `${PUBLIC_SITE_URL}/verify/${sanitizedId}`
     });
   } catch (err) {
     console.error('[Certificate Issue Error]', err);

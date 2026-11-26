@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { Code2, BookOpen, Timer, Award, Info, Mail, Sun, Moon, ArrowRight, Menu, X } from 'lucide-react';
+import { Code2, BookOpen, Timer, Award, Info, Mail, Sun, Moon, ArrowRight, Menu, X, Calculator } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
 
-export function PublicHeader({ onNavigate, currentView = 'landing' }) {
+export function PublicHeader({ onNavigate, currentView = 'landing', currentPath = '/' }) {
   const { user } = useAuth();
   const { settings, toggleTheme } = useSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleMobileNav = (view, action) => {
-    setMobileMenuOpen(false);
-    if (action) {
-      action();
-    } else {
-      onNavigate(view);
+  const handleLinkClick = (e, path) => {
+    if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      e.preventDefault();
+      setMobileMenuOpen(false);
+      onNavigate(path);
     }
   };
 
@@ -21,71 +20,88 @@ export function PublicHeader({ onNavigate, currentView = 'landing' }) {
     <>
       <header className="public-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <button
+          <a
             id="brand-logo-btn"
+            href="/"
             className="brand-logo"
-            onClick={() => onNavigate('landing')}
-            style={{ cursor: 'pointer', background: 'transparent', border: 'none', padding: 0 }}
+            onClick={(e) => handleLinkClick(e, '/')}
+            style={{ cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, textDecoration: 'none' }}
             title="CodeTyper Home"
           >
             <div className="brand-icon">
               <Code2 size={20} />
             </div>
             <span>CodeTyper</span>
-          </button>
+          </a>
         </div>
 
         <nav className="public-nav-links" aria-label="Main Navigation">
-          <button
+          <a
             id="header-nav-english"
-            className={`public-nav-link ${currentView === 'english' || currentView === 'practice' ? 'active' : ''}`}
-            onClick={() => onNavigate('english')}
-            title="English Typing Practice"
+            href="/practice"
+            className={`public-nav-link ${currentPath === '/practice' || currentView === 'english' || currentView === 'practice' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/practice')}
+            title="Interactive Typing Practice"
           >
             <BookOpen size={15} />
-            <span>English Typing</span>
-          </button>
-          <button
+            <span>Practice</span>
+          </a>
+          <a
             id="header-nav-coding"
-            className={`public-nav-link ${currentView === 'coding' ? 'active' : ''}`}
-            onClick={() => onNavigate('coding')}
+            href="/coding-typing-test"
+            className={`public-nav-link ${currentPath === '/coding-typing-test' || currentView === 'coding' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/coding-typing-test')}
             title="Coding Practice (25+ Languages)"
           >
             <Code2 size={15} />
-            <span>Coding Practice</span>
-          </button>
-          <button
+            <span>Code Test</span>
+          </a>
+          <a
             id="header-nav-test"
-            className={`public-nav-link ${currentView === 'test' ? 'active' : ''}`}
-            onClick={() => onNavigate('test')}
+            href="/typing-test"
+            className={`public-nav-link ${currentPath === '/typing-test' || currentView === 'test' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/typing-test')}
             title="Speed Typing Test"
           >
             <Timer size={15} />
             <span>Typing Test</span>
-          </button>
-          <button
+          </a>
+          <a
+            id="header-nav-calculator"
+            href="/wpm-calculator"
+            className={`public-nav-link ${currentPath === '/wpm-calculator' || currentView === 'wpm-calculator' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/wpm-calculator')}
+            title="WPM & Accuracy Calculator"
+          >
+            <Calculator size={15} />
+            <span>WPM Calculator</span>
+          </a>
+          <a
             id="header-nav-certificate"
-            className={`public-nav-link ${currentView === 'certificate' ? 'active' : ''}`}
-            onClick={() => onNavigate('certificate')}
+            href="/certificate"
+            className={`public-nav-link ${currentPath === '/certificate' || currentView === 'certificate' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/certificate')}
             title="Verified Typing Certificates"
           >
             <Award size={15} />
             <span>Certificates</span>
-          </button>
-          <button
+          </a>
+          <a
             id="header-nav-about"
-            className={`public-nav-link ${currentView === 'about' ? 'active' : ''}`}
-            onClick={() => onNavigate('about')}
+            href="/about"
+            className={`public-nav-link ${currentPath === '/about' || currentView === 'about' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/about')}
           >
             <span>About</span>
-          </button>
-          <button
+          </a>
+          <a
             id="header-nav-contact"
-            className={`public-nav-link ${currentView === 'contact' ? 'active' : ''}`}
-            onClick={() => onNavigate('contact')}
+            href="/contact"
+            className={`public-nav-link ${currentPath === '/contact' || currentView === 'contact' ? 'active' : ''}`}
+            onClick={(e) => handleLinkClick(e, '/contact')}
           >
             <span>Contact</span>
-          </button>
+          </a>
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -101,99 +117,155 @@ export function PublicHeader({ onNavigate, currentView = 'landing' }) {
 
           {/* User Auth Buttons */}
           {user ? (
-            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('dashboard')}>
+            <a
+              href="/dashboard"
+              className="btn btn-primary btn-sm"
+              onClick={(e) => handleLinkClick(e, '/dashboard')}
+              style={{ textDecoration: 'none' }}
+            >
               <span>Dashboard</span>
               <ArrowRight size={14} />
-            </button>
+            </a>
           ) : (
             <div className="header-auth-group">
-              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('login')}>
-                Log In
-              </button>
-              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('signup')}>
-                Start Free
-              </button>
+              <a
+                href="/login"
+                className="btn btn-ghost btn-sm"
+                onClick={(e) => handleLinkClick(e, '/login')}
+                style={{ textDecoration: 'none' }}
+              >
+                Sign In
+              </a>
+              <a
+                href="/signup"
+                className="btn btn-primary btn-sm"
+                onClick={(e) => handleLinkClick(e, '/signup')}
+                style={{ textDecoration: 'none' }}
+              >
+                Get Started
+              </a>
             </div>
           )}
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile Menu Hamburger Toggle */}
           <button
-            className="mobile-menu-toggle-btn"
-            onClick={() => setMobileMenuOpen(prev => !prev)}
-            aria-label="Toggle Menu"
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </header>
 
-      {/* Mobile Drawer Dropdown */}
+      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="mobile-public-drawer">
-          <button
-            id="mobile-drawer-english"
-            className={`mobile-drawer-link ${currentView === 'english' ? 'active' : ''}`}
-            onClick={() => handleMobileNav('english')}
-          >
-            <BookOpen size={18} />
-            <span>English Typing</span>
-          </button>
-          <button
-            id="mobile-drawer-coding"
-            className={`mobile-drawer-link ${currentView === 'coding' ? 'active' : ''}`}
-            onClick={() => handleMobileNav('coding')}
-          >
-            <Code2 size={18} />
-            <span>Coding Practice (25+ Languages)</span>
-          </button>
-          <button
-            id="mobile-drawer-test"
-            className={`mobile-drawer-link ${currentView === 'test' ? 'active' : ''}`}
-            onClick={() => handleMobileNav('test')}
-          >
-            <Timer size={18} />
-            <span>Speed Typing Test</span>
-          </button>
-          <button
-            id="mobile-drawer-certificate"
-            className={`mobile-drawer-link ${currentView === 'certificate' ? 'active' : ''}`}
-            onClick={() => handleMobileNav('certificate')}
-          >
-            <Award size={18} />
-            <span>Certificates</span>
-          </button>
-          <button
-            id="mobile-drawer-about"
-            className={`mobile-drawer-link ${currentView === 'about' ? 'active' : ''}`}
-            onClick={() => handleMobileNav('about')}
-          >
-            <Info size={18} />
-            <span>About CodeTyper</span>
-          </button>
-          <button
-            id="mobile-drawer-contact"
-            className={`mobile-drawer-link ${currentView === 'contact' ? 'active' : ''}`}
-            onClick={() => handleMobileNav('contact')}
-          >
-            <Mail size={18} />
-            <span>Contact & Support</span>
-          </button>
-
-          <div className="mobile-drawer-auth">
-            {!user ? (
-              <>
-                <button className="btn btn-outline" style={{ width: '100%' }} onClick={() => handleMobileNav('login')}>
-                  Log In
-                </button>
-                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => handleMobileNav('signup')}>
-                  Start Typing Free
-                </button>
-              </>
-            ) : (
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => handleMobileNav('dashboard')}>
-                Go to Dashboard
+        <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-drawer-header">
+              <div className="brand-logo">
+                <div className="brand-icon">
+                  <Code2 size={20} />
+                </div>
+                <span>CodeTyper</span>
+              </div>
+              <button className="mobile-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close Menu">
+                <X size={20} />
               </button>
-            )}
+            </div>
+
+            <nav className="mobile-nav-list" aria-label="Mobile Navigation">
+              <a
+                href="/practice"
+                className={`mobile-nav-item ${currentPath === '/practice' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/practice')}
+              >
+                <BookOpen size={18} />
+                <span>Practice Drills</span>
+              </a>
+              <a
+                href="/coding-typing-test"
+                className={`mobile-nav-item ${currentPath === '/coding-typing-test' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/coding-typing-test')}
+              >
+                <Code2 size={18} />
+                <span>Coding Test (25+ Stacks)</span>
+              </a>
+              <a
+                href="/typing-test"
+                className={`mobile-nav-item ${currentPath === '/typing-test' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/typing-test')}
+              >
+                <Timer size={18} />
+                <span>Speed Typing Test</span>
+              </a>
+              <a
+                href="/wpm-calculator"
+                className={`mobile-nav-item ${currentPath === '/wpm-calculator' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/wpm-calculator')}
+              >
+                <Calculator size={18} />
+                <span>WPM Calculator</span>
+              </a>
+              <a
+                href="/certificate"
+                className={`mobile-nav-item ${currentPath === '/certificate' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/certificate')}
+              >
+                <Award size={18} />
+                <span>Accredited Certificates</span>
+              </a>
+              <a
+                href="/about"
+                className={`mobile-nav-item ${currentPath === '/about' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/about')}
+              >
+                <Info size={18} />
+                <span>About CodeTyper</span>
+              </a>
+              <a
+                href="/contact"
+                className={`mobile-nav-item ${currentPath === '/contact' ? 'active' : ''}`}
+                onClick={(e) => handleLinkClick(e, '/contact')}
+              >
+                <Mail size={18} />
+                <span>Contact &amp; Support</span>
+              </a>
+            </nav>
+
+            <div className="mobile-drawer-footer">
+              {user ? (
+                <a
+                  href="/dashboard"
+                  className="btn btn-primary"
+                  onClick={(e) => handleLinkClick(e, '/dashboard')}
+                  style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
+                >
+                  <span>Dashboard</span>
+                  <ArrowRight size={16} />
+                </a>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                  <a
+                    href="/login"
+                    className="btn btn-secondary"
+                    onClick={(e) => handleLinkClick(e, '/login')}
+                    style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
+                  >
+                    Sign In
+                  </a>
+                  <a
+                    href="/signup"
+                    className="btn btn-primary"
+                    onClick={(e) => handleLinkClick(e, '/signup')}
+                    style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
+                  >
+                    Create Free Account
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

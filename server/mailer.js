@@ -44,7 +44,7 @@ export function logEmailRecord({ recipientEmail, subject, emailType, status = 's
 
 export async function sendPasswordResetEmail({ toEmail, resetToken, otpCode, origin }) {
   const appOrigin = origin || process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://codetyper-beta.vercel.app');
-  const resetUrl = `${appOrigin}/#forgot-password?token=${resetToken}`;
+  const resetUrl = `${appOrigin}/forgot-password?token=${resetToken}`;
   const displayOtp = otpCode || resetToken.slice(0, 6).toUpperCase();
 
   const transport = getTransporter();
@@ -237,7 +237,7 @@ export async function sendFeedbackResolutionEmail({ toEmail, recipientName, subj
         </div>
 
         <div style="text-align: center;">
-          <a href="${appOrigin}/#landing" class="button" target="_blank">Open CodeTyper & Verify Fix</a>
+          <a href="${appOrigin}/" class="button" target="_blank">Open CodeTyper & Verify Fix</a>
         </div>
 
         <p style="font-size: 0.8rem; color: #6B7280; line-height: 1.5; margin-top: 1.5rem;">
@@ -353,7 +353,7 @@ export async function sendNewsletterWelcomeEmail({ toEmail, origin }) {
         </div>
 
         <div style="text-align: center;">
-          <a href="${appOrigin}/#practice" class="button" target="_blank">Start Practice Session</a>
+          <a href="${appOrigin}/practice" class="button" target="_blank">Start Practice Session</a>
         </div>
 
         <p style="font-size: 0.8rem; color: #6B7280; line-height: 1.5;">
@@ -459,7 +459,7 @@ export async function sendBroadcastUpdateEmail({ toEmails, updateTitle, changelo
         <div class="changelog-box">${notes}</div>
 
         <div style="text-align: center;">
-          <a href="${appOrigin}/#landing" class="button" target="_blank">Explore What's New</a>
+          <a href="${appOrigin}/" class="button" target="_blank">Explore What's New</a>
         </div>
 
         <div class="footer">

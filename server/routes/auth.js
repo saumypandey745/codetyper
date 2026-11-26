@@ -349,7 +349,7 @@ router.post('/reset-password', resetLimiter, (req, res) => {
 router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId || clientId.trim() === '' || clientId.includes('your_google_client_id_here')) {
-    return res.redirect('/#login?error=google_not_configured');
+    return res.redirect('/login?error=google_not_configured');
   }
 
   const getCallbackUrl = (request) => {
@@ -381,7 +381,7 @@ router.get('/google/callback', async (req, res) => {
   const { code, error } = req.query;
 
   if (error || !code) {
-    return res.redirect('/#login?error=google_cancelled');
+    return res.redirect('/login?error=google_cancelled');
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -488,7 +488,7 @@ router.get('/google/callback', async (req, res) => {
             <h3>Authentication successful! Entering your typing sanctuary...</h3>
             <script>
               localStorage.setItem('codetyper_token', '${token}');
-              window.location.href = '/#dashboard';
+              window.location.href = '/dashboard';
             </script>
           </div>
         </body>
@@ -496,7 +496,7 @@ router.get('/google/callback', async (req, res) => {
     `);
   } catch (err) {
     console.error('[Google OAuth Error]', err);
-    return res.redirect('/#login?error=' + encodeURIComponent(err.message || 'Google authentication failed.'));
+    return res.redirect('/login?error=' + encodeURIComponent(err.message || 'Google authentication failed.'));
   }
 });
 

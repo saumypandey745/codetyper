@@ -937,6 +937,7 @@
   transition: all 0.18s ease;
   font-family: inherit;
   border-radius: 4px;
+  text-decoration: none;
 }
 
 .footer-nav-item .nav-label {

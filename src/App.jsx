@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from './context/AuthContext.jsx';
 import { useToast } from './context/ToastContext.jsx';
 import { PublicHeader } from './components/layout/PublicHeader.jsx';
@@ -8,201 +8,88 @@ import { Header } from './components/layout/Header.jsx';
 import { QuickSearchModal } from './components/common/QuickSearchModal.jsx';
 import { AnnouncementBanner } from './components/common/AnnouncementBanner.jsx';
 
-// Public pages
+// Core Public Pages (Eagerly loaded for instant First Contentful Paint)
 import { LandingPage } from './pages/public/LandingPage.jsx';
+import { PracticePage } from './pages/app/PracticePage.jsx';
+import { LanguagePracticeLanding } from './pages/public/LanguagePracticeLanding.jsx';
+import { WpmCalculatorPage } from './pages/public/WpmCalculatorPage.jsx';
 import { LoginPage } from './pages/public/LoginPage.jsx';
 import { SignupPage } from './pages/public/SignupPage.jsx';
 import { ForgotPasswordPage } from './pages/public/ForgotPasswordPage.jsx';
 import { AboutPage, ContactPage, PrivacyPage, TermsPage } from './pages/public/StaticPages.jsx';
-
-// App pages
-import { Dashboard } from './pages/app/Dashboard.jsx';
-import { PracticePage } from './pages/app/PracticePage.jsx';
-import { HistoryPage } from './pages/app/HistoryPage.jsx';
-import { StatisticsPage } from './pages/app/StatisticsPage.jsx';
-import { ProfilePage } from './pages/app/ProfilePage.jsx';
-import { SettingsPage } from './pages/app/SettingsPage.jsx';
-import { AdminPage } from './pages/app/AdminPage.jsx';
-import { MultiplayerArena } from './pages/app/MultiplayerArena.jsx';
-import { LeaderboardPage } from './pages/app/LeaderboardPage.jsx';
-import { KeyHeatmap } from './components/typing/KeyHeatmap.jsx';
-import { CertificatePage } from './pages/app/CertificatePage.jsx';
 import { VerifyCertificatePage } from './pages/public/VerifyCertificatePage.jsx';
+
+// Router & SEO helpers
+import { parseCurrentRoute, navigateToPath, ROUTES, ROUTE_METADATA } from './utils/router.js';
+import { updateDocumentHead } from './utils/seoConfig.js';
+
+// Heavy App Pages (Code-split with React.lazy to reduce initial JS payload)
+const Dashboard = lazy(() => import('./pages/app/Dashboard.jsx').then(m => ({ default: m.Dashboard })));
+const HistoryPage = lazy(() => import('./pages/app/HistoryPage.jsx').then(m => ({ default: m.HistoryPage })));
+const StatisticsPage = lazy(() => import('./pages/app/StatisticsPage.jsx').then(m => ({ default: m.StatisticsPage })));
+const ProfilePage = lazy(() => import('./pages/app/ProfilePage.jsx').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/app/SettingsPage.jsx').then(m => ({ default: m.SettingsPage })));
+const AdminPage = lazy(() => import('./pages/app/AdminPage.jsx').then(m => ({ default: m.AdminPage })));
+const MultiplayerArena = lazy(() => import('./pages/app/MultiplayerArena.jsx').then(m => ({ default: m.MultiplayerArena })));
+const LeaderboardPage = lazy(() => import('./pages/app/LeaderboardPage.jsx').then(m => ({ default: m.LeaderboardPage })));
+const CertificatePage = lazy(() => import('./pages/app/CertificatePage.jsx').then(m => ({ default: m.CertificatePage })));
+const KeyHeatmap = lazy(() => import('./components/typing/KeyHeatmap.jsx').then(m => ({ default: m.KeyHeatmap })));
+
+// Minimal Loading Fallback
+function SuspenseLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem 1rem', minHeight: '300px' }}>
+      <div className="loading-spinner" style={{ width: '36px', height: '36px', border: '3px solid var(--color-border)', borderTopColor: 'var(--color-primary-forest)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  );
+}
 
 export function App() {
   const { user, loading } = useAuth();
   const toast = useToast();
 
-  const [currentView, setCurrentView] = useState(() => {
-    // Check initial route or saved view
-    const raw = window.location.hash.replace('#', '');
-    if (raw.startsWith('verify')) return 'verify';
-    const view = raw.split('?')[0];
-    const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('codetyper_token');
-    const guestRestrictedViews = [
-      'dashboard',
-      'history',
-      'statistics',
-      'profile',
-      'settings',
-      'admin'
-    ];
-    if (guestRestrictedViews.includes(view) && !hasToken) {
-      return 'landing';
-    }
-    return view || 'landing';
-  });
-
+  const [routeState, setRouteState] = useState(() => parseCurrentRoute());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const parsePracticeParams = (raw) => {
-    if (!raw || !raw.includes('?')) return null;
-    const params = new URLSearchParams(raw.split('?')[1]);
-    const langRaw = (params.get('lang') || params.get('language') || '').toLowerCase();
-    const durationRaw = parseInt(params.get('duration') || params.get('time') || '', 10);
-    const langMap = {
-      python: 'Python',
-      py: 'Python',
-      javascript: 'JavaScript',
-      js: 'JavaScript',
-      typescript: 'TypeScript',
-      ts: 'TypeScript',
-      react: 'React/JSX',
-      jsx: 'React/JSX',
-      cpp: 'C++',
-      'c++': 'C++',
-      java: 'Java',
-      html: 'HTML',
-      css: 'CSS',
-      go: 'Go',
-      golang: 'Go',
-      rust: 'Rust',
-      sql: 'SQL'
-    };
-    return {
-      language: langMap[langRaw] || null,
-      duration: !isNaN(durationRaw) && durationRaw > 0 ? durationRaw : null
-    };
-  };
 
-  const [practiceConfig, setPracticeConfig] = useState(() => {
-    const raw = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
-    const parsed = parsePracticeParams(raw);
-    return {
-      type: 'practice',
-      language: parsed?.language || null,
-      duration: parsed?.duration || null
-    };
-  });
-
-  const getVerifyCertId = () => {
-    const raw = window.location.hash.replace('#', '');
-    if (!raw.startsWith('verify')) return '';
-    if (raw.includes('/')) return raw.split('/')[1]?.split('?')[0] || '';
-    if (raw.includes('?')) {
-      const params = new URLSearchParams(raw.split('?')[1]);
-      return params.get('id') || params.get('certId') || '';
-    }
-    return '';
-  };
-
-  // Keep URL hash in sync for back/forward navigation and bookmarks
+  // Synchronize routeState on popstate (browser back/forward) and hashchange
   useEffect(() => {
-    const raw = window.location.hash.replace('#', '');
-    if (currentView === 'verify') {
-      const certId = getVerifyCertId();
-      const targetHash = certId ? `verify/${certId}` : 'verify';
-      if (raw !== targetHash && !raw.startsWith('verify')) {
-        window.location.hash = targetHash;
-      }
-      return;
-    }
-    const currentHashView = raw.split('?')[0];
-    const query = currentHashView === currentView && raw.includes('?') ? '?' + raw.split('?')[1] : '';
-    const targetHash = currentView + query;
-    if (window.location.hash.replace('#', '') !== targetHash) {
-      window.location.hash = targetHash;
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView]);
-
-  // Update document title dynamically for each route (SEO & UX)
-  useEffect(() => {
-    if (currentView === 'practice' || currentView === 'coding') {
-      if (practiceConfig?.language) {
-        document.title = `${practiceConfig.language} Code Typing Practice & Speed Test | CodeTyper`;
-        return;
-      }
-      if (practiceConfig?.duration === 60) {
-        document.title = '1 Minute Typing Speed Test (WPM) | CodeTyper';
-        return;
-      }
-      if (practiceConfig?.duration === 180) {
-        document.title = '3 Minute Typing Endurance Test | CodeTyper';
-        return;
-      }
-      if (practiceConfig?.duration === 300) {
-        document.title = '5 Minute Typing Speed Assessment | CodeTyper';
-        return;
-      }
-    }
-
-    const titles = {
-      landing: 'CodeTyper — Free Code Typing Test & Developer Typing Practice with Certificate',
-      practice: 'Code Typing Practice — Interactive Speed Test & Syntactic Training | CodeTyper',
-      certificate: 'Accredited Typing Certificates — Official Developer Credentials | CodeTyper',
-      verify: 'Verify Official Typing Certificate | CodeTyper Global Registry',
-      leaderboard: 'Global Developer Typing Leaderboard — Top WPM Rankings | CodeTyper',
-      arena: 'Multiplayer Code Typing Arena — Real-Time Velocity Battles | CodeTyper',
-      heatmap: 'Typing Accuracy Heatmap & Keystroke Diagnostics | CodeTyper',
-      dashboard: 'Developer Dashboard | CodeTyper',
-      history: 'Typing Session History & Analytics | CodeTyper',
-      statistics: 'Speed Analytics & Accuracy Trends | CodeTyper',
-      profile: 'User Profile & Achievements | CodeTyper',
-      settings: 'Platform Preferences & Sound Customization | CodeTyper',
-      admin: 'Admin Console | CodeTyper',
-      login: 'Sign In — CodeTyper',
-      signup: 'Create Free Account — CodeTyper',
-      'forgot-password': 'Reset Password — CodeTyper',
-      about: 'About CodeTyper — Peaceful Typing for Developers & Writers',
-      contact: 'Contact Support — CodeTyper',
-      privacy: 'Privacy Policy — CodeTyper',
-      terms: 'Terms of Service — CodeTyper'
+    const handleLocationChange = () => {
+      const parsed = parseCurrentRoute();
+      setRouteState(parsed);
     };
-    if (titles[currentView]) {
-      document.title = titles[currentView];
-    }
-  }, [currentView, practiceConfig]);
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      const raw = window.location.hash.replace('#', '');
-      let view = raw.split('?')[0];
-      if (raw.startsWith('verify')) view = 'verify';
-      const parsed = parsePracticeParams(raw);
-      if (parsed && (parsed.language || parsed.duration)) {
-        setPracticeConfig((prev) => ({
-          ...prev,
-          language: parsed.language || prev.language,
-          duration: parsed.duration || prev.duration
-        }));
-      }
-      if (view && view !== currentView) {
-        navigateTo(view);
-      }
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [currentView, user, loading]);
+  }, []);
 
-  // If user is authenticated, automatically transition away from login/signup/forgot-password pages
+  // Synchronize dynamic document title, description, and canonical on route change
   useEffect(() => {
-    if (user && (currentView === 'login' || currentView === 'signup' || currentView === 'forgot-password')) {
-      setCurrentView('dashboard');
-    }
-  }, [user, currentView]);
+    const meta = ROUTE_METADATA[routeState.path] || {
+      title: 'CodeTyper — Free Code Typing Test & Developer Typing Practice with Certificate',
+      description: 'CodeTyper is the premier typing test and practice platform for software developers across 25+ language stacks.',
+      path: routeState.path
+    };
 
-  // Global keyboard shortcuts
+    updateDocumentHead({
+      title: meta.title,
+      description: meta.description,
+      path: meta.path
+    });
+  }, [routeState.path]);
+
+  // If user is authenticated, redirect away from guest-only auth pages
+  useEffect(() => {
+    if (user && (routeState.view === 'login' || routeState.view === 'signup' || routeState.view === 'forgot-password')) {
+      navigateToPath(ROUTES.DASHBOARD);
+    }
+  }, [user, routeState.view]);
+
+  // Global keyboard shortcuts (Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -214,59 +101,62 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const navigateTo = (view, options = {}) => {
-    // Protected views requiring authentication
-    const authRequiredViews = [
-      'dashboard',
-      'history',
-      'statistics',
-      'profile',
-      'admin',
-      'settings'
-    ];
-    const hasToken = !!localStorage.getItem('codetyper_token');
+  const navigateTo = (target, options = {}) => {
+    const guestRestrictedViews = ['dashboard', 'history', 'statistics', 'profile', 'admin', 'settings'];
+    const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('codetyper_token');
 
-    // Check both user and token to avoid race condition right after login/register
-    if (authRequiredViews.includes(view) && !user && !hasToken && !loading) {
+    let cleanTarget = typeof target === 'string' ? target : '/';
+    let checkView = cleanTarget.replace(/^\//, '').split('/')[0].split('?')[0];
+
+    if (guestRestrictedViews.includes(checkView) && !user && !hasToken && !loading) {
       toast.info('Please sign in or create an account to access this page.');
-      window.location.hash = 'login';
-      setCurrentView('login');
+      navigateToPath(ROUTES.LOGIN);
       return;
     }
 
-    if (options.practiceOptions) {
-      setPracticeConfig(options.practiceOptions);
-    }
-
-    setCurrentView(view);
     setSidebarOpen(false);
+    navigateToPath(target, options);
   };
 
   const handleStartPractice = (options = {}, maybeLang = null, maybeDuration = null) => {
-    let targetType = 'practice';
     let targetLang = null;
     let targetDuration = null;
 
     if (typeof options === 'string') {
-      targetType = options;
       targetLang = maybeLang;
       targetDuration = maybeDuration;
     } else {
-      targetType = options.type || 'practice';
       targetLang = options.language || null;
       targetDuration = options.duration || null;
     }
 
-    setPracticeConfig({
-      type: targetType,
-      language: targetLang,
-      duration: targetDuration
-    });
-    setCurrentView(targetType);
+    const langRouteMap = {
+      Python: ROUTES.PYTHON,
+      JavaScript: ROUTES.JAVASCRIPT,
+      TypeScript: ROUTES.TYPESCRIPT,
+      'C++': ROUTES.CPP,
+      Rust: ROUTES.RUST,
+      Go: ROUTES.GO,
+      SQL: ROUTES.SQL
+    };
+
+    if (targetLang && langRouteMap[targetLang]) {
+      navigateTo(langRouteMap[targetLang]);
+      return;
+    }
+
+    if (targetDuration === 60) {
+      navigateTo(ROUTES.TYPING_TEST);
+      return;
+    }
+
+    navigateTo(ROUTES.PRACTICE, { practiceOptions: { type: 'practice', language: targetLang, duration: targetDuration } });
   };
 
   const isPublicView = [
     'landing',
+    'language-landing',
+    'wpm-calculator',
     'login',
     'signup',
     'forgot-password',
@@ -275,13 +165,28 @@ export function App() {
     'privacy',
     'terms',
     'verify',
-    ...(!user && currentView === 'certificate' ? ['certificate'] : [])
-  ].includes(currentView);
+    'test',
+    'coding',
+    'practice',
+    ...(!user && (routeState.view === 'certificate' || routeState.view === 'leaderboard' || routeState.view === 'arena') ? [routeState.view] : [])
+  ].includes(routeState.view);
 
   // Render Page Content
   const renderCurrentView = () => {
-    switch (currentView) {
-      // Public Views
+    switch (routeState.view) {
+      // SEO-optimized public educational & practice pages
+      case 'language-landing':
+        return (
+          <LanguagePracticeLanding
+            key={routeState.language || 'Python'}
+            language={routeState.language || 'Python'}
+            onNavigate={navigateTo}
+          />
+        );
+      case 'wpm-calculator':
+        return <WpmCalculatorPage onNavigate={navigateTo} />;
+
+      // Public informational views
       case 'landing':
         return <LandingPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
       case 'login':
@@ -299,27 +204,26 @@ export function App() {
       case 'terms':
         return <TermsPage />;
       case 'verify':
-        return <VerifyCertificatePage certId={getVerifyCertId()} onNavigate={navigateTo} />;
+        return <VerifyCertificatePage certId={routeState.certId} onNavigate={navigateTo} />;
 
-      // App Views
-      case 'dashboard':
-        return <Dashboard onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
+      // Core Practice & Test Views
       case 'practice':
         return (
           <PracticePage
             key="practice"
             initialType="practice"
-            initialDuration={practiceConfig.duration}
+            initialDuration={routeState.practiceOptions?.duration || null}
+            initialLanguage={routeState.practiceOptions?.language || null}
             onNavigate={navigateTo}
           />
         );
       case 'coding':
         return (
           <PracticePage
-            key={`coding-${practiceConfig.language || 'all'}`}
+            key={`coding-${routeState.practiceOptions?.language || 'all'}`}
             initialType="coding"
-            initialLanguage={practiceConfig.language}
-            initialDuration={practiceConfig.duration}
+            initialLanguage={routeState.practiceOptions?.language || null}
+            initialDuration={routeState.practiceOptions?.duration || null}
             onNavigate={navigateTo}
           />
         );
@@ -328,7 +232,7 @@ export function App() {
           <PracticePage
             key="english"
             initialType="english"
-            initialDuration={practiceConfig.duration}
+            initialDuration={routeState.practiceOptions?.duration || null}
             onNavigate={navigateTo}
           />
         );
@@ -337,43 +241,86 @@ export function App() {
           <PracticePage
             key="test"
             initialType="test"
-            initialDuration={practiceConfig.duration}
+            initialDuration={routeState.practiceOptions?.duration || 60}
             onNavigate={navigateTo}
           />
         );
+
+      // Lazy-Loaded App & Feature Views
       case 'multiplayer':
-        return <MultiplayerArena onNavigate={navigateTo} />;
-      case 'certificate':
-        return <CertificatePage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
-      case 'heatmap':
+      case 'arena':
         return (
-          <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h1 style={{ fontSize: '1.85rem', margin: '0 0 0.25rem' }}>Keystroke Precision Heatmap</h1>
-                <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
-                  Per-key accuracy diagnostics captured across all your live typing and coding drills.
-                </p>
-              </div>
-              <button className="btn btn-primary" onClick={() => navigateTo('practice')}>
-                Start Practice Drill
-              </button>
-            </div>
-            <KeyHeatmap />
-          </div>
+          <Suspense fallback={<SuspenseLoader />}>
+            <MultiplayerArena onNavigate={navigateTo} />
+          </Suspense>
+        );
+      case 'certificate':
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <CertificatePage onNavigate={navigateTo} onStartPractice={handleStartPractice} />
+          </Suspense>
+        );
+      case 'leaderboard':
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <LeaderboardPage />
+          </Suspense>
+        );
+      case 'dashboard':
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <Dashboard onNavigate={navigateTo} onStartPractice={handleStartPractice} />
+          </Suspense>
         );
       case 'history':
-        return <HistoryPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <HistoryPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />
+          </Suspense>
+        );
       case 'statistics':
-        return <StatisticsPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
-      case 'leaderboard':
-        return <LeaderboardPage />;
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <StatisticsPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />
+          </Suspense>
+        );
       case 'profile':
-        return <ProfilePage onNavigate={navigateTo} />;
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <ProfilePage onNavigate={navigateTo} />
+          </Suspense>
+        );
       case 'settings':
-        return <SettingsPage onNavigate={navigateTo} />;
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <SettingsPage onNavigate={navigateTo} />
+          </Suspense>
+        );
       case 'admin':
-        return <AdminPage onNavigate={navigateTo} />;
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <AdminPage onNavigate={navigateTo} />
+          </Suspense>
+        );
+      case 'heatmap':
+        return (
+          <Suspense fallback={<SuspenseLoader />}>
+            <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h1 style={{ fontSize: '1.85rem', margin: '0 0 0.25rem' }}>Keystroke Precision Heatmap</h1>
+                  <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
+                    Per-key accuracy diagnostics captured across all your live typing and coding drills.
+                  </p>
+                </div>
+                <button className="btn btn-primary" onClick={() => navigateTo('/practice')}>
+                  Start Practice Drill
+                </button>
+              </div>
+              <KeyHeatmap />
+            </div>
+          </Suspense>
+        );
 
       default:
         return <LandingPage onNavigate={navigateTo} onStartPractice={handleStartPractice} />;
@@ -382,11 +329,11 @@ export function App() {
 
   return (
     <>
-      {!['practice', 'coding', 'english', 'test'].includes(currentView) && <AnnouncementBanner />}
+      {!['practice', 'coding', 'english', 'test', 'language-landing'].includes(routeState.view) && <AnnouncementBanner />}
       {isPublicView ? (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <PublicHeader onNavigate={navigateTo} currentView={currentView} />
-          <main style={{ flex: 1, padding: currentView === 'landing' ? '0.5rem 1.5rem 2rem' : '2rem 1.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
+          <PublicHeader onNavigate={navigateTo} currentView={routeState.view} currentPath={routeState.path} />
+          <main style={{ flex: 1, padding: routeState.view === 'landing' ? '0.5rem 1.5rem 2rem' : '2rem 1.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
             {renderCurrentView()}
           </main>
           <PublicFooter onNavigate={navigateTo} />
@@ -394,7 +341,7 @@ export function App() {
       ) : (
         <div className="app-container">
           <Sidebar
-            currentView={currentView}
+            currentView={routeState.view}
             onNavigate={navigateTo}
             isOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
@@ -402,7 +349,7 @@ export function App() {
 
           <div className="app-main">
             <Header
-              currentView={currentView}
+              currentView={routeState.view}
               onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
               onNavigate={navigateTo}
               onOpenSearch={() => setIsSearchOpen(true)}

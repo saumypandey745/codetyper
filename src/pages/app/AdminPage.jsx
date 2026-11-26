@@ -60,6 +60,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { programmingLanguages, englishCategories } from '../../../server/seedData.js';
 import { TypingCertificateModal } from '../../components/typing/TypingCertificateModal.jsx';
+import { getSiteUrl } from '../../utils/seoConfig.js';
 
 export function AdminPage({ onNavigate }) {
   const { user } = useAuth();
@@ -2690,7 +2691,7 @@ export function AdminPage({ onNavigate }) {
 
                               <button
                                 className="btn btn-ghost btn-sm"
-                                onClick={() => window.open(`/#verify/${c.cert_id}`, '_blank')}
+                                onClick={() => window.open(`/verify/${c.cert_id}`, '_blank')}
                                 title="Open Public Verifier URL"
                               >
                                 <ExternalLink size={15} />
@@ -3862,7 +3863,7 @@ export function AdminPage({ onNavigate }) {
             biometricVerified: Boolean(previewCert.biometric_verified),
             theme: previewCert.theme || 'royal-obsidian',
             issuedAt: previewCert.issued_at || previewCert.created_at,
-            verificationUrl: `https://codetyper.dev/#verify/${previewCert.cert_id}`
+            verificationUrl: `${getSiteUrl()}/verify/${previewCert.cert_id}`
           }}
           onClose={() => setPreviewCert(null)}
         />

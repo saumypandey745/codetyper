@@ -6,8 +6,8 @@
       "destination": "/api"
     },
     {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "source": "/((?!assets/|icon-|manifest\\.json|robots\\.txt|sitemap\\.xml|sw\\.js|data/).*)",
+      "destination": "/index.html"
     }
   ]
 }

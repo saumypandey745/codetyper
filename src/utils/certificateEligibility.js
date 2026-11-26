@@ -1,4 +1,5 @@
 import { calculateLevelFromXp } from './gamificationEngine.js';
+import { getSiteUrl } from './seoConfig.js';
 
 /**
  * Official CodeTyper Certificate Eligibility & Accreditation Standards
@@ -135,7 +136,7 @@ export const CERTIFICATE_ROLES = [
 export function getLinkedInCertificationUrl({ certId, recipientName, wpm, tierTitle, issueDate }) {
   const certName = `Accredited Touch-Typing Competency - ${tierTitle} (${Math.round(wpm)} WPM)`;
   const orgName = 'CodeTyper';
-  const certUrl = `https://codetyper.dev/#verify/${encodeURIComponent(certId)}`;
+  const certUrl = `${getSiteUrl()}/verify/${encodeURIComponent(certId)}`;
   const dateObj = issueDate ? new Date(issueDate) : new Date();
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth() + 1;
@@ -144,7 +145,7 @@ export function getLinkedInCertificationUrl({ certId, recipientName, wpm, tierTi
 }
 
 export function getSocialShareUrls({ certId, recipientName, wpm, accuracy, tierTitle }) {
-  const verifyUrl = `https://codetyper.dev/#verify/${encodeURIComponent(certId)}`;
+  const verifyUrl = `${getSiteUrl()}/verify/${encodeURIComponent(certId)}`;
   const text = `🏆 I just earned my official Accredited Typing Certificate on CodeTyper with ${Number(wpm).toFixed(1)} WPM and ${Number(accuracy).toFixed(1)}% accuracy, signed by Founder & App Owner Saumy Pandey! Verify my credential here: ${verifyUrl}`;
 
   return {

@@ -42,4 +42,4 @@ User-agent: CCBot
 Allow: /
 
 # XML Sitemap Location
-Sitemap: https://codetyper.dev/sitemap.xml
+Sitemap: https://codetyper-beta.vercel.app/sitemap.xml

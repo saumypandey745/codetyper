@@ -3,6 +3,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { app } from '../server/index.js';
+import { db } from '../server/db.js';
 
 let server;
 let baseUrl;
@@ -32,6 +33,9 @@ describe('Community Feedback & Testimonials Feature Suite', () => {
   });
 
   after(async () => {
+    try {
+      db.prepare("DELETE FROM feedback_reports WHERE email IN ('nadia.chen@crypto.org', 'alexandra.vance@fintech-security.dev')").run();
+    } catch {}
     if (server) {
       await new Promise((resolve) => server.close(resolve));
     }
