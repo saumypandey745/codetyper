@@ -252,7 +252,7 @@ const FAQS = [
   },
   {
     q: "How do the Accredited Certificates work and how can employers verify them?",
-    a: "Every certificate issued on CodeTyper is cryptographically registered in our global verification ledger with a unique Ledger ID (e.g., CT-2026-CERT). Employers, recruiters, and colleagues can verify your credentials anytime at codetyper.com/#verify by entering your certificate ID or scanning the certificate's QR code."
+    a: "Every certificate issued on CodeTyper is cryptographically registered in our global verification ledger with a unique Ledger ID (e.g., CT-2026-CERT). Employers, recruiters, and colleagues can verify your credentials anytime at codetyper.dev/#verify by entering your certificate ID or scanning the certificate's QR code."
   },
   {
     q: "How does coding typing practice differ from standard English typing?",

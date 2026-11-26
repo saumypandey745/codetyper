@@ -88,7 +88,35 @@ export function App() {
     if (window.location.hash.replace('#', '') !== targetHash) {
       window.location.hash = targetHash;
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentView]);
+
+  // Update document title dynamically for each route (SEO & UX)
+  useEffect(() => {
+    const titles = {
+      landing: 'CodeTyper — Free Code Typing Test & Developer Typing Practice with Certificate',
+      practice: 'Code Typing Practice — Interactive Speed Test & Syntactic Training | CodeTyper',
+      certificate: 'Accredited Typing Certificates — Official Developer Credentials | CodeTyper',
+      verify: 'Verify Official Typing Certificate | CodeTyper Global Registry',
+      leaderboard: 'Global Developer Typing Leaderboard — Top WPM Rankings | CodeTyper',
+      arena: 'Multiplayer Code Typing Arena — Real-Time Velocity Battles | CodeTyper',
+      heatmap: 'Typing Accuracy Heatmap & Keystroke Diagnostics | CodeTyper',
+      dashboard: 'Developer Dashboard | CodeTyper',
+      history: 'Typing Session History & Analytics | CodeTyper',
+      statistics: 'Speed Analytics & Accuracy Trends | CodeTyper',
+      profile: 'User Profile & Achievements | CodeTyper',
+      settings: 'Platform Preferences & Sound Customization | CodeTyper',
+      admin: 'Admin Console | CodeTyper',
+      login: 'Sign In — CodeTyper',
+      signup: 'Create Free Account — CodeTyper',
+      'forgot-password': 'Reset Password — CodeTyper',
+      about: 'About CodeTyper — Peaceful Typing for Developers & Writers',
+      contact: 'Contact Support — CodeTyper',
+      privacy: 'Privacy Policy — CodeTyper',
+      terms: 'Terms of Service — CodeTyper'
+    };
+    if (titles[currentView]) {
+      document.title = titles[currentView];
+    }
   }, [currentView]);
 
   useEffect(() => {
