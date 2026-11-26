@@ -327,6 +327,36 @@ export function App() {
     }
   };
 
+  // Show a full-page loader while auth is initializing to prevent blank white flash on refresh
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--color-bg, #0d1117)'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <div style={{
+            width: '44px',
+            height: '44px',
+            border: '3px solid rgba(255,255,255,0.1)',
+            borderTopColor: 'var(--color-primary-forest, #22c55e)',
+            borderRadius: '50%',
+            animation: 'spin 0.75s linear infinite'
+          }} />
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', letterSpacing: '0.05em' }}>Initializing...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {!['practice', 'coding', 'english', 'test', 'language-landing'].includes(routeState.view) && <AnnouncementBanner />}

@@ -466,62 +466,20 @@ function seedInitialData() {
     console.warn('[DB] Could not sync new practice passages', syncErr);
   }
 
-  // Check demo user
-  const demoUser = db.prepare("SELECT * FROM users WHERE email = 'demo@codetyper.dev'").get();
-  if (!demoUser) {
-    const salt = bcrypt.genSaltSync(10);
-    const demoPassword = process.env.DEMO_USER_PASSWORD || 'Peaceful_Demo_2026';
-    const adminPassword = process.env.ADMIN_USER_PASSWORD || 'Peaceful_Admin_2026';
-    const demoHash = bcrypt.hashSync(demoPassword, salt);
-    const adminHash = bcrypt.hashSync(adminPassword, salt);
-
-    try {
-      const userStmt = db.prepare(`
-        INSERT INTO users (email, username, full_name, password_hash, avatar_url, role, bio)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const demoResult = userStmt.run(
-        'demo@codetyper.dev',
-        'sarah_coder',
-        'Sarah Jenkins',
-        demoHash,
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-        'user',
-        'Frontend architect cultivating focus and typing speed for code and technical writing.'
-      );
-
-      const adminResult = userStmt.run(
-        'admin@codetyper.dev',
-        'admin_alex',
-        'Alex Vance',
-        adminHash,
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
-        'admin',
-        'System administrator and maintainer of CodeTyper practice libraries.'
-      );
-
-      const demoId = Number(demoResult.lastInsertRowid);
-      const adminId = Number(adminResult.lastInsertRowid);
-
-      const settingsStmt = db.prepare('INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)');
-      settingsStmt.run(demoId);
-      settingsStmt.run(adminId);
-
-      const statsStmt = db.prepare(`
-        INSERT OR IGNORE INTO user_statistics (user_id, total_tests, total_practice_seconds, best_wpm, avg_wpm, avg_accuracy, current_streak, last_practice_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      // Initialize clean statistics for demo & admin accounts
-      statsStmt.run(demoId, 0, 0, 0, 0, 0, 0, null);
-      statsStmt.run(adminId, 0, 0, 0, 0, 0, 0, null);
-    } catch (seedErr) {
-      // Ignore unique constraint error if another concurrent process seeded users first
-      if (!seedErr.message.includes('UNIQUE constraint failed')) {
-        throw seedErr;
-      }
+  // Remove any legacy dummy seed users (Sarah Jenkins / Alex Vance) if they exist
+  try {
+    const demoUser = db.prepare("SELECT id FROM users WHERE email = 'demo@codetyper.dev'").get();
+    if (demoUser) {
+      db.prepare('DELETE FROM users WHERE email = ?').run('demo@codetyper.dev');
+      console.log('[DB] Removed legacy demo@codetyper.dev dummy account.');
     }
+    const adminDummy = db.prepare("SELECT id FROM users WHERE email = 'admin@codetyper.dev'").get();
+    if (adminDummy) {
+      db.prepare('DELETE FROM users WHERE email = ?').run('admin@codetyper.dev');
+      console.log('[DB] Removed legacy admin@codetyper.dev dummy account.');
+    }
+  } catch (e) {
+    console.warn('[DB] Could not clean up legacy dummy users:', e.message);
   }
 
   // Seed Saumy Pandey Admin Account independently
@@ -559,100 +517,32 @@ function seedInitialData() {
     }
   }
 
-  // Seed initial sample feedback reports if table is fresh
+  // Remove any legacy dummy feedback reports (not from real users)
   try {
-    const feedbackCount = db.prepare('SELECT COUNT(*) as count FROM feedback_reports').get().count;
-    if (feedbackCount === 0) {
-      const insertFeedback = db.prepare(`
-        INSERT INTO feedback_reports (name, email, category, subject, message, status, admin_notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
-      `);
-      insertFeedback.run(
-        'Alex Rivers',
-        'alex.rivers@devmail.io',
-        'feedback',
-        'Loving the dark mode mechanical audio synthesis!',
-        'The sub-millisecond audio feedback and tactile sound themes are unmatched. Would love to see an option for custom keypress wav packs in future releases.',
-        'pending',
-        null,
-        '-2 hours'
-      );
-      insertFeedback.run(
-        'Priya Sharma',
-        'priya.code@techlab.org',
-        'typo',
-        'Typo in Python Snippet #14 (List Comprehensions)',
-        'In snippet #14 line 3, there is an extra trailing parenthesis `[x**2 for x in nums))` which causes a syntax error during typing.',
-        'in_review',
-        'Investigating snippet line 3 in practice_content',
-        '-5 hours'
-      );
-      insertFeedback.run(
-        'Marcus Vance',
-        'marcus.v@fullstack.dev',
-        'bug_report',
-        'Multiplayer race lobby reconnect glitch on iOS Safari',
-        'When switching tabs on mobile Safari during lobby countdown, the websocket connection sometimes fails to reconnect gracefully without full page refresh.',
-        'resolved',
-        'Fixed in v2.4 offline/online sync resilience handler',
-        '-1 day'
-      );
-      console.log('[DB] Sample developer feedback reports seeded.');
+    const dummyEmails = ['alex.rivers@devmail.io', 'priya.code@techlab.org', 'marcus.v@fullstack.dev'];
+    for (const email of dummyEmails) {
+      const existing = db.prepare('SELECT id FROM feedback_reports WHERE email = ? AND user_id IS NULL').get(email);
+      if (existing) {
+        db.prepare('DELETE FROM feedback_reports WHERE email = ? AND user_id IS NULL').run(email);
+        console.log(`[DB] Removed legacy dummy feedback from ${email}.`);
+      }
     }
   } catch (e) {
-    console.warn('[DB] Could not seed sample feedback reports:', e.message);
+    console.warn('[DB] Could not clean up legacy dummy feedback:', e.message);
   }
 
-  // Seed curated real community testimonials for landing page if none are featured
+  // Remove any legacy dummy featured testimonials (created with dummy email domains)
   try {
-    const featuredCount = db.prepare('SELECT COUNT(*) as count FROM feedback_reports WHERE is_featured = 1').get().count;
-    if (featuredCount === 0) {
-      const insertFeatured = db.prepare(`
-        INSERT INTO feedback_reports (
-          name, email, category, subject, message, status, rating, is_featured, display_role, avatar_color, admin_notes, created_at
-        ) VALUES (?, ?, ?, ?, ?, 'resolved', ?, 1, ?, ?, 'Official verified community testimonial', datetime('now', ?))
-      `);
-
-      insertFeatured.run(
-        'Ananya Rao',
-        'ananya.rao@fintech.dev',
-        'feedback',
-        'Live technical interview confidence with CodeTyper',
-        'Practicing curly braces and arrow function muscle memory on CodeTyper completely eliminated my hesitation during live technical interviews. I jumped from 60 to 95 WPM on real JavaScript and TypeScript code.',
-        5,
-        'Senior Frontend Engineer @ FinTech',
-        'linear-gradient(135deg, #10b981, #059669)',
-        '-3 days'
-      );
-
-      insertFeatured.run(
-        'Marcus Schmidt',
-        'marcus.schmidt@rustsystems.io',
-        'feedback',
-        'Cherry MX acoustics and obsidian theme',
-        'The Cherry MX Blue acoustic synthesizer and the peaceful obsidian dark mode make my morning typing drills a joy. Unlocking my official Gold Master diploma signed by Saumy Pandey was a huge milestone!',
-        5,
-        'Staff Systems Engineer (Rust / Go)',
-        'linear-gradient(135deg, #0284c7, #38bdf8)',
-        '-2 days'
-      );
-
-      insertFeatured.run(
-        'Devon Park',
-        'devon.park@competitivecs.edu',
-        'feedback',
-        'Cryptographic typing certificate on LinkedIn',
-        'Having verifiable cryptographic certificates for typing speed is brilliant. I added my 100+ WPM Diamond Grandmaster certificate to my LinkedIn profile and recruiters commented on it during my screening calls.',
-        5,
-        'Computer Science Graduate & Competitive Typist',
-        'linear-gradient(135deg, #7c3aed, #a855f7)',
-        '-1 day'
-      );
-
-      console.log('[DB] Curated featured developer testimonials seeded.');
+    const dummyFeaturedEmails = ['ananya.rao@fintech.dev', 'marcus.schmidt@rustsystems.io', 'devon.park@competitivecs.edu'];
+    for (const email of dummyFeaturedEmails) {
+      const existing = db.prepare('SELECT id FROM feedback_reports WHERE email = ? AND user_id IS NULL').get(email);
+      if (existing) {
+        db.prepare('DELETE FROM feedback_reports WHERE email = ? AND user_id IS NULL').run(email);
+        console.log(`[DB] Removed legacy dummy testimonial from ${email}.`);
+      }
     }
   } catch (e) {
-    console.warn('[DB] Could not seed featured testimonials:', e.message);
+    console.warn('[DB] Could not clean up legacy dummy testimonials:', e.message);
   }
 
   // Seed sample certified typist if certificates registry is fresh
@@ -679,22 +569,18 @@ function seedInitialData() {
     console.warn('[DB] Could not seed benchmark certificate:', e.message);
   }
 
-  // Seed sample newsletter subscribers if table is fresh
+  // Remove any legacy dummy newsletter subscribers
   try {
-    const subCount = db.prepare('SELECT COUNT(*) as count FROM newsletter_subscribers').get().count;
-    if (subCount === 0) {
-      const insertSub = db.prepare(`
-        INSERT INTO newsletter_subscribers (email, source, status, created_at)
-        VALUES (?, ?, ?, datetime('now', ?))
-      `);
-      insertSub.run('dev.elena@systems.io', 'footer', 'active', '-3 days');
-      insertSub.run('kenji.takahashi@tokyotech.jp', 'footer', 'active', '-2 days');
-      insertSub.run('rachel.green@frontend.dev', 'footer', 'active', '-1 day');
-      insertSub.run('aravind.nair@kernel.org', 'footer', 'active', '-4 hours');
-      console.log('[DB] Sample newsletter subscribers seeded.');
+    const dummySubscribers = ['dev.elena@systems.io', 'kenji.takahashi@tokyotech.jp', 'rachel.green@frontend.dev', 'aravind.nair@kernel.org'];
+    for (const email of dummySubscribers) {
+      const existing = db.prepare('SELECT id FROM newsletter_subscribers WHERE email = ?').get(email);
+      if (existing) {
+        db.prepare('DELETE FROM newsletter_subscribers WHERE email = ?').run(email);
+        console.log(`[DB] Removed legacy dummy subscriber ${email}.`);
+      }
     }
   } catch (e) {
-    console.warn('[DB] Could not seed sample subscribers:', e.message);
+    console.warn('[DB] Could not clean up legacy dummy subscribers:', e.message);
   }
 }
 

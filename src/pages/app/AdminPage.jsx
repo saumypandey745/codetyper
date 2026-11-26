@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -70,6 +70,13 @@ export function AdminPage({ onNavigate }) {
   const [securityStats, setSecurityStats] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'content' | 'users' | 'moderation' | 'certificates' | 'feedback' | 'subscribers' | 'settings' | 'audit'
   const [loading, setLoading] = useState(true);
+
+  // Real-time Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const notifPanelRef = useRef(null);
+  const sseRef = useRef(null);
 
   // Content Tab State
   const [contentItems, setContentItems] = useState([]);
@@ -278,6 +285,67 @@ export function AdminPage({ onNavigate }) {
       loadAdminData();
     }
   }, [user]);
+
+  // Set up SSE for real-time notifications
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+
+    // Load historical notifications first
+    api.admin.getNotifications().then((res) => {
+      if (res?.notifications) {
+        const mapped = res.notifications.map((n) => ({
+          id: n.id,
+          type: n.action,
+          payload: n.details ? (() => { try { return JSON.parse(n.details); } catch { return {}; } })() : {},
+          timestamp: n.created_at,
+          read: true
+        }));
+        setNotifications(mapped);
+      }
+    }).catch(() => {});
+
+    // Connect to SSE stream
+    const token = localStorage.getItem('codetyper_token');
+    const streamUrl = api.admin.streamNotifications();
+    const eventSource = new EventSource(`${streamUrl}?token=${token}`);
+    sseRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'CONNECTED') return;
+        setNotifications((prev) => [{ ...data, id: Date.now(), read: false }, ...prev.slice(0, 49)]);
+        setUnreadCount((prev) => prev + 1);
+      } catch (e) {}
+    };
+
+    eventSource.onerror = () => {
+      // SSE will auto-reconnect; no action needed
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [user]);
+
+  // Close notification panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target)) {
+        setShowNotifPanel(false);
+      }
+    };
+    if (showNotifPanel) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifPanel]);
+
+  const handleOpenNotifPanel = () => {
+    setShowNotifPanel((prev) => !prev);
+    setUnreadCount(0); // mark all as read on open
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   const loadCertificates = async (filter = certFilter, search = certSearch) => {
     try {
@@ -512,6 +580,8 @@ export function AdminPage({ onNavigate }) {
       const res = await api.admin.deleteUser(targetUser.id);
       setUserList((prev) => prev.filter((u) => u.id !== targetUser.id));
       toast.success(res.message);
+      // Refresh stats so KPI boxes update immediately
+      loadAdminData();
     } catch (err) {
       toast.error(err.message || 'Failed to delete user.');
     }
@@ -920,7 +990,7 @@ export function AdminPage({ onNavigate }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem', position: 'relative' }}>
             <div className="admin-telemetry-pill" title="Live System Telemetry">
               <span className="admin-pulse-dot" />
               <span>All Systems Operational • &lt; 3ms Input Latency • Node 22 Engine</span>
@@ -928,6 +998,188 @@ export function AdminPage({ onNavigate }) {
 
             {/* Quick Actions Launchpad */}
             <div className="admin-quick-actions">
+              {/* Bell Notification Icon */}
+              <div ref={notifPanelRef} style={{ position: 'relative' }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleOpenNotifPanel}
+                  title="Activity Notifications"
+                  style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Bell size={16} />
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      background: '#ef4444',
+                      color: '#fff',
+                      borderRadius: '999px',
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      minWidth: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      boxShadow: '0 0 0 2px var(--color-bg)',
+                      animation: 'pulse 1.5s ease-in-out infinite'
+                    }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Panel Dropdown */}
+                {showNotifPanel && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 10px)',
+                    right: 0,
+                    width: '340px',
+                    maxHeight: '460px',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '12px',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {/* Panel Header */}
+                    <div style={{
+                      padding: '1rem 1.25rem',
+                      borderBottom: '1px solid var(--color-border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'var(--color-surface-elevated, var(--color-surface))'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Bell size={15} style={{ color: 'var(--color-primary-forest)' }} />
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Activity Feed</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{
+                          background: 'rgba(34,197,94,0.15)',
+                          color: '#22c55e',
+                          borderRadius: '999px',
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          padding: '2px 8px'
+                        }}>LIVE</span>
+                        <button
+                          onClick={() => setShowNotifPanel(false)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '2px' }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Notifications List */}
+                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                          <Bell size={28} style={{ opacity: 0.3, marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }} />
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>No recent activity</p>
+                        </div>
+                      ) : (
+                        notifications.slice(0, 30).map((notif, idx) => {
+                          const isNewUser = notif.type === 'USER_REGISTERED';
+                          const isBan = notif.type === 'BAN_USER';
+                          const isDelete = notif.type === 'DELETE_USER';
+                          const payload = notif.payload || {};
+                          const username = payload.username || payload.target_id || 'Unknown';
+                          const fullName = payload.full_name || username;
+                          const time = notif.timestamp ? new Date(notif.timestamp).toLocaleString() : '';
+
+                          return (
+                            <div key={notif.id || idx} style={{
+                              padding: '0.75rem 1.25rem',
+                              borderBottom: '1px solid var(--color-border)',
+                              display: 'flex',
+                              gap: '0.75rem',
+                              alignItems: 'flex-start',
+                              background: notif.read ? 'transparent' : 'rgba(34,197,94,0.04)',
+                              transition: 'background 0.3s'
+                            }}>
+                              {/* Avatar / icon */}
+                              <div style={{
+                                width: '34px',
+                                height: '34px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                background: isNewUser ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+                                  : isBan ? 'linear-gradient(135deg,#ef4444,#b91c1c)'
+                                  : isDelete ? 'linear-gradient(135deg,#f59e0b,#d97706)'
+                                  : 'linear-gradient(135deg,#6366f1,#4f46e5)'
+                              }}>
+                                {isNewUser ? <Users size={16} color="#fff" />
+                                  : isBan ? <UserX size={16} color="#fff" />
+                                  : isDelete ? <Trash2 size={16} color="#fff" />
+                                  : <Activity size={16} color="#fff" />}
+                              </div>
+
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.82rem', lineHeight: 1.4 }}>
+                                  {isNewUser ? (
+                                    <><strong style={{ color: 'var(--color-text)' }}>{fullName}</strong>
+                                    {' '}<span style={{ color: 'var(--color-text-secondary)' }}>signed up as</span>
+                                    {' '}<span style={{ color: 'var(--color-primary-forest)', fontFamily: 'monospace' }}>@{username}</span></>
+                                  ) : isBan ? (
+                                    <><span style={{ color: 'var(--color-text-secondary)' }}>Suspended</span>
+                                    {' '}<strong>@{username}</strong></>
+                                  ) : isDelete ? (
+                                    <><span style={{ color: 'var(--color-text-secondary)' }}>Deleted account</span>
+                                    {' '}<strong>@{username}</strong></>
+                                  ) : (
+                                    <span style={{ color: 'var(--color-text-secondary)' }}>{notif.type?.replace(/_/g, ' ')}</span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{time}</div>
+                              </div>
+
+                              {!notif.read && (
+                                <div style={{
+                                  width: '7px', height: '7px', borderRadius: '50%',
+                                  background: '#22c55e', flexShrink: 0, marginTop: '5px'
+                                }} />
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Panel Footer */}
+                    <div style={{
+                      padding: '0.6rem 1.25rem',
+                      borderTop: '1px solid var(--color-border)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                        {notifications.length} recent events
+                      </span>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        onClick={() => { setActiveTab('audit'); setShowNotifPanel(false); }}
+                      >
+                        View Audit Log →
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 className="btn btn-primary btn-sm"
                 onClick={() => setShowBroadcastModal(true)}

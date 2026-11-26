@@ -243,7 +243,9 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload)
       }),
-    getWebhookLogs: () => this.request('/admin/webhooks/logs')
+    getWebhookLogs: () => this.request('/admin/webhooks/logs'),
+    getNotifications: () => this.request('/admin/notifications'),
+    streamNotifications: () => `${API_BASE}/admin/notifications/stream`
   };
 
   // Feedback & Developer Reports

@@ -3,8 +3,9 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { db, logAdminAudit } from '../db.js';
-import { authenticate, requireAdmin } from '../authMiddleware.js';
+import { authenticate, requireAdmin, JWT_SECRET } from '../authMiddleware.js';
 import { announcementBroadcaster } from '../announcements.js';
 import { sendFeedbackResolutionEmail, sendBroadcastUpdateEmail } from '../mailer.js';
 import { getWebhookConfig, testWebhookConnection, getRecentWebhookLogs, dispatchWebhookEvent } from '../webhookDispatcher.js';
@@ -13,8 +14,100 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = Router();
 
-// Protect all admin routes
+// ==========================================
+// Real-Time Admin Notification System (SSE)
+// ==========================================
+const adminSseClients = new Set();
+
+/**
+ * Broadcasts a notification to all connected admin SSE clients.
+ */
+export function emitAdminNotification(type, payload) {
+  const notification = {
+    type,
+    payload,
+    timestamp: new Date().toISOString()
+  };
+  const data = `data: ${JSON.stringify(notification)}\n\n`;
+  for (const client of adminSseClients) {
+    try {
+      client.write(data);
+    } catch (e) {
+      adminSseClients.delete(client);
+    }
+  }
+}
+
+// ==========================================
+// 0a. SSE Notifications Stream (before auth middleware)
+// EventSource can't send custom headers, so we authenticate via ?token= query param
+// ==========================================
+router.get('/notifications/stream', (req, res) => {
+  // Manual JWT auth from query param for SSE (browsers can't set headers on EventSource)
+  const token = req.query.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+  if (!token) {
+    res.status(401).end();
+    return;
+  }
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    res.status(401).end();
+    return;
+  }
+  if (decoded.role !== 'admin') {
+    res.status(403).end();
+    return;
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  // Send initial connected acknowledgement
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', payload: { message: 'Admin notification stream connected' }, timestamp: new Date().toISOString() })}\n\n`);
+
+  adminSseClients.add(res);
+
+  // Keep-alive heartbeat every 25 seconds
+  const heartbeat = setInterval(() => {
+    try { res.write(':heartbeat\n\n'); } catch (e) { clearInterval(heartbeat); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    adminSseClients.delete(res);
+  });
+});
+
+// Protect all remaining admin routes
 router.use(authenticate, requireAdmin);
+
+// ==========================================
+// 0b. Admin Notifications History
+// ==========================================
+
+/**
+ * GET /api/admin/notifications
+ * Returns last 50 admin activity notifications from audit log.
+ */
+router.get('/notifications', (req, res) => {
+  try {
+    const notifications = db.prepare(`
+      SELECT id, action, target_type, target_id, details, admin_username, created_at
+      FROM admin_audit_logs
+      WHERE action IN ('USER_REGISTERED', 'BAN_USER', 'UNBAN_USER', 'DELETE_USER', 'REVOKE_CERTIFICATE', 'DELETE_CERTIFICATE', 'FEEDBACK_SUBMITTED')
+      ORDER BY created_at DESC
+      LIMIT 50
+    `).all();
+    return res.json({ notifications });
+  } catch (err) {
+    return res.status(500).json({ error: 'Could not load notifications.' });
+  }
+});
 
 // ==========================================
 // 1. Platform Statistics & Security Summary

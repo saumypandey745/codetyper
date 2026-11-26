@@ -2,10 +2,11 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db } from '../db.js';
+import { db, logAdminAudit } from '../db.js';
 import { authenticate, JWT_SECRET } from '../authMiddleware.js';
 import { createRateLimiter } from '../rateLimiter.js';
 import { sendPasswordResetEmail } from '../mailer.js';
+import { emitAdminNotification } from './admin.js';
 
 const router = Router();
 
@@ -107,12 +108,34 @@ router.post('/register', authLimiter, (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
 
+  // Log & broadcast new user registration to admin panel in real-time
+  try {
+    logAdminAudit(
+      { id: null, username: 'system' },
+      'USER_REGISTERED',
+      'users',
+      userId,
+      { username: trimmedUsername, email: trimmedEmail, full_name: trimmedName }
+    );
+    emitAdminNotification('USER_REGISTERED', {
+      userId,
+      username: trimmedUsername,
+      full_name: trimmedName,
+      email: trimmedEmail,
+      avatar_url: user.avatar_url,
+      created_at: new Date().toISOString()
+    });
+  } catch (e) {
+    // Non-fatal: notification failure does not block registration
+  }
+
   return res.status(201).json({
     message: 'Account created successfully.',
     user,
     token
   });
 });
+
 
 router.post('/login', authLimiter, (req, res) => {
   const { login, password, remember_me } = req.body;
