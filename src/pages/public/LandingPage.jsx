@@ -247,16 +247,36 @@ CMD ["node", "server/index.js"]`
 
 const FAQS = [
   {
+    q: "What is the best typing test for programmers and developers?",
+    a: "CodeTyper is widely recognized as the premier typing test and practice platform built specifically for developers. Unlike conventional typing tests that only practice prose, CodeTyper builds muscle memory for complex syntax, brackets {}, [], parentheses (), semicolons, and code structures across 25+ programming languages including Python, JavaScript, C++, Go, and Rust."
+  },
+  {
+    q: "How can I test my typing speed in WPM for free online?",
+    a: "You can test your typing speed instantly on CodeTyper with no account or registration required. Choose between standard 1-minute, 3-minute, or 5-minute typing tests, or select real coding snippets across 25+ tech stacks. CodeTyper calculates Gross WPM, Net WPM, accuracy, and key consistency in real-time."
+  },
+  {
+    q: "Can I get an official verified typing certificate for coding and resumes?",
+    a: "Yes! Every certificate issued on CodeTyper is cryptographically registered in our global verification ledger with a unique Ledger ID (e.g., CT-2026-CERT). Employers, recruiters, and colleagues can verify your credentials anytime at codetyper.dev/#verify by entering your certificate ID or scanning the certificate's QR code."
+  },
+  {
+    q: "What is a good typing speed for developers, programmers, and writers?",
+    a: "The average person types around 40 WPM. For software engineers and technical writers, 60-80 WPM is considered strong, while 90+ WPM places you in the top 5% of typists. Practicing on CodeTyper bridges the gap between natural language typing and complex code typing with special characters."
+  },
+  {
     q: "Is CodeTyper completely free to use?",
     a: "Yes! CodeTyper is 100% free with no paywalls or subscription fees. You can practice all 25+ language stacks, take speed tests, race in multiplayer arenas, and earn official founder-signed accredited certificates at zero cost."
   },
   {
-    q: "How do the Accredited Certificates work and how can employers verify them?",
-    a: "Every certificate issued on CodeTyper is cryptographically registered in our global verification ledger with a unique Ledger ID (e.g., CT-2026-CERT). Employers, recruiters, and colleagues can verify your credentials anytime at codetyper.dev/#verify by entering your certificate ID or scanning the certificate's QR code."
-  },
-  {
     q: "How does coding typing practice differ from standard English typing?",
     a: "Normal typing tests focus primarily on regular English dictionary words. Coding typing tests your muscle memory for syntactic constructs you actually type at work: curly braces {}, brackets [], arrows =>, operators ===, camelCase variables, indentation, and punctuation. Mastering these eliminates stutter during coding and technical interviews."
+  },
+  {
+    q: "Is CodeTyper an alternative to Monkeytype, 10FastFingers, and TypeRacer?",
+    a: "Yes! CodeTyper serves as a high-performance, calm alternative to Monkeytype, 10FastFingers, and TypeRacer. It combines clean minimal ergonomics with mechanical keyboard acoustic profiles (Cherry MX Blue, Brown, Topre), real-world syntax practice, live multiplayer duels, and verifiable credentials."
+  },
+  {
+    q: "How can I increase my typing speed from 50 WPM to 100+ WPM?",
+    a: "To reach 100+ WPM, prioritize accuracy above raw speed. Maintain at least 96-98% accuracy so your muscle memory becomes automatic without frequent backspacing. Use CodeTyper's keystroke heatmap to identify slow keys and weak fingers."
   },
   {
     q: "Can I use CodeTyper without creating an account?",
@@ -270,6 +290,29 @@ const FAQS = [
     q: "What are the 4 Accredited Certificate tiers?",
     a: "We offer 4 collectible luxury tiers: Bronze Certified (40+ WPM, 95% Acc), Silver Specialist (65+ WPM, 97% Acc), Gold Master (85+ WPM, 98% Acc), and Diamond Grandmaster (100+ WPM, 99% Acc). Each milestone diploma is individually rendered with an official wax seal and founder signature."
   }
+];
+
+const POPULAR_TYPING_TOPICS = [
+  { label: '1 Minute Typing Test', view: 'practice', desc: 'Quick 60-second speed check' },
+  { label: '3 Minute Typing Test', view: 'practice', desc: 'Sustained endurance test' },
+  { label: '5 Minute Typing Speed Test', view: 'practice', desc: 'Accredited pacing assessment' },
+  { label: 'WPM & Accuracy Test', view: 'practice', desc: 'Real-time Net WPM calculator' },
+  { label: 'JavaScript Typing Practice', view: 'practice', lang: 'js', desc: 'ES2024 functions & syntax' },
+  { label: 'Python Typing Test', view: 'practice', lang: 'python', desc: 'Clean indentation & loops' },
+  { label: 'TypeScript Code Typing', view: 'practice', lang: 'ts', desc: 'Generics & interfaces' },
+  { label: 'C++ Typing Practice', view: 'practice', lang: 'cpp', desc: 'Pointers & templates' },
+  { label: 'React Syntax Practice', view: 'practice', lang: 'react', desc: 'Hooks & JSX markup' },
+  { label: 'SQL Query Typing', view: 'practice', lang: 'sql', desc: 'SELECT, JOIN & indexing' },
+  { label: 'Rust Code Speed', view: 'practice', lang: 'rust', desc: 'Borrow checker & structs' },
+  { label: 'Go Syntax Test', view: 'practice', lang: 'go', desc: 'Goroutines & channels' },
+  { label: 'Touch Typing Practice', view: 'practice', desc: '10-finger muscle memory' },
+  { label: 'Free Typing Certificate', view: 'certificate', desc: 'Official diploma for resumes' },
+  { label: 'LinkedIn Verified Credential', view: 'certificate', desc: 'QR code verified badge' },
+  { label: 'Multiplayer Typing Arena', view: 'arena', desc: 'Real-time 1v1 speed races' },
+  { label: 'Global Speed Leaderboard', view: 'leaderboard', desc: 'Top ranked developer typists' },
+  { label: 'Mechanical Keyboard Simulator', view: 'practice', desc: 'Cherry MX & Topre audio' },
+  { label: 'Keystroke Accuracy Heatmap', view: 'heatmap', desc: 'Finger load & weak key analytics' },
+  { label: 'Monkeytype Alternative', view: 'practice', desc: 'Zen developer typing flow' }
 ];
 
 export function LandingPage({ onNavigate, onStartPractice }) {
@@ -1941,7 +1984,74 @@ export function LandingPage({ onNavigate, onStartPractice }) {
       </section>
 
       {/* =========================================================================
-          SECTION 9: GRAND PRE-FOOTER CLOSING CTA BANNER
+          SECTION 9: POPULAR TYPING TESTS & DEVELOPER PRACTICE DIRECTORY (SEO)
+          ========================================================================= */}
+      <section className="landing-section-wrap">
+        <div className="landing-section-header">
+          <span className="sequence-badge">
+            <Search size={13} />
+            <span>09 // POPULAR TESTS & KEYWORD DIRECTORY</span>
+          </span>
+          <h2 className="landing-section-title">Explore Popular Typing Tests & Practice Modes</h2>
+          <p className="landing-section-subtitle">
+            Instantly launch 1-minute speed checks, code syntax workouts, or official accredited assessments.
+          </p>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gap: '1rem',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          width: '100%'
+        }}>
+          {POPULAR_TYPING_TOPICS.map((topic, i) => (
+            <div
+              key={i}
+              onClick={() => {
+                if (topic.lang && onStartPractice) {
+                  onStartPractice({ language: topic.lang });
+                } else if (topic.view) {
+                  onNavigate(topic.view);
+                }
+              }}
+              className="card"
+              style={{
+                padding: '1.15rem 1.25rem',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                transition: 'all 0.22s ease',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-surface)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary-forest)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-text)' }}>
+                  {topic.label}
+                </span>
+                <ArrowRight size={14} color="var(--color-primary-forest)" />
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                {topic.desc}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 10: GRAND PRE-FOOTER CLOSING CTA BANNER
           ========================================================================= */}
       <section className="landing-section-wrap" style={{ paddingBottom: '1rem' }}>
         <div className="grand-cta-banner-wrap">
