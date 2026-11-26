@@ -55,9 +55,44 @@ export function App() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [practiceConfig, setPracticeConfig] = useState({
-    type: 'practice',
-    language: null
+  const parsePracticeParams = (raw) => {
+    if (!raw || !raw.includes('?')) return null;
+    const params = new URLSearchParams(raw.split('?')[1]);
+    const langRaw = (params.get('lang') || params.get('language') || '').toLowerCase();
+    const durationRaw = parseInt(params.get('duration') || params.get('time') || '', 10);
+    const langMap = {
+      python: 'Python',
+      py: 'Python',
+      javascript: 'JavaScript',
+      js: 'JavaScript',
+      typescript: 'TypeScript',
+      ts: 'TypeScript',
+      react: 'React/JSX',
+      jsx: 'React/JSX',
+      cpp: 'C++',
+      'c++': 'C++',
+      java: 'Java',
+      html: 'HTML',
+      css: 'CSS',
+      go: 'Go',
+      golang: 'Go',
+      rust: 'Rust',
+      sql: 'SQL'
+    };
+    return {
+      language: langMap[langRaw] || null,
+      duration: !isNaN(durationRaw) && durationRaw > 0 ? durationRaw : null
+    };
+  };
+
+  const [practiceConfig, setPracticeConfig] = useState(() => {
+    const raw = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
+    const parsed = parsePracticeParams(raw);
+    return {
+      type: 'practice',
+      language: parsed?.language || null,
+      duration: parsed?.duration || null
+    };
   });
 
   const getVerifyCertId = () => {
@@ -88,10 +123,30 @@ export function App() {
     if (window.location.hash.replace('#', '') !== targetHash) {
       window.location.hash = targetHash;
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
 
   // Update document title dynamically for each route (SEO & UX)
   useEffect(() => {
+    if (currentView === 'practice' || currentView === 'coding') {
+      if (practiceConfig?.language) {
+        document.title = `${practiceConfig.language} Code Typing Practice & Speed Test | CodeTyper`;
+        return;
+      }
+      if (practiceConfig?.duration === 60) {
+        document.title = '1 Minute Typing Speed Test (WPM) | CodeTyper';
+        return;
+      }
+      if (practiceConfig?.duration === 180) {
+        document.title = '3 Minute Typing Endurance Test | CodeTyper';
+        return;
+      }
+      if (practiceConfig?.duration === 300) {
+        document.title = '5 Minute Typing Speed Assessment | CodeTyper';
+        return;
+      }
+    }
+
     const titles = {
       landing: 'CodeTyper — Free Code Typing Test & Developer Typing Practice with Certificate',
       practice: 'Code Typing Practice — Interactive Speed Test & Syntactic Training | CodeTyper',
@@ -117,13 +172,21 @@ export function App() {
     if (titles[currentView]) {
       document.title = titles[currentView];
     }
-  }, [currentView]);
+  }, [currentView, practiceConfig]);
 
   useEffect(() => {
     const handleHashChange = () => {
       const raw = window.location.hash.replace('#', '');
       let view = raw.split('?')[0];
       if (raw.startsWith('verify')) view = 'verify';
+      const parsed = parsePracticeParams(raw);
+      if (parsed && (parsed.language || parsed.duration)) {
+        setPracticeConfig((prev) => ({
+          ...prev,
+          language: parsed.language || prev.language,
+          duration: parsed.duration || prev.duration
+        }));
+      }
       if (view && view !== currentView) {
         navigateTo(view);
       }

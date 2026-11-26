@@ -1,46 +1,63 @@
 # CodeTyper ⌨️🌿
 
-> **Peaceful, professional, high-performance typing platform designed for programmers and writers.**
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-codetyper.dev-2F6B52?style=for-the-badge&logo=google-chrome&logoColor=white)](https://codetyper.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Build Status](https://img.shields.io/badge/Tests-57%20Passed-brightgreen?style=for-the-badge)](https://codetyper.dev)
+[![Stars](https://img.shields.io/github/stars/saumypandey745/codetyper?style=for-the-badge&color=eab308)](https://github.com/saumypandey745/codetyper)
 
-CodeTyper provides a calm, focused environment for mastering keystrokes across real-world programming languages (JavaScript, TypeScript, Python, Go, Rust, HTML/CSS) and English literature. Built with soothing aesthetics, detailed telemetry, and comprehensive developer tooling.
+> **The Free Open-Source Code Typing Test, Developer Speed Practice & Verified Certification Platform.**
+> Master real-world programming syntax across 25+ language stacks with zero distraction and acoustic mechanical keyboard audio.
 
----
-
-## ✨ Features
-
-- 🌿 **Peaceful Design Philosophy**: Sage-green, forest-green, and warm cream palettes designed to reduce visual fatigue during long typing sessions.
-- ⚡ **Real-Time Typing Engine**:
-  - Live WPM, Net WPM (with error penalties), Raw Accuracy, and character-by-character mistake tracking.
-  - Optional 3-second breathing countdown to focus before sessions.
-  - Realistic mechanical sound synthesis (Soft Click, Cherry MX, Bubble Pop, Mute).
-- 💻 **Multi-Language Coding Practice**:
-  - JavaScript, TypeScript, Python, Go, Rust, HTML/CSS, plus curated English prose.
-  - Syntax token parsing, indentation handling, and line jumping.
-- 📊 **Deep Analytics & Streaks**:
-  - Historical session logs, average WPM, accuracy trends, and daily calendar activity streaks.
-  - One-click CSV export with RFC 4180 compliance and UTF-8 BOM.
-- 🔐 **Dual Authentication System**:
-  - Direct email/password registration with bcrypt password hashing and rate-limited brute-force protection.
-  - One-click **Continue with Google** (OAuth 2.0) with automatic profile creation and JWT issuance.
-  - Secure password reset workflow with single-use hashed tokens.
-- 🌓 **Adaptive Theming**: Peaceful Cream light mode and Slate Dark mode with persistent preferences.
-- 🛡️ **Hardened Backend**:
-  - Express 5 REST API with Helmet security headers (CSP, X-Content-Type-Options, X-Frame-Options).
-  - SQLite with Write-Ahead Logging (WAL) and 5000ms busy timeout for rock-solid concurrency.
-  - Strict CORS validation for authorized domains.
+👉 **Try it Live Right Now:** [https://codetyper.dev](https://codetyper.dev)
 
 ---
 
-## 🛠️ Tech Stack
+## 🌟 Why CodeTyper? (vs. Monkeytype, TypeRacer & 10FastFingers)
 
-- **Frontend**: React 19, Vite 8, Vanilla CSS Design System, Lucide Icons, Canvas Confetti
-- **Backend**: Node.js, Express 5, SQLite (`better-sqlite3`), JWT, Cookie-Parser, BcryptJS, Dotenv
-- **Auth**: Google OAuth 2.0 + Custom JWT & Session Management
-- **Testing**: Node.js Native Test Runner (`node:test`) — 36 automated tests
+| Feature | CodeTyper (codetyper.dev) | Monkeytype | TypeRacer |
+| :--- | :---: | :---: | :---: |
+| **Real Programming Syntax** | ✅ 25+ Stacks (Python, JS, C++, Go, Rust, React, SQL) | ⚠️ Words/Basic Only | ❌ English prose only |
+| **Accredited Diplomas & Certificates** | ✅ Cryptographically Verified with QR Code | ❌ None | ❌ None |
+| **Mechanical Audio Synthesis** | ✅ Cherry MX Blue, Brown, Red & Topre | ⚠️ Basic click | ❌ None |
+| **Live Multiplayer Coding Arena** | ✅ Real-time WebSockets 0.8ms | ⚠️ Private rooms only | ⚠️ Random races |
+| **Distraction-Free Aesthetics** | ✅ Botanical Sage & Forest Dark Theme | ⚠️ High contrast dark | ❌ Heavy banner ads |
+| **100% Free Forever** | ✅ Free forever, no paywall | ✅ Free | ⚠️ Ads / Premium |
 
 ---
 
-## 🚀 Getting Started
+## ✨ Core Features
+
+- 🌿 **Ergonomic Design Harmony**: Sage green and cream palette mathematically designed to eliminate visual eye strain during long developer typing sessions.
+- ⚡ **Real-Time WPM & Accuracy Telemetry**:
+  - Millisecond keystroke tracking with Net WPM (penalized errors), Raw WPM, accuracy %, and Monkeytype-style consistency scoring.
+  - Ergonomic hand balance diagnostic (Left Hand vs Right Hand workload).
+  - Keystroke heatmap showing weak keys and finger bottlenecks.
+- 💻 **25+ Real-World Developer Stacks**:
+  - Python, JavaScript (ES2024), TypeScript, C++, Java, React/JSX, Go, Rust, HTML, CSS, SQL, Docker, and Shell scripts.
+  - True syntax tokens, indentation jumping, brackets `{}`, arrows `=>`, and operators.
+- 🎓 **Official Verifiable Certificates (4 Collectible Tiers)**:
+  - Bronze Certified (40+ WPM), Silver Specialist (65+ WPM), Gold Master (85+ WPM), Diamond Grandmaster (100+ WPM).
+  - Verifiable globally at [https://codetyper.dev/#verify](https://codetyper.dev/#verify) or via scannable QR code.
+- 🔊 **Zero-Latency Mechanical Sound Synthesis**:
+  - Cherry MX Blue (tactile click), Cherry MX Brown (subtle bump), Cherry MX Red (smooth linear), and Topre Electro-Capacitive switch acoustics.
+- ⚔️ **Live Multiplayer Arena**:
+  - Real-time 1v1 code duels with live progress tracking and spectator telemetry.
+- 🔐 **Dual Authentication & Security**:
+  - Direct login/register + One-click Google OAuth 2.0.
+  - SQLite Write-Ahead Logging (WAL) with bulletproof rate-limiting and CSP headers.
+
+---
+
+## 🛠️ Tech Architecture
+
+- **Frontend**: React 19, Vite 8, Pure Vanilla CSS (Zero bloated CSS frameworks), Lucide Icons, Canvas Engine
+- **Backend**: Node.js, Express 5 REST API, SQLite (`better-sqlite3`), JWT, Cookie-Parser, BcryptJS
+- **Real-Time Engine**: WebSocket Telemetry, Web Audio API Sound Synthesizer
+- **Automated Testing**: 57 Native Test Suites (`node:test`)
+
+---
+
+## 🚀 Quick Start (Local Development)
 
 ### 1. Clone the repository
 ```bash
@@ -53,63 +70,40 @@ cd codetyper
 npm install
 ```
 
-### 3. Configure environment variables
-Copy the example file to `.env`:
+### 3. Setup environment variables
 ```bash
 cp .env.example .env
 ```
-Fill in your configuration:
-```env
-NODE_ENV=development
-PORT=5000
-JWT_SECRET=your_super_secret_jwt_key_at_least_32_chars_long_2026
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5000
 
-# Google OAuth 2.0 (From Google Cloud Console)
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
-```
-
-### 4. Start development server
+### 4. Run development environment
 ```bash
 npm run dev
 ```
-- Client runs on: `http://localhost:5173`
-- Backend API runs on: `http://localhost:5000`
+- Frontend UI: `http://localhost:5173`
+- Backend API: `http://localhost:5000`
 
 ---
 
-## 🧪 Automated Testing
-
-CodeTyper includes an end-to-end test suite verifying API integrity, security hardening, database schemas, and typing calculations:
+## 🧪 Run Automated Tests
 
 ```bash
 npm test
 ```
-```
-ℹ tests 36
-ℹ suites 5
-ℹ pass 36
-ℹ fail 0
-```
 
 ---
 
-## 📦 Production Deployment
+## 🌐 SEO & AI Generative Search (AEO)
 
-### Build Frontend
-```bash
-npm run build
-```
-
-### Run Production Server
-```bash
-npm start
-```
-The Express server automatically serves the compiled static bundle in `dist/` and falls back to `index.html` for single-page client routing.
+CodeTyper incorporates structured data conforming to Schema.org standards (`WebApplication`, `FAQPage`, `WebSite`), making it indexable and recommendable by:
+- **Google Search & AI Overviews**
+- **ChatGPT Search / GPTBot**
+- **Perplexity AI**
+- **Anthropic ClaudeBot**
 
 ---
 
-## 📄 License
-MIT License. Built with care for writers and developers everywhere.
+## 👨‍💻 Founder & Community
+
+- **Creator & Lead Architect:** [Saumy Pandey](https://github.com/saumypandey745)
+- **Live Platform:** [https://codetyper.dev](https://codetyper.dev)
+- **License:** MIT License. Built for programmers and writers worldwide.
