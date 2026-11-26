@@ -147,7 +147,7 @@ describe('Advanced Features: Custom Snippets API Suite', () => {
     const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login: 'demo@codetyper.dev', password: 'Peaceful_Demo_2026' })
+      body: JSON.stringify({ login: 'saumypandey745@gmail.com', password: 'Saumy_2026!' })
     });
     const loginData = await loginRes.json();
     demoToken = loginData.token;

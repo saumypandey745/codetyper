@@ -45,7 +45,7 @@ describe('Security Hardening Suite (P0 & P1)', () => {
     const res = await fetch(`${baseUrl}/api/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'demo@codetyper.dev' })
+      body: JSON.stringify({ email: 'saumypandey745@gmail.com' })
     });
     assert.equal(res.status, 200);
     const data = await res.json();
@@ -75,7 +75,7 @@ describe('Security Hardening Suite (P0 & P1)', () => {
     const tokenHash = crypto.createHash('sha256').update(expiredToken).digest('hex');
     const pastDate = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
-    const user = db.prepare('SELECT id FROM users WHERE email = ?').get('demo@codetyper.dev');
+    const user = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get('saumypandey745@gmail.com');
     db.prepare(`
       INSERT INTO password_resets (user_id, token_hash, expires_at)
       VALUES (?, ?, ?)
@@ -245,7 +245,7 @@ describe('Security Hardening Suite (P0 & P1)', () => {
     const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login: 'demo@codetyper.dev', password: 'Peaceful_Demo_2026' })
+      body: JSON.stringify({ login: 'saumypandey745@gmail.com', password: 'Saumy_2026!' })
     });
     const { token } = await loginRes.json();
 
@@ -257,8 +257,8 @@ describe('Security Hardening Suite (P0 & P1)', () => {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        full_name: 'Sarah Jenkins',
-        username: 'sarah_coder',
+        full_name: 'Saumy Pandey',
+        username: 'saumypandey',
         avatar_url: 'javascript:alert(1)'
       })
     });
@@ -272,8 +272,8 @@ describe('Security Hardening Suite (P0 & P1)', () => {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        full_name: 'Sarah Jenkins',
-        username: 'sarah_coder',
+        full_name: 'Saumy Pandey',
+        username: 'saumypandey',
         avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb'
       })
     });

@@ -30,11 +30,20 @@ describe('Community Feedback & Testimonials Feature Suite', () => {
     });
     const data = await res.json();
     adminToken = data.token;
+
+    // Seed isolated test featured testimonials
+    db.prepare(`
+      INSERT INTO feedback_reports (name, email, subject, message, status, rating, is_featured, display_role)
+      VALUES 
+        ('Ananya Rao', 'test.ananya@test.dev', 'Feedback', 'The curly braces and arrow function drills are incredible.', 'resolved', 5, 1, 'FinTech Systems Engineer'),
+        ('Marcus Schmidt', 'test.marcus@test.dev', 'Feedback', 'Zero input latency and Cherry MX Blue mechanical audio feel amazing.', 'resolved', 5, 1, 'Systems Developer'),
+        ('Devon Park', 'test.devon@test.dev', 'Feedback', 'The cryptographic certificates are so clean for LinkedIn.', 'resolved', 5, 1, 'Competitive Typist')
+    `).run();
   });
 
   after(async () => {
     try {
-      db.prepare("DELETE FROM feedback_reports WHERE email IN ('nadia.chen@crypto.org', 'alexandra.vance@fintech-security.dev')").run();
+      db.prepare("DELETE FROM feedback_reports WHERE email IN ('nadia.chen@crypto.org', 'alexandra.vance@fintech-security.dev', 'test.ananya@test.dev', 'test.marcus@test.dev', 'test.devon@test.dev')").run();
     } catch {}
     if (server) {
       await new Promise((resolve) => server.close(resolve));

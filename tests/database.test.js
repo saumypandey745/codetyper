@@ -26,18 +26,16 @@ describe('Database & Seed Data Integrity Suite', () => {
     assert.ok(englishCount >= 10, `Expected at least 10 English passages, found ${englishCount}`);
   });
 
-  it('contains seeded default demo and admin accounts', () => {
-    const adminUser = db.prepare("SELECT * FROM users WHERE role = 'admin'").get();
-    assert.ok(adminUser, 'Admin user account should be seeded');
-    assert.equal(adminUser.username, 'admin_alex');
-    assert.equal(adminUser.email, 'admin@codetyper.dev');
-
-    const demoUser = db.prepare("SELECT * FROM users WHERE email = 'demo@codetyper.dev'").get();
-    assert.ok(demoUser, 'Demo user account should be seeded');
-    assert.equal(demoUser.username, 'sarah_coder');
-
+  it('contains seeded Saumy admin account and cleans up legacy dummy accounts', () => {
     const saumyUser = db.prepare("SELECT * FROM users WHERE LOWER(email) = 'saumypandey745@gmail.com'").get();
-    assert.ok(saumyUser, 'Saumy user account should be seeded');
+    assert.ok(saumyUser, 'Saumy admin account must be seeded');
+    assert.equal(saumyUser.username, 'saumypandey');
     assert.equal(saumyUser.role, 'admin');
+
+    const legacyDemo = db.prepare("SELECT * FROM users WHERE email = 'demo@codetyper.dev'").get();
+    assert.equal(legacyDemo, undefined, 'Legacy demo dummy account must be cleaned up');
+
+    const legacyAdmin = db.prepare("SELECT * FROM users WHERE email = 'admin@codetyper.dev'").get();
+    assert.equal(legacyAdmin, undefined, 'Legacy admin dummy account must be cleaned up');
   });
 });

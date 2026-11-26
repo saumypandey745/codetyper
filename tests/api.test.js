@@ -34,20 +34,20 @@ describe('CodeTyper API Integration Suite', () => {
     assert.ok(data.uptime !== undefined);
   });
 
-  it('POST /api/auth/login logs in seeded demo user', async () => {
+  it('POST /api/auth/login logs in seeded Saumy admin account via username', async () => {
     const res = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        login: 'demo@codetyper.dev',
-        password: 'Peaceful_Demo_2026'
+        login: 'saumypandey',
+        password: 'Saumy_2026!'
       })
     });
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.ok(data.token, 'Token must be returned');
-    assert.equal(data.user.email, 'demo@codetyper.dev');
-    assert.equal(data.user.username, 'sarah_coder');
+    assert.equal(data.user.email, 'saumypandey745@gmail.com');
+    assert.equal(data.user.username, 'saumypandey');
     demoToken = data.token;
   });
 
@@ -113,7 +113,7 @@ describe('CodeTyper API Integration Suite', () => {
     });
     assert.equal(res.status, 200);
     const data = await res.json();
-    assert.equal(data.user.email, 'demo@codetyper.dev');
+    assert.equal(data.user.email, 'saumypandey745@gmail.com');
     assert.ok(data.settings, 'User settings must be returned');
     assert.ok(data.statistics, 'User stats must be returned');
   });
@@ -228,8 +228,8 @@ describe('CodeTyper API Integration Suite', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        login: 'admin@codetyper.dev',
-        password: 'Peaceful_Admin_2026'
+        login: 'saumypandey745@gmail.com',
+        password: 'Saumy_2026!'
       })
     });
     const adminData = await adminLoginRes.json();
