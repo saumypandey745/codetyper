@@ -621,3 +621,26 @@
 [data-theme="matrix-neon"] .admin-webhook-logs-table th {
   background: rgba(0, 0, 0, 0.25);
 }
+
+/* ==========================================================================
+   PROMOTIONAL SPECIMEN CERTIFICATES SHOWCASE (4 TIERS)
+   ========================================================================== */
+.admin-promo-cert-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+
+.admin-promo-cert-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  border-color: var(--color-primary-forest);
+}
+
+[data-theme="dark"] .admin-promo-cert-card:hover,
+[data-theme="catppuccin"] .admin-promo-cert-card:hover,
+[data-theme="dracula"] .admin-promo-cert-card:hover,
+[data-theme="tokyo-night"] .admin-promo-cert-card:hover,
+[data-theme="nord"] .admin-promo-cert-card:hover,
+[data-theme="matrix-neon"] .admin-promo-cert-card:hover {
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55), 0 0 20px rgba(47, 107, 82, 0.2);
+}
+

@@ -142,15 +142,18 @@ const CERT_THEMES = {
   }
 };
 
-export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTest }) {
+export function TypingCertificateModal({ isOpen = true, onClose, result, certificate, onStartCertTest }) {
   const canvasRef = useRef(null);
   const { user, userStats } = useAuth();
   const toast = useToast();
 
-  const defaultName = user ? (user?.display_name || user?.username || 'Saumy Pandey') : 'DEMO SPECIMEN - JOHNATHAN DOE';
+  const payload = certificate || result || {};
+  const isSpecimenOrAdmin = Boolean(user?.role === 'admin' || payload?.isAdminPreview || payload?.isSpecimen);
+
+  const defaultName = payload?.recipientName || payload?.recipient_name || (user ? (user?.display_name || user?.username || 'Saumy Pandey') : 'Saumy Pandey');
   const [recipientName, setRecipientName] = useState(defaultName);
-  const [titleRole, setTitleRole] = useState(result?.titleRole || 'Touch-Typing Specialist');
-  const [activeTheme, setActiveTheme] = useState('imperial-ivory');
+  const [titleRole, setTitleRole] = useState(payload?.titleRole || payload?.title_role || 'Touch-Typing Specialist');
+  const [activeTheme, setActiveTheme] = useState(payload?.theme || 'royal-obsidian');
   const [signatureVariant, setSignatureVariant] = useState('calligraphy'); // 'calligraphy' | 'lowercase'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [tilt, setTilt] = useState({ rx: 0, ry: 0, glareX: 50, glareY: 50 });
@@ -172,14 +175,30 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     }
   }, [defaultName, recipientName]);
 
-  const eligibility = useMemo(() => checkCertificateEligibility(result), [result]);
+  const eligibility = useMemo(() => {
+    if (isSpecimenOrAdmin && payload?.isEligible !== false) {
+      return {
+        isEligible: true,
+        checks: [],
+        passedCount: 4,
+        totalCount: 4,
+        progressPercent: 100,
+        tierTitle: payload?.tierTitle || payload?.tier_title || 'Certified Typist',
+        tierBadge: payload?.tierBadge || payload?.tier_badge || 'Gold',
+        tierGrade: payload?.tierGrade || payload?.tier_grade || 'Grade A',
+        tierPercentile: 'Standard Professional'
+      };
+    }
+    return checkCertificateEligibility(result);
+  }, [result, isSpecimenOrAdmin, payload]);
+
   const [activeTab, setActiveTab] = useState(eligibility.isEligible ? 'certificate' : 'requirements');
 
-  const wpm = result?.netWpm !== undefined ? Number(result.netWpm) : 60;
-  const grossWpm = result?.grossWpm !== undefined ? Number(result.grossWpm) : wpm;
-  const accuracy = result?.accuracy !== undefined ? Number(result.accuracy) : 100;
-  const duration = result?.durationSeconds !== undefined ? Math.round(Number(result.durationSeconds)) : 60;
-  const language = result?.language || 'All Disciplines (English & Code)';
+  const wpm = payload?.netWpm !== undefined ? Number(payload.netWpm) : (payload?.net_wpm !== undefined ? Number(payload.net_wpm) : 60);
+  const grossWpm = payload?.grossWpm !== undefined ? Number(payload.grossWpm) : (payload?.gross_wpm !== undefined ? Number(payload.gross_wpm) : wpm);
+  const accuracy = payload?.accuracy !== undefined ? Number(payload.accuracy) : 100;
+  const duration = payload?.durationSeconds !== undefined ? Math.round(Number(payload.durationSeconds)) : (payload?.duration_seconds !== undefined ? Math.round(Number(payload.duration_seconds)) : 60);
+  const language = payload?.discipline || payload?.language || 'All Disciplines (English & Code)';
 
   const userLevel = useMemo(() => {
     if (userStats?.level && userStats.level > 1) return userStats.level;
@@ -209,7 +228,10 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   }, [userLevel, wpm, accuracy, userStats, duration]);
 
   const currentTier = themeTiers.tiers[activeTheme];
-  const isCurrentThemeUnlocked = Boolean(user && currentTier?.isUnlocked && eligibility.isEligible);
+  const isCurrentThemeUnlocked = Boolean(
+    isSpecimenOrAdmin ||
+    (user && currentTier?.isUnlocked && eligibility.isEligible)
+  );
   const isBlurredLockedTheme = Boolean(activeTheme !== 'imperial-ivory' && !isCurrentThemeUnlocked);
 
   // When eligibility changes, update activeTab accordingly
@@ -238,14 +260,14 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
     setActiveTheme(themeId);
     soundEngine.playWaxSealStamp();
     const tierMeta = themeTiers.tiers[themeId];
-    if (tierMeta && !tierMeta.isUnlocked) {
+    if (tierMeta && !tierMeta.isUnlocked && !isSpecimenOrAdmin) {
       toast.info(`Previewing locked theme: ${tierMeta.name} (${tierMeta.passedCount}/4 Tasks Cleared). Complete its tasks to unlock official downloading.`);
     }
   };
 
   const { tierTitle, tierGrade, tierBadge } = eligibility;
 
-  const certId = useRef(result?.certId || `CT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`).current;
+  const certId = useRef(payload?.certId || payload?.cert_id || `CT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`).current;
   const dateStr = useMemo(() => {
     return new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -256,7 +278,8 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   // Auto-record certificate in ledger database
   useEffect(() => {
-    if (isOpen && eligibility.isEligible) {
+    if (payload?.isSpecimen || payload?.isAdminPreview) return; // Do not spam ledger with specimens
+    if (isOpen && eligibility.isEligible && user && certId) {
       api.certificate.issue({
         certId,
         recipientName,
@@ -266,14 +289,14 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
         grossWpm,
         accuracy,
         durationSeconds: duration,
-        totalCharacters: result?.totalCharacters || 250,
+        totalCharacters: payload?.totalCharacters || payload?.total_characters || 250,
         tierTitle,
         tierBadge,
         tierGrade,
         theme: activeTheme
       }).catch((e) => console.warn('Could not auto-register certificate in ledger', e));
     }
-  }, [isOpen, eligibility.isEligible, certId, recipientName, titleRole, language, wpm, grossWpm, accuracy, duration, tierTitle, tierBadge, tierGrade, activeTheme]);
+  }, [isOpen, eligibility.isEligible, certId, recipientName, titleRole, language, wpm, grossWpm, accuracy, duration, tierTitle, tierBadge, tierGrade, activeTheme, payload?.isSpecimen, payload?.isAdminPreview, user]);
 
   // --- DRAW ULTRA HIGH-DEFINITION 2400x1600 ACCREDITED DIPLOMA ---
   const drawCertificate = useCallback(() => {
@@ -905,7 +928,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
 
   // --- ACTIONS ---
   const handleDownload = () => {
-    if (!user) {
+    if (!user && !isSpecimenOrAdmin) {
       toast.info('🔒 Please Sign Up or Log In first to claim, certify, and download your official 4K accredited diploma!');
       if (typeof window !== 'undefined') {
         window.location.hash = '#signup';
@@ -928,7 +951,7 @@ export function TypingCertificateModal({ isOpen, onClose, result, onStartCertTes
   };
 
   const handlePrint = () => {
-    if (!user) {
+    if (!user && !isSpecimenOrAdmin) {
       toast.info('🔒 Please Sign Up or Log In first to print or export your official accredited diploma!');
       if (typeof window !== 'undefined') {
         window.location.hash = '#signup';
