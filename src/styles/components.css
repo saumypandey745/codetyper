@@ -804,39 +804,8 @@
   background: var(--color-primary-dark, #245440);
 }
 
-.gl-popup-btn-secondary {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
-}
-.gl-popup-btn-secondary:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-primary-sage);
-  color: var(--color-text-primary);
-}
 
-/* Footer note */
-.gl-popup-footer-note {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  text-align: center;
-  margin: 0;
-}
 
-.gl-popup-link {
-  background: none;
-  border: none;
-  color: var(--color-primary-forest);
-  font-weight: 600;
-  font-size: 0.75rem;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.gl-popup-link:hover {
-  opacity: 0.8;
-}
 
 /* Mobile: popup full width at bottom */
 @media (max-width: 480px) {
