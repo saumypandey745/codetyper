@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Sun, Moon, Search, Volume2, VolumeX, LogOut, User, Settings, Check, BookOpen, Code2, Timer } from 'lucide-react';
+import { LogoutConfirmModal } from '../common/LogoutConfirmModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -9,6 +10,7 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch, currentView 
   const { settings, toggleTheme, updateSetting } = useSettings();
   const toast = useToast();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const dropdownRef = useRef(null);
   const themeMenuRef = useRef(null);
@@ -27,11 +29,22 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch, currentView 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
+  // Step 1: dropdown band karo, confirmation modal dikhao
+  const handleLogoutRequest = () => {
     setDropdownOpen(false);
+    setShowLogoutConfirm(true);
+  };
+
+  // Step 2: user ne confirm kiya — ab actual logout
+  const handleLogoutConfirmed = async () => {
+    setShowLogoutConfirm(false);
     await logout();
-    toast.info('You have been logged out.');
+    toast.info('You have been signed out.');
     onNavigate('landing');
+  };
+
+  const handleLogoutCancelled = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -254,7 +267,7 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch, currentView 
                 <button
                   className="btn btn-ghost btn-sm"
                   style={{ justifyContent: 'flex-start', width: '100%', color: 'var(--color-error)' }}
-                  onClick={handleLogout}
+                  onClick={handleLogoutRequest}
                 >
                   <LogOut size={15} />
                   <span>Sign Out</span>
@@ -273,6 +286,13 @@ export function Header({ onToggleSidebar, onNavigate, onOpenSearch, currentView 
           </div>
         )}
       </div>
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutConfirm}
+        onConfirm={handleLogoutConfirmed}
+        onCancel={handleLogoutCancelled}
+        userName={user?.full_name}
+      />
     </header>
   );
 }

@@ -673,3 +673,300 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ============================================================
+   GOOGLE LOGIN SMART POPUP (Landing Page)
+   ============================================================ */
+.gl-popup-wrapper {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 320px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18), 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem 1.25rem 1rem;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  /* Start hidden — below screen */
+  opacity: 0;
+  transform: translateY(28px) scale(0.96);
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.gl-popup-wrapper.gl-popup-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Close button */
+.gl-popup-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-bg-hover, rgba(0,0,0,0.06));
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.gl-popup-close:hover {
+  background: var(--color-error-bg, rgba(239,68,68,0.1));
+  color: var(--color-error, #ef4444);
+}
+
+/* Header: google icon + title */
+.gl-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.gl-popup-google-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--color-bg-hover, rgba(0,0,0,0.04));
+  border: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.gl-popup-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.gl-popup-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.gl-popup-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* Description */
+.gl-popup-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Buttons */
+.gl-popup-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  border: 1px solid transparent;
+}
+.gl-popup-btn:hover {
+  transform: translateY(-1px);
+}
+.gl-popup-btn:active {
+  transform: translateY(0);
+}
+
+.gl-popup-btn-primary {
+  background: var(--color-primary-forest, #2f6b52);
+  color: #fff;
+  border-color: var(--color-primary-forest, #2f6b52);
+}
+.gl-popup-btn-primary:hover {
+  background: var(--color-primary-dark, #245440);
+}
+
+.gl-popup-btn-secondary {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+.gl-popup-btn-secondary:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary-sage);
+  color: var(--color-text-primary);
+}
+
+/* Footer note */
+.gl-popup-footer-note {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.gl-popup-link {
+  background: none;
+  border: none;
+  color: var(--color-primary-forest);
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.gl-popup-link:hover {
+  opacity: 0.8;
+}
+
+/* Mobile: popup full width at bottom */
+@media (max-width: 480px) {
+  .gl-popup-wrapper {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    bottom: 1rem;
+  }
+}
+
+/* ============================================================
+   LOGOUT CONFIRMATION MODAL
+   ============================================================ */
+.logout-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeInBackdrop 0.2s ease;
+  padding: 1rem;
+}
+
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.logout-modal-card {
+  position: relative;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  padding: 2rem 2rem 1.75rem;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  animation: scaleInModal 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleInModal {
+  from { opacity: 0; transform: scale(0.9) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Close X in corner */
+.logout-modal-x {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.logout-modal-x:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* Icon circle */
+.logout-modal-icon-wrap {
+  margin-bottom: 0.4rem;
+}
+
+.logout-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--color-error-bg, rgba(239,68,68,0.1));
+  color: var(--color-error, #ef4444);
+  margin: 0 auto;
+}
+
+/* Text */
+.logout-modal-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.logout-modal-desc {
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0.1rem 0 0.6rem;
+  max-width: 280px;
+}
+
+/* Actions row */
+.logout-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.logout-modal-actions .btn {
+  flex: 1;
+}
+
+/* Red confirm button */
+.logout-modal-confirm-btn {
+  background: var(--color-error, #ef4444);
+  color: #fff;
+  border: 1px solid var(--color-error, #ef4444);
+}
+.logout-modal-confirm-btn:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
