@@ -32,7 +32,9 @@ import {
   SlidersHorizontal,
   Minimize2,
   Maximize2,
-  ChevronUp
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
@@ -159,6 +161,54 @@ export function PracticePage({
       return next;
     });
   };
+
+  // Command Deck horizontal scroller & mouse controls
+  const commandDeckRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkDeckScroll = useCallback(() => {
+    const el = commandDeckRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 4;
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(hasOverflow && el.scrollLeft < el.scrollWidth - el.clientWidth - 6);
+  }, []);
+
+  const handleScrollDeck = (amount) => {
+    const el = commandDeckRef.current;
+    if (!el) return;
+    el.scrollBy({ left: amount, behavior: 'smooth' });
+    setTimeout(checkDeckScroll, 250);
+  };
+
+  useEffect(() => {
+    const el = commandDeckRef.current;
+    if (!el) return;
+
+    checkDeckScroll();
+    const raf = requestAnimationFrame(checkDeckScroll);
+    window.addEventListener('resize', checkDeckScroll);
+
+    // Mouse wheel horizontal scroll listener: converts vertical mouse wheel into smooth horizontal scroll
+    const onWheel = (e) => {
+      if (el.scrollWidth > el.clientWidth) {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY * 0.85;
+          checkDeckScroll();
+        }
+      }
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', checkDeckScroll);
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [checkDeckScroll, practiceType, mode, duration, wordCount]);
 
   // Result state
   const [completedResult, setCompletedResult] = useState(null);
@@ -603,7 +653,26 @@ export function PracticePage({
       {/* Space-Saving Minimalist Toolbar (Focus Mode) */}
       {isCompactMode ? (
         <div className="compact-command-deck-container">
-          <div className="compact-command-deck" role="toolbar" aria-label="Practice Controls">
+          <div className="compact-command-deck-scroll-wrapper">
+            {canScrollLeft && (
+              <button
+                type="button"
+                className="deck-scroll-arrow-btn left"
+                onClick={() => handleScrollDeck(-220)}
+                title="Scroll options left (or use mouse wheel / scroller)"
+                aria-label="Scroll options left"
+              >
+                <ChevronLeft size={16} />
+              </button>
+            )}
+
+            <div
+              ref={commandDeckRef}
+              className="compact-command-deck"
+              role="toolbar"
+              aria-label="Practice Controls"
+              onScroll={checkDeckScroll}
+            >
             {/* Primary Mode Segmented Switcher */}
             <div className="compact-modes-pill" role="tablist" aria-label="Practice Modes">
               <button
@@ -818,6 +887,18 @@ export function PracticePage({
                 <span>Options ▾</span>
               </button>
             </div>
+
+            {canScrollRight && (
+              <button
+                type="button"
+                className="deck-scroll-arrow-btn right"
+                onClick={() => handleScrollDeck(220)}
+                title="Scroll options right (or use mouse wheel / scroller)"
+                aria-label="Scroll options right"
+              >
+                <ChevronRight size={16} />
+              </button>
+            )}
           </div>
 
           {/* Dedicated Sub-bar for Coding: Popular Language Quick Chips */}

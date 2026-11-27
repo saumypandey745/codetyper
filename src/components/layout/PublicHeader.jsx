@@ -41,7 +41,6 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             onClick={(e) => handleLinkClick(e, '/practice')}
             title="Interactive Typing Practice"
           >
-            <BookOpen size={15} />
             <span>Practice</span>
           </a>
           <a
@@ -51,7 +50,6 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             onClick={(e) => handleLinkClick(e, '/coding-typing-test')}
             title="Coding Practice (25+ Languages)"
           >
-            <Code2 size={15} />
             <span>Code Test</span>
           </a>
           <a
@@ -61,7 +59,6 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             onClick={(e) => handleLinkClick(e, '/typing-test')}
             title="Speed Typing Test"
           >
-            <Timer size={15} />
             <span>Typing Test</span>
           </a>
           <a
@@ -71,7 +68,6 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             onClick={(e) => handleLinkClick(e, '/wpm-calculator')}
             title="WPM & Accuracy Calculator"
           >
-            <Calculator size={15} />
             <span>WPM Calculator</span>
           </a>
           <a
@@ -81,7 +77,6 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             onClick={(e) => handleLinkClick(e, '/certificate')}
             title="Verified Typing Certificates"
           >
-            <Award size={15} />
             <span>Certificates</span>
           </a>
           <a
@@ -127,6 +122,7 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
           ) : (
             <div className="header-auth-group">
               <a
+                id="header-signin-btn"
                 href="/login"
                 className="btn btn-ghost btn-sm"
                 onClick={(e) => handleLinkClick(e, '/login')}
@@ -135,6 +131,7 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
                 Sign In
               </a>
               <a
+                id="header-signup-btn"
                 href="/signup"
                 className="btn btn-primary btn-sm"
                 onClick={(e) => handleLinkClick(e, '/signup')}

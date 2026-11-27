@@ -867,29 +867,35 @@
 }
 
 /* ==========================================================================
-   Google One Tap Native-Style Professional Card
+   Google One Tap Native-Style Card — Ultra-Compact Minimum Space
    ========================================================================== */
 .gl-google-card {
   position: fixed;
   top: 72px;
-  right: 24px;
-  width: 375px;
+  right: 20px;
+  width: 328px;
   max-width: calc(100vw - 32px);
-  background: var(--color-bg-surface, #202124);
-  border: 1px solid var(--color-border, #3c4043);
+  background: var(--color-bg-surface, #ffffff);
+  border: 1px solid var(--color-border, #dadce0);
   border-radius: 12px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  padding: 1rem 1.15rem 1.15rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 8px 12px 10px 12px;
   z-index: 99999;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
   opacity: 0;
-  transform: translateY(-10px) scale(0.98);
+  transform: translateY(-8px) scale(0.98);
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+[data-theme="dark"] .gl-google-card {
+  background: #202124;
+  border-color: #3c4043;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .gl-google-card.gl-google-card-visible {
@@ -902,51 +908,96 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  height: 20px;
+}
+
+.gl-google-card-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.gl-google-svg {
+  flex-shrink: 0;
 }
 
 .gl-google-card-title {
-  font-size: 0.85rem;
+  font-size: 0.74rem;
   font-weight: 500;
-  color: var(--color-text-primary, #e8eaed);
+  color: var(--color-text-secondary, #5f6368);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .gl-google-card-title {
+  color: #bdc1c6;
 }
 
 .gl-google-card-close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--color-text-muted, #9aa0a6);
+  color: var(--color-text-muted, #70757a);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  padding: 0;
 }
 
 .gl-google-card-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text-primary, #ffffff);
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--color-text-primary, #202124);
+}
+
+[data-theme="dark"] .gl-google-card-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.gl-google-card-divider {
+  height: 1px;
+  background: var(--color-border-subtle, #e8eaed);
+  margin: 6px 0 7px 0;
+}
+
+[data-theme="dark"] .gl-google-card-divider {
+  background: #3c4043;
+}
+
+.gl-google-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .gl-google-card-account {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0.35rem;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
   cursor: pointer;
-  border-radius: 8px;
+  padding: 2px 4px;
+  border-radius: 6px;
   transition: background 0.15s;
 }
+
 .gl-google-card-account:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .gl-google-card-account:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .gl-google-card-avatar {
-  width: 36px;
-  height: 36px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #7c3aed;
   color: #ffffff;
@@ -954,7 +1005,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.75rem;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -968,55 +1019,73 @@
 .gl-google-card-account-text {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   overflow: hidden;
   text-align: left;
 }
 
 .gl-google-card-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-primary, #e8eaed);
-  line-height: 1.3;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #202124);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .gl-google-card-name {
+  color: #e8eaed;
 }
 
 .gl-google-card-email {
-  font-size: 0.78rem;
-  color: var(--color-text-muted, #9aa0a6);
-  line-height: 1.2;
+  font-size: 0.67rem;
+  color: var(--color-text-muted, #5f6368);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .gl-google-card-email {
+  color: #9aa0a6;
 }
 
 .gl-google-card-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 40px;
+  height: 28px;
+  padding: 0 11px;
   background: #1a73e8;
   color: #ffffff;
   border: none;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  border-radius: 14px;
+  font-size: 0.74rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 
 .gl-google-card-btn:hover {
-  background: #1b66c9;
+  background: #1765c9;
+  box-shadow: 0 1px 3px rgba(26, 115, 232, 0.35);
 }
 
 .gl-google-card-btn:active {
-  transform: scale(0.99);
+  transform: scale(0.98);
 }
 
-/* Mobile: popup full width at bottom */
+/* Mobile: popup below header */
 @media (max-width: 480px) {
   .gl-google-card {
-    top: auto;
-    bottom: 16px;
-    right: 16px;
-    left: 16px;
-    width: auto;
+    top: 72px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
   }
   .gl-popup-wrapper {
     left: 0.75rem;
