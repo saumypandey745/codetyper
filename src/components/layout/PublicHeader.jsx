@@ -16,8 +16,7 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
   };
 
   return (
-    <>
-      <header className="public-header">
+    <header className="public-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <a
             id="brand-logo-btn"
@@ -146,10 +145,7 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             </div>
           )}
 
-
         </div>
-      </header>
-
-    </>
+    </header>
   );
 }
