@@ -245,6 +245,190 @@ Test your coding typing speed for free across 25+ programming languages and earn
     });
   };
 
+  const renderPromotionalCertificatesSection = () => (
+    <div className="card admin-promo-cert-section" style={{ padding: '1.5rem', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg, 12px)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1.35rem' }}>🏆</span>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
+              Official Certificates (4 Collectible Tiers)
+            </h3>
+            <span className="badge badge-sage" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+              Marketing &amp; Download Kit
+            </span>
+          </div>
+          <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+            Ye charon certificates aapke promotion aur marketing ke liye hain. Yahan se direct dekh sakte hain aur Ultra HD (4K) mein download kar sakte hain.
+          </p>
+        </div>
+
+        {/* Master Control: Customize Name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-bg-subtle, rgba(255,255,255,0.04))', padding: '0.45rem 0.8rem', borderRadius: 'var(--radius-md, 8px)', border: '1px solid var(--color-border)' }}>
+            <UserCheck size={16} color="var(--color-primary-forest)" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+              Candidate Name:
+            </span>
+            <input
+              type="text"
+              value={promoRecipientName}
+              onChange={(e) => setPromoRecipientName(e.target.value)}
+              placeholder="Saumy Pandey"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--color-text-primary)',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                outline: 'none',
+                minWidth: '150px'
+              }}
+              title="Change name displayed on certificates"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 4 Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+        {promotionalCertificates.map((tier) => (
+          <div
+            key={tier.id}
+            className="admin-promo-cert-card"
+            style={{
+              borderRadius: 'var(--radius-lg, 12px)',
+              border: '1px solid var(--color-border)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: 'var(--color-bg-soft, rgba(0,0,0,0.2))'
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                background: tier.bgGradient,
+                padding: '1.25rem 1rem',
+                color: tier.theme === 'imperial-ivory' ? '#1e293b' : '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                boxShadow: 'inset 0 -10px 20px rgba(0,0,0,0.15)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    backgroundColor: tier.theme === 'imperial-ivory' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.18)',
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '20px'
+                  }}
+                >
+                  {tier.tierBadge}
+                </span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.9 }}>
+                  {tier.tierGrade}
+                </span>
+              </div>
+
+              <h4 style={{ margin: '0.4rem 0 0.1rem 0', fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+                {tier.tierTitle}
+              </h4>
+              <span style={{ fontSize: '0.75rem', opacity: 0.85, fontWeight: 500 }}>
+                Theme: {tier.themeName}
+              </span>
+            </div>
+
+            {/* Card Body */}
+            <div style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    padding: '0.3rem 0.65rem',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <span style={{ fontWeight: 800, fontSize: '1rem', color: tier.themeAccent }}>
+                    {tier.wpm.toFixed(1)}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                    WPM
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    padding: '0.3rem 0.65rem',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>
+                    {tier.accuracy.toFixed(1)}%
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    accuracy
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.2rem' }}>
+                  Curriculum Stack:
+                </div>
+                <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--color-text-secondary)', lineHeight: 1.35 }}>
+                  {tier.discipline}
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <ShieldCheck size={14} color="var(--color-primary-forest)" />
+                <span>Signed by Founder Saumy Pandey</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ marginTop: 'auto', display: 'flex', gap: '0.5rem', paddingTop: '0.5rem' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', fontWeight: 700 }}
+                  onClick={() => handleOpenPromoCert(tier)}
+                  title="View full certificate and download"
+                >
+                  <Eye size={15} />
+                  <span>View</span>
+                </button>
+
+                <button
+                  className="btn btn-outline btn-sm"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', fontWeight: 700, borderColor: tier.themeAccent, color: tier.themeAccent }}
+                  onClick={() => handleOpenPromoCert(tier)}
+                  title="Download Certificate"
+                >
+                  <Download size={15} />
+                  <span>Download</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
 
   // Feedback & Reports Tab State
   const [feedbackList, setFeedbackList] = useState([]);
@@ -1636,6 +1820,11 @@ Test your coding typing speed for free across 25+ programming languages and earn
             </div>
           </div>
 
+          {/* ========================================================================= */}
+          {/* 4 OFFICIAL CERTIFICATES (DIRECTLY ON ADMIN HOMEPAGE) */}
+          {/* ========================================================================= */}
+          {renderPromotionalCertificatesSection()}
+
           {/* 2-Column Grid: Infrastructure & Language Distribution vs Quick Actions & Recent Audits */}
           <div className="admin-overview-grid">
             {/* Left Column (2fr) */}
@@ -2888,211 +3077,9 @@ Test your coding typing speed for free across 25+ programming languages and earn
           </div>
 
           {/* ========================================================================= */}
-          {/* MARKETING & PROMOTIONAL SPECIMEN CERTIFICATES (4 OFFICIAL TIERS) */}
+          {/* 4 OFFICIAL CERTIFICATES (PROMOTIONAL SUITE) */}
           {/* ========================================================================= */}
-          <div className="admin-promo-cert-section card" style={{ padding: '1.5rem', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg, 12px)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '1.35rem' }}>🏆</span>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-                    Promotional &amp; Marketing Showcase Suite (4 Official Tiers)
-                  </h3>
-                  <span className="badge badge-sage" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                    4K Specimen Asset Kit
-                  </span>
-                </div>
-                <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)', maxWidth: '780px' }}>
-                  Download ultra-high resolution (2400x1600 4K) specimen diplomas across all 4 CodeTyper tiers to upload for social media marketing, LinkedIn flex posts, Instagram Reels, YouTube thumbnails, and advertising campaigns.
-                </p>
-              </div>
-
-              {/* Master Control: Customize Recipient Name on all 4 certificates live */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-bg-subtle, rgba(255,255,255,0.04))', padding: '0.45rem 0.8rem', borderRadius: 'var(--radius-md, 8px)', border: '1px solid var(--color-border)' }}>
-                  <UserCheck size={16} color="var(--color-primary-forest)" />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                    Candidate Name:
-                  </span>
-                  <input
-                    type="text"
-                    value={promoRecipientName}
-                    onChange={(e) => setPromoRecipientName(e.target.value)}
-                    placeholder="Enter name (e.g. Saumy Pandey)"
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: 'var(--color-text-primary)',
-                      fontWeight: 700,
-                      fontSize: '0.875rem',
-                      outline: 'none',
-                      minWidth: '160px'
-                    }}
-                    title="Change name displayed on all 4 promotional certificates live"
-                  />
-                </div>
-
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() => {
-                    const allText = `🚀 CodeTyper (https://codetyper-beta.vercel.app/) — Master real code syntax across 25+ programming languages (Python, JS, C++, Rust, React, SQL), enjoy mechanical keyboard sounds, and earn cryptographically verified certificates signed by Founder & App Owner Saumy Pandey! 💻✨ Try a 60-second test and share your certificate!`;
-                    navigator.clipboard.writeText(allText);
-                    toast.success('Copied universal marketing post caption!');
-                  }}
-                  title="Copy universal promotional caption for social media"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                >
-                  <Copy size={14} />
-                  <span>Copy Universal Promo Post</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 4 Collectible Tiers Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-              {promotionalCertificates.map((tier) => (
-                <div
-                  key={tier.id}
-                  className="admin-promo-cert-card"
-                  style={{
-                    borderRadius: 'var(--radius-lg, 12px)',
-                    border: '1px solid var(--color-border)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: 'var(--color-bg-soft, rgba(0,0,0,0.2))'
-                  }}
-                >
-                  {/* Card Header with Theme Palette Gradient */}
-                  <div
-                    style={{
-                      background: tier.bgGradient,
-                      padding: '1.25rem 1rem',
-                      color: tier.theme === 'imperial-ivory' ? '#1e293b' : '#ffffff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.35rem',
-                      position: 'relative',
-                      boxShadow: 'inset 0 -10px 20px rgba(0,0,0,0.15)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.06em',
-                          backgroundColor: tier.theme === 'imperial-ivory' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.18)',
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '20px'
-                        }}
-                      >
-                        {tier.tierBadge}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.9 }}>
-                        {tier.tierGrade}
-                      </span>
-                    </div>
-
-                    <h4 style={{ margin: '0.4rem 0 0.1rem 0', fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                      {tier.tierTitle}
-                    </h4>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.85, fontWeight: 500 }}>
-                      Theme: {tier.themeName}
-                    </span>
-                  </div>
-
-                  {/* Card Body */}
-                  <div style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1 }}>
-                    {/* Velocity & Accuracy Metrics */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                      <div
-                        style={{
-                          backgroundColor: 'var(--color-bg-surface)',
-                          border: '1px solid var(--color-border)',
-                          padding: '0.3rem 0.65rem',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'baseline',
-                          gap: '0.3rem'
-                        }}
-                      >
-                        <span style={{ fontWeight: 800, fontSize: '1rem', color: tier.themeAccent }}>
-                          {tier.wpm.toFixed(1)}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-                          WPM
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          backgroundColor: 'var(--color-bg-surface)',
-                          border: '1px solid var(--color-border)',
-                          padding: '0.3rem 0.65rem',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'baseline',
-                          gap: '0.3rem'
-                        }}
-                      >
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>
-                          {tier.accuracy.toFixed(1)}%
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                          accuracy
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Discipline & Details */}
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.2rem' }}>
-                        Curriculum Discipline:
-                      </div>
-                      <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--color-text-secondary)', lineHeight: 1.35 }}>
-                        {tier.discipline}
-                      </div>
-                    </div>
-
-                    {/* Marketing Recommendation */}
-                    <div style={{ backgroundColor: 'var(--color-bg-surface)', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid var(--color-border-subtle)', fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                      <strong style={{ color: 'var(--color-text-primary)' }}>Target / Best For:</strong> {tier.bestFor}
-                    </div>
-
-                    <div style={{ fontSize: '0.725rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <ShieldCheck size={14} color="var(--color-primary-forest)" />
-                      <span>Signed by Founder Saumy Pandey • Verified QR</span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.5rem' }}>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', fontWeight: 700 }}
-                        onClick={() => handleOpenPromoCert(tier)}
-                        title="Open full interactive 3D view and download 4K PNG / PDF"
-                      >
-                        <Eye size={15} />
-                        <span>Preview &amp; Download (4K)</span>
-                      </button>
-
-                      <button
-                        className="btn btn-outline btn-sm"
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', fontSize: '0.8rem' }}
-                        onClick={() => handleCopyPromoCaption(tier)}
-                        title="Copy ready-to-post caption for this certificate"
-                      >
-                        {copiedCaptionTier === tier.id ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-                        <span>{copiedCaptionTier === tier.id ? 'Caption Copied!' : 'Copy Social Post Text'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {renderPromotionalCertificatesSection()}
 
           {/* Controls Bar & Quick Verifier */}
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>

@@ -25,7 +25,7 @@ export const updateDocumentHead = ({
   title,
   description,
   path = '',
-  image = '/icon-512.svg',
+  image = '/og-image.jpg',
   type = 'website'
 }) => {
   if (typeof document === 'undefined') return;
