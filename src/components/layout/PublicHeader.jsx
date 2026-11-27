@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
-import { Code2, BookOpen, Timer, Award, Info, Mail, Sun, Moon, ArrowRight, Menu, X, Calculator } from 'lucide-react';
+import React from 'react';
+import { Code2, BookOpen, Timer, Award, Info, Mail, Sun, Moon, ArrowRight, Calculator } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSettings } from '../../context/SettingsContext.jsx';
 
 export function PublicHeader({ onNavigate, currentView = 'landing', currentPath = '/' }) {
   const { user } = useAuth();
   const { settings, toggleTheme } = useSettings();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
 
   const handleLinkClick = (e, path) => {
     if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
       e.preventDefault();
-      setMobileMenuOpen(false);
       onNavigate(path);
     }
   };
@@ -147,128 +146,10 @@ export function PublicHeader({ onNavigate, currentView = 'landing', currentPath 
             </div>
           )}
 
-          {/* Mobile Menu Hamburger Toggle */}
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+
         </div>
       </header>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
-          <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
-            <div className="mobile-drawer-header">
-              <div className="brand-logo">
-                <div className="brand-icon">
-                  <Code2 size={20} />
-                </div>
-                <span>CodeTyper</span>
-              </div>
-              <button className="mobile-close-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Close Menu">
-                <X size={20} />
-              </button>
-            </div>
-
-            <nav className="mobile-nav-list" aria-label="Mobile Navigation">
-              <a
-                href="/practice"
-                className={`mobile-nav-item ${currentPath === '/practice' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/practice')}
-              >
-                <BookOpen size={18} />
-                <span>Practice Drills</span>
-              </a>
-              <a
-                href="/coding-typing-test"
-                className={`mobile-nav-item ${currentPath === '/coding-typing-test' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/coding-typing-test')}
-              >
-                <Code2 size={18} />
-                <span>Coding Test (25+ Stacks)</span>
-              </a>
-              <a
-                href="/typing-test"
-                className={`mobile-nav-item ${currentPath === '/typing-test' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/typing-test')}
-              >
-                <Timer size={18} />
-                <span>Speed Typing Test</span>
-              </a>
-              <a
-                href="/wpm-calculator"
-                className={`mobile-nav-item ${currentPath === '/wpm-calculator' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/wpm-calculator')}
-              >
-                <Calculator size={18} />
-                <span>WPM Calculator</span>
-              </a>
-              <a
-                href="/certificate"
-                className={`mobile-nav-item ${currentPath === '/certificate' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/certificate')}
-              >
-                <Award size={18} />
-                <span>Accredited Certificates</span>
-              </a>
-              <a
-                href="/about"
-                className={`mobile-nav-item ${currentPath === '/about' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/about')}
-              >
-                <Info size={18} />
-                <span>About CodeTyper</span>
-              </a>
-              <a
-                href="/contact"
-                className={`mobile-nav-item ${currentPath === '/contact' ? 'active' : ''}`}
-                onClick={(e) => handleLinkClick(e, '/contact')}
-              >
-                <Mail size={18} />
-                <span>Contact &amp; Support</span>
-              </a>
-            </nav>
-
-            <div className="mobile-drawer-footer">
-              {user ? (
-                <a
-                  href="/dashboard"
-                  className="btn btn-primary"
-                  onClick={(e) => handleLinkClick(e, '/dashboard')}
-                  style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
-                >
-                  <span>Dashboard</span>
-                  <ArrowRight size={16} />
-                </a>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
-                  <a
-                    href="/login"
-                    className="btn btn-secondary"
-                    onClick={(e) => handleLinkClick(e, '/login')}
-                    style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
-                  >
-                    Sign In
-                  </a>
-                  <a
-                    href="/signup"
-                    className="btn btn-primary"
-                    onClick={(e) => handleLinkClick(e, '/signup')}
-                    style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
-                  >
-                    Create Free Account
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
