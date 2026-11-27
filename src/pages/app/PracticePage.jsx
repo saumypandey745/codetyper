@@ -887,19 +887,20 @@ export function PracticePage({
                 <span>Options ▾</span>
               </button>
             </div>
-
-            {canScrollRight && (
-              <button
-                type="button"
-                className="deck-scroll-arrow-btn right"
-                onClick={() => handleScrollDeck(220)}
-                title="Scroll options right (or use mouse wheel / scroller)"
-                aria-label="Scroll options right"
-              >
-                <ChevronRight size={16} />
-              </button>
-            )}
           </div>
+
+          {canScrollRight && (
+            <button
+              type="button"
+              className="deck-scroll-arrow-btn right"
+              onClick={() => handleScrollDeck(220)}
+              title="Scroll options right (or use mouse wheel / scroller)"
+              aria-label="Scroll options right"
+            >
+              <ChevronRight size={16} />
+            </button>
+          )}
+        </div>
 
           {/* Dedicated Sub-bar for Coding: Popular Language Quick Chips */}
           {practiceType === 'coding' && (
