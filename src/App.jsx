@@ -7,6 +7,7 @@ import { Sidebar } from './components/layout/Sidebar.jsx';
 import { Header } from './components/layout/Header.jsx';
 import { QuickSearchModal } from './components/common/QuickSearchModal.jsx';
 import { AnnouncementBanner } from './components/common/AnnouncementBanner.jsx';
+import { GoogleLoginPopup } from './components/common/GoogleLoginPopup.jsx';
 
 // Core Public Pages (Eagerly loaded for instant First Contentful Paint)
 import { LandingPage } from './pages/public/LandingPage.jsx';
@@ -406,6 +407,10 @@ export function App() {
           navigateTo(view);
         }}
       />
+      {/* Google Login Popup — sirf landing page pe logged-out users ke liye */}
+      {!user && routeState.view === 'landing' && (
+        <GoogleLoginPopup onNavigate={navigateTo} />
+      )}
       <Analytics />
     </>
   );

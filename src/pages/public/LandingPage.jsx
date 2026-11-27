@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleLoginPopup } from '../../components/common/GoogleLoginPopup.jsx';
 import {
   Code2,
   ArrowRight,
@@ -2187,9 +2186,6 @@ export function LandingPage({ onNavigate, onStartPractice }) {
           </div>
         </div>
       </section>
-
-      {/* Google Login Smart Popup — sirf tab dikhe jab logged out ho */}
-      {!user && <GoogleLoginPopup onNavigate={onNavigate} />}
     </div>
   );
 }
