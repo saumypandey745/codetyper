@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 
 /**
- * GoogleLoginPopup — sirf ek clean Google login suggestion popup.
- * Landing page pe 1.8s baad bottom-right se slide-in hota hai.
- * Sirf logged-out users ko dikhta hai.
+ * GoogleLoginPopup — landing page pe 1.8s baad bottom-right mein slide-in hota hai.
+ * Portal ke through document.body mein render hota hai.
  */
 export function GoogleLoginPopup({ onNavigate, onDismiss }) {
   const [visible, setVisible] = useState(false);
@@ -33,7 +33,7 @@ export function GoogleLoginPopup({ onNavigate, onDismiss }) {
 
   if (!visible) return null;
 
-  return (
+  const popup = (
     <div
       className={`gl-popup-wrapper ${slideIn ? 'gl-popup-visible' : ''}`}
       role="dialog"
@@ -44,7 +44,7 @@ export function GoogleLoginPopup({ onNavigate, onDismiss }) {
         <X size={14} />
       </button>
 
-      {/* Body */}
+      {/* Header */}
       <div className="gl-popup-header">
         <div className="gl-popup-google-icon">
           <svg width="20" height="20" viewBox="0 0 18 18">
@@ -76,4 +76,6 @@ export function GoogleLoginPopup({ onNavigate, onDismiss }) {
       </a>
     </div>
   );
+
+  return ReactDOM.createPortal(popup, document.body);
 }

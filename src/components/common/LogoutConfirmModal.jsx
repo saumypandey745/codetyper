@@ -1,15 +1,10 @@
 import React, { useEffect } from 'react';
-import { LogOut, X, AlertTriangle } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { LogOut, X } from 'lucide-react';
 
 /**
- * LogoutConfirmModal
- * Sign Out button click karne ke baad ek confirmation dialog dikhata hai.
- *
- * Props:
- *   isOpen      — boolean, show/hide
- *   onConfirm   — user ne "Yes, sign out" click kiya
- *   onCancel    — user ne cancel kiya ya background click kiya
- *   userName    — optional, greeting ke liye
+ * LogoutConfirmModal — portal ke through document.body mein render hota hai
+ * taaki parent header/transform se affect na ho aur properly center dikhe.
  */
 export function LogoutConfirmModal({ isOpen, onConfirm, onCancel, userName }) {
   // Escape key support
@@ -22,17 +17,13 @@ export function LogoutConfirmModal({ isOpen, onConfirm, onCancel, userName }) {
 
   // Body scroll lock
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  return (
+  const modal = (
     <div
       className="logout-modal-backdrop"
       onClick={onCancel}
@@ -91,4 +82,7 @@ export function LogoutConfirmModal({ isOpen, onConfirm, onCancel, userName }) {
       </div>
     </div>
   );
+
+  // Portal: document.body mein directly render karo
+  return ReactDOM.createPortal(modal, document.body);
 }
