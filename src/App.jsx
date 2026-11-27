@@ -407,9 +407,9 @@ export function App() {
           navigateTo(view);
         }}
       />
-      {/* Google Login Popup — sirf landing page pe logged-out users ke liye */}
-      {!user && routeState.view === 'landing' && (
-        <GoogleLoginPopup onNavigate={navigateTo} />
+      {/* Google Login One Tap — logged-out users ke liye har page pe trigger hoga */}
+      {!user && (
+        <GoogleLoginPopup onNavigate={navigateTo} currentPath={routeState.path} />
       )}
       <Analytics />
     </>

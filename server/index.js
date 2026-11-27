@@ -95,10 +95,10 @@ app.use((req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
 
-  // Non-breaking Content-Security-Policy supporting fonts, avatars, Web Audio, and APIs
+  // Non-breaking Content-Security-Policy supporting Google One Tap / GSI, fonts, avatars, Web Audio, and APIs
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' http: ws:;"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client https://www.googletagmanager.com; frame-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob: https://*.googleusercontent.com; connect-src 'self' http: https: ws: wss: https://accounts.google.com https://*.google-analytics.com;"
   );
 
   next();

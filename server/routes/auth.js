@@ -208,6 +208,56 @@ router.post('/login', authLimiter, (req, res) => {
   });
 });
 
+router.post('/continue-as', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  const query = email.trim().toLowerCase();
+  const user = db.prepare(`
+    SELECT id, email, username, full_name, avatar_url, role, is_banned, ban_reason
+    FROM users
+    WHERE LOWER(email) = ?
+  `).get(query);
+
+  if (!user) {
+    return res.status(404).json({ error: 'User account not found.' });
+  }
+
+  if (user.is_banned) {
+    return res.status(403).json({
+      error: user.ban_reason
+        ? `Account suspended by platform administration: ${user.ban_reason}`
+        : 'Your account has been suspended by platform administration.'
+    });
+  }
+
+  const payload = {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    full_name: user.full_name,
+    avatar_url: user.avatar_url,
+    role: user.role
+  };
+
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+
+  return res.json({
+    message: `Welcome back, ${user.full_name || user.username}!`,
+    user,
+    token
+  });
+});
+
 router.get('/me', authenticate, (req, res) => {
   const user = db.prepare(`
     SELECT id, email, username, full_name, avatar_url, role, bio, created_at
@@ -368,7 +418,125 @@ router.post('/reset-password', resetLimiter, (req, res) => {
   return res.json({ message: 'Password has been reset successfully. You can now log in.' });
 });
 
-// --- Google OAuth 2.0 Flow ---
+// --- Google OAuth 2.0 & One Tap Flow ---
+router.get('/google/client-id', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  return res.json({ clientId: clientId.includes('your_google_client_id_here') ? '' : clientId });
+});
+
+router.post('/google/one-tap', authLimiter, async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential token is required.' });
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId || clientId.includes('your_google_client_id_here')) {
+    return res.status(500).json({ error: 'Google Client ID is not configured on the server.' });
+  }
+
+  try {
+    // 1. Verify credential token with Google's official tokeninfo endpoint
+    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!verifyRes.ok) {
+      const errData = await verifyRes.json().catch(() => ({}));
+      return res.status(401).json({ error: errData.error_description || 'Invalid or expired Google credential token.' });
+    }
+
+    const payload = await verifyRes.json();
+
+    // 2. Security validation: Verify audience matches GOOGLE_CLIENT_ID
+    if (payload.aud !== clientId) {
+      return res.status(401).json({ error: 'Google token audience mismatch.' });
+    }
+
+    // 3. Security validation: Verify email is present and verified
+    if (!payload.email || (payload.email_verified !== 'true' && payload.email_verified !== true)) {
+      return res.status(400).json({ error: 'Google account email is unverified.' });
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const fullName = payload.name || email.split('@')[0];
+    const avatarUrl = payload.picture || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(email)}`;
+
+    // 4. Find or create user in SQLite database
+    let user = db.prepare('SELECT id, email, username, full_name, avatar_url, role, is_banned, ban_reason FROM users WHERE LOWER(email) = ?').get(email);
+
+    if (user && user.is_banned) {
+      return res.status(403).json({ error: `Account suspended: ${user.ban_reason || 'Violation of CodeTyper community standards.'}` });
+    }
+
+    if (!user) {
+      const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16);
+      let username = baseUsername.length >= 3 ? baseUsername : `user_${Date.now().toString().slice(-4)}`;
+      const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+      if (existingUser) {
+        username = `${username}_${Date.now().toString().slice(-4)}`;
+      }
+
+      const randomPassword = crypto.randomBytes(24).toString('hex');
+      const passwordHash = bcrypt.hashSync(randomPassword, 10);
+
+      const insertResult = db.prepare(`
+        INSERT INTO users (email, username, full_name, password_hash, avatar_url, role)
+        VALUES (?, ?, ?, ?, ?, 'user')
+      `).run(email, username, fullName, passwordHash, avatarUrl);
+
+      const userId = Number(insertResult.lastInsertRowid);
+      db.prepare('INSERT INTO user_settings (user_id) VALUES (?)').run(userId);
+      db.prepare('INSERT INTO user_statistics (user_id, last_practice_date) VALUES (?, ?)').run(
+        userId,
+        new Date().toISOString().split('T')[0]
+      );
+
+      user = { id: userId, email, username, full_name: fullName, avatar_url: avatarUrl, role: 'user' };
+
+      try {
+        logAdminAudit({ id: null, username: 'system' }, 'USER_REGISTERED_ONE_TAP', 'users', userId, { email, username });
+        emitAdminNotification('USER_REGISTERED', {
+          userId,
+          username,
+          full_name: fullName,
+          email,
+          avatar_url: avatarUrl,
+          created_at: new Date().toISOString()
+        });
+      } catch (e) {}
+    }
+
+    // 5. Issue CodeTyper JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, username: user.username, full_name: user.full_name, avatar_url: user.avatar_url, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    return res.json({
+      message: 'Google login successful.',
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        full_name: user.full_name,
+        avatar_url: user.avatar_url,
+        role: user.role
+      },
+      token
+    });
+  } catch (err) {
+    console.error('[Google One Tap Error]', err);
+    return res.status(500).json({ error: 'Google One Tap authentication failed.' });
+  }
+});
+
 router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId || clientId.trim() === '' || clientId.includes('your_google_client_id_here')) {
@@ -393,9 +561,11 @@ router.get('/google', (req, res) => {
     client_id: clientId,
     access_type: 'offline',
     response_type: 'code',
-    prompt: 'consent',
     scope: 'openid email profile'
   });
+  if (req.query.login_hint) {
+    options.append('login_hint', req.query.login_hint);
+  }
 
   return res.redirect(`${rootUrl}?${options.toString()}`);
 });

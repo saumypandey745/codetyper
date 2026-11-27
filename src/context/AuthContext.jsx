@@ -32,6 +32,15 @@ export function AuthProvider({ children }) {
     const res = await api.auth.login(credentials);
     api.setToken(res.token);
     setUser(res.user);
+    if (typeof window !== 'undefined' && res.user) {
+      try {
+        localStorage.setItem('codetyper_last_user', JSON.stringify({
+          email: res.user.email,
+          name: res.user.full_name || res.user.username,
+          avatar: res.user.avatar_url
+        }));
+      } catch (e) {}
+    }
     // Fetch full profile including statistics in one call
     try {
       const me = await api.auth.me();
@@ -43,10 +52,61 @@ export function AuthProvider({ children }) {
     return res;
   };
 
+  const loginWithGoogleCredential = async (credential) => {
+    const res = await api.auth.googleOneTap(credential);
+    api.setToken(res.token);
+    setUser(res.user);
+    if (typeof window !== 'undefined' && res.user) {
+      try {
+        localStorage.setItem('codetyper_last_user', JSON.stringify({
+          email: res.user.email,
+          name: res.user.full_name || res.user.username,
+          avatar: res.user.avatar_url
+        }));
+      } catch (e) {}
+    }
+    try {
+      const me = await api.auth.me();
+      setUser(me.user);
+      setUserStats(me.statistics);
+    } catch (e) {}
+    return res;
+  };
+
+  const continueAsUser = async (email) => {
+    const res = await api.auth.continueAs(email);
+    api.setToken(res.token);
+    setUser(res.user);
+    if (typeof window !== 'undefined' && res.user) {
+      try {
+        localStorage.setItem('codetyper_last_user', JSON.stringify({
+          email: res.user.email,
+          name: res.user.full_name || res.user.username,
+          avatar: res.user.avatar_url
+        }));
+      } catch (e) {}
+    }
+    try {
+      const me = await api.auth.me();
+      setUser(me.user);
+      setUserStats(me.statistics);
+    } catch (e) {}
+    return res;
+  };
+
   const register = async (userData) => {
     const res = await api.auth.register(userData);
     api.setToken(res.token);
     setUser(res.user);
+    if (typeof window !== 'undefined' && res.user) {
+      try {
+        localStorage.setItem('codetyper_last_user', JSON.stringify({
+          email: res.user.email,
+          name: res.user.full_name || res.user.username,
+          avatar: res.user.avatar_url
+        }));
+      } catch (e) {}
+    }
     // Fetch full profile including statistics
     try {
       const me = await api.auth.me();
@@ -87,6 +147,8 @@ export function AuthProvider({ children }) {
         loading,
         isAuthenticated: !!user,
         login,
+        loginWithGoogleCredential,
+        continueAsUser,
         register,
         logout,
         refreshUser,

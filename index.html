@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0d1117" />
 
+    <!-- Clear any rogue/stale Service Workers on localhost -->
+    <script>
+      if ('serviceWorker' in navigator && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var r of regs) {
+            r.unregister();
+          }
+        });
+        if ('caches' in window) {
+          caches.keys().then(function(keys) {
+            for (var k of keys) {
+              if (k.toLowerCase().includes('naam') || k.toLowerCase().includes('sw-v')) {
+                caches.delete(k);
+              }
+            }
+          });
+        }
+      }
+    </script>
+
     <!-- Google tag (gtag.js) - Real-Time Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-PG03GSM1Z9"></script>
     <script>
@@ -13,6 +33,8 @@
       gtag('js', new Date());
       gtag('config', 'G-PG03GSM1Z9');
     </script>
+    <!-- Google Identity Services (One Tap & Sign In) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- High-Ranking SEO Title & Primary Meta Tags -->
     <title>CodeTyper — Free Typing Test, Developer Code Practice & Verified Certificates</title>

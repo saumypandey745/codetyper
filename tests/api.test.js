@@ -369,4 +369,63 @@ describe('CodeTyper API Integration Suite', () => {
     assert.equal(verifyData.certificate.netWpm, 88.5);
     assert.equal(verifyData.certificate.biometricVerified, true);
   });
+
+  it('GET /api/auth/google/client-id returns Google Client ID configuration', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/google/client-id`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(typeof data.clientId === 'string');
+  });
+
+  it('POST /api/auth/google/one-tap rejects request without credential token', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/google/one-tap`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.ok(data.error.includes('credential'));
+  });
+
+  it('POST /api/auth/google/one-tap rejects request with invalid token', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/google/one-tap`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: 'invalid_token_123' })
+    });
+    assert.equal(res.status, 401);
+    const data = await res.json();
+    assert.ok(data.error);
+  });
+
+  it('POST /api/auth/continue-as logs in user directly with valid email', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/continue-as`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'saumypandey745@gmail.com' })
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.user.email, 'saumypandey745@gmail.com');
+    assert.ok(typeof data.token === 'string');
+  });
+
+  it('POST /api/auth/continue-as rejects request without email', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/continue-as`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('POST /api/auth/continue-as returns 404 for non-existent email', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/continue-as`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nonexistent_user_9999@test.com' })
+    });
+    assert.equal(res.status, 404);
+  });
 });

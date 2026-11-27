@@ -89,7 +89,10 @@ class ApiClient {
     me: () => this.request('/auth/me'),
     logout: () => this.request('/auth/logout', { method: 'POST' }),
     forgotPassword: (email) => this.request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
-    resetPassword: (payload) => this.request('/auth/reset-password', { method: 'POST', body: JSON.stringify(payload) })
+    resetPassword: (payload) => this.request('/auth/reset-password', { method: 'POST', body: JSON.stringify(payload) }),
+    googleOneTap: (credential) => this.request('/auth/google/one-tap', { method: 'POST', body: JSON.stringify({ credential }) }),
+    continueAs: (email) => this.request('/auth/continue-as', { method: 'POST', body: JSON.stringify({ email }) }),
+    getGoogleClientId: () => this.request('/auth/google/client-id')
   };
 
   // Practice Content

@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useGoogleAuth } from '../../hooks/useGoogleAuth.js';
 
 export function LoginPage({ onNavigate }) {
   const { user, login } = useAuth();
   const toast = useToast();
+  const { promptOneTap } = useGoogleAuth({
+    onNavigate,
+    autoPrompt: true
+  });
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -131,6 +136,11 @@ export function LoginPage({ onNavigate }) {
           href="/api/auth/google"
           className="btn"
           id="btn-google-login"
+          onClick={(e) => {
+            if (window.google?.accounts?.id) {
+              promptOneTap();
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',

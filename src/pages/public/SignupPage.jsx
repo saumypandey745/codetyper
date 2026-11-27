@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useGoogleAuth } from '../../hooks/useGoogleAuth.js';
 
 export function SignupPage({ onNavigate }) {
   const { user, register } = useAuth();
   const toast = useToast();
+  const { promptOneTap } = useGoogleAuth({
+    onNavigate,
+    autoPrompt: true
+  });
 
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -18,7 +23,7 @@ export function SignupPage({ onNavigate }) {
   const [error, setError] = useState('');
 
   // If already authenticated, redirect to dashboard immediately
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       onNavigate('dashboard');
     }
@@ -110,6 +115,11 @@ export function SignupPage({ onNavigate }) {
           href="/api/auth/google"
           className="btn"
           id="btn-google-signup"
+          onClick={(e) => {
+            if (window.google?.accounts?.id) {
+              promptOneTap();
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
